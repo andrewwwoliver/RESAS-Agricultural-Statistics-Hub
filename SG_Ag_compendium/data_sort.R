@@ -45,23 +45,23 @@ land_use <- c("Total crops and grass",
 #data prep----
 
 #crops and structures of Scottish agriculture 
-load("~/R/SG_Ag_compendium/Data/JAC_crops.RData")
+load("./Data/JAC_crops.RData")
 #crops <- crops %>% select(-item, -total_item)
 #farmtypes
-load("~/R/SG_Ag_compendium/Data/JAC_farm_types.RData")
+load("./Data/JAC_farm_types.RData")
 
 
 #livestock-
 #cattle
-load("~/R/SG_Ag_compendium/Data/JAC_cattle.RData")
+load("./Data/JAC_cattle.RData")
 cattle <- cattle %>%   pivot_longer(., cols = !`Cattle by category`,
                                     names_to = "Year",
                                     values_to = "Number of livestock"
 )
 
-beef <- read_xlsx("~/R/SG_Ag_compendium/Data/beef_sector.xlsx")
-dairy <- read_xlsx("~/R/SG_Ag_compendium/Data/dairy_sector.xlsx")
-sheep <- read_xlsx("~/R/SG_Ag_compendium/Data/sheep_sector.xlsx")
+beef <- read_xlsx("./Data/beef_sector.xlsx")
+dairy <- read_xlsx("./Data/dairy_sector.xlsx")
+sheep <- read_xlsx("./Data/sheep_sector.xlsx")
 #
 #crop data
 #item <- c(item, total_item)
