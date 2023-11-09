@@ -44,31 +44,35 @@ lineselectUI <- function(id) {
 
 lineselectServer <- function(id,  plot_data_one, plot_data_two) {
   
-  moduleServer(id, function(input, output, session) {
+ 
     
-    itemplot1 <- reactive({line_chart_items(plot_data_one())})
-    itemplot2 <- reactive({line_chart_totals(plot_data_two())})
+  
+   moduleServer(id, function(input, output, session) {
+    
+    
+    itemplot1 <- reactive({line_chart_item(plot_data_one)})
+    itemplot2 <- reactive({line_chart_total(plot_data_two)})
   
     output$item_plot <-renderHighchart({itemplot1()})
     
     output$total_plot <-renderHighchart({itemplot2()})
 
 
-  
-plot_data_one <-  reactive({crops %>% filter(!Crop %in% land_use) %>% filter(item %in% input$item) %>%  
-                                             #& !grepl("total", Crop, ignore.case=TRUE)) %>%
-    filter(Year>= min(input$year1) & Year<= max(input$year1))})
+    plot_data_one <-  reactive({crops %>% filter(!Crop %in% land_use) %>% filter(item %in% input$item) %>%
+        #& !grepl("total", Crop, ignore.case=TRUE)) %>%
+        filter(Year>= min(input$year1) & Year<= max(input$year1))})
 
-  plot_data_two <-reactive({crops %>% filter(!Crop %in% land_use) %>% filter(total_item %in% input$total_item) %>%  
-    #& grepl("total", Crop, ignore.case=TRUE)) %>% 
-  filter(Year>= min(input$year2) & Year<= max(input$year2))})
-   
-    
+    plot_data_two <-reactive({crops %>% filter(!Crop %in% land_use) %>% filter(total_item %in% input$total_item) %>%
+        #& grepl("total", Crop, ignore.case=TRUE)) %>%
+        filter(Year>= min(input$year2) & Year<= max(input$year2))})
+
   })
 }
 
 plot_demo <- function() {
+  
 
+  
   
   ui <- fluidPage(lineselectUI("x"))
   server <- function(input, output, session) {

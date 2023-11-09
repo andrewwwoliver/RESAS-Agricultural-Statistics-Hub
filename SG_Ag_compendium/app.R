@@ -17,11 +17,12 @@ source("data_sort.R")
 #land use section modules
 #content suffix == reactivity with year slider or select 
 #(module within a module e.g. mod_land_plot_content calls in mod_land_stacked_plot which calls in stacked_col) 
-source("mod_land_plot_content.R")
 source("land_line_plot.R")
-source("bar_plot.R")
-source("stacked_col.R")
 source("mod_land_stacked_plot.R")
+source("mod_land_plot_content.R")
+source("bar_plot.R")
+source("mod_land_bar_plot.R")
+source("stacked_col.R")
 
 #crops section modules
 source("mod_tab_line_plot.R")
@@ -31,8 +32,9 @@ source("data_table.R")
 
 #livestock modules
 #beef
-source("mod_livestock_plot_content.R")
 source("livestock_line_plot.R")
+source("mod_livestock_plot_content.R")
+
 
 #dairy
 source("mod_dlivestock_plot_content.R")

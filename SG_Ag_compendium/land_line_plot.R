@@ -81,10 +81,10 @@ line_chart<- function(plot_data) {
   
 }
 
-line_chart_item<- function(plot_data) {
+line_chart_item<- function(plot_data_one) {
 
  
-  hchart(plot_data_item(), "line", 
+  hchart(plot_data_one(), "line", 
        hcaes(
          x = Year, 
          y = Area,
@@ -108,10 +108,10 @@ line_chart_item<- function(plot_data) {
 }
 
 
-line_chart_total<- function(plot_data) {
+line_chart_total<- function(plot_data_two) {
   
   
-  hchart(plot_data_total(), "line", 
+  hchart(plot_data_two(), "line", 
          hcaes(
            x = Year, 
            y = Area,
