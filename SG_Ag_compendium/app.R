@@ -341,6 +341,7 @@ server <- function(input, output, session, content) {
     output$page <- renderUI({
       landing_ui
     })
+    output$sub_section_content <- NULL
   })
   
   # # Function to update the currently displayed sub-section and tab
