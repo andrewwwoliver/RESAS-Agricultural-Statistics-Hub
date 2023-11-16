@@ -53,9 +53,9 @@ landing_ui <- fluidPage(
   
   fluidRow(
     column(width = 2, align = "left", 
-           actionButton("btn_back_home", 
-                        tags$img(src = "RESAS Logo.png", width = "100%"), 
-                        class = "btn btn-custom")),
+           # actionButton("btn_home", 
+                        tags$img(src = "RESAS Logo.png", width = "100%")), 
+                        # class = "btn btn-custom")),
     column(width = 8, align = "center", h1("Scottish Agricultural Statistics Hub")),
     column(width = 2, align = "right", tags$img(src = "sg.png", width = "100%")),
     column(width = 12, align = "center", h4("Collection of all Scottish agriculture statistics produced by RESAS (Scottish Government)"))
@@ -190,16 +190,18 @@ section_ui <- function(title, image, content, sections) {
   fluidPage(
     fluidRow(
       column(width = 2, align = "left", 
-             actionButton("btn_back_home", 
-                          tags$img(src = "RESAS Logo.png", width = "100%"), 
-                          class = "btn btn-custom")),
+             # actionButton("btn_home", 
+                          tags$img(src = "RESAS Logo.png", width = "100%")), 
+                          # class = "btn btn-custom")),
       column(width = 8, align = "center", h1("Scottish Agricultural Statistics Hub")),
       column(width = 2, align = "right", tags$img(src = "sg.png", width = "100%")),
       column(width = 12, align = "center", h4("Collection of all Scottish agriculture statistics produced by RESAS (Scottish Government)"))
     ),
     
     sidebarPanel(
-      actionButton("btn_home", "Home", class = "btn btn-custom"),
+      actionButton("btn_home", "Home", class = "btn btn-custom",
+                   #Define style of Home button here
+                   style="font-weight: bold; font-size: 20px"),
       img(src = image, width = "100%"),
       if (title == "Crops") {
         list(
@@ -300,7 +302,7 @@ section_ui <- function(title, image, content, sections) {
       style = "width: auto; max-width: 300px; margin-right: 10px;",
       
       # Add a search bar specific to this section
-      textInput("section_search_query", "Search", placeholder = paste("Search within", title, "...")),   
+      # textInput("section_search_quercy", "Search", placeholder = paste("Search within", title, "...")),   
       
     ),
     
@@ -335,14 +337,25 @@ server <- function(input, output, session, content) {
   
   # Add observeEvent to create home button
   observeEvent(input$btn_home, {
-    home_button_clicked(TRUE)
-    clear_main_content()
-    clear_sub_section_content()
+    # home_button_clicked(TRUE)
+    # clear_main_content()
+    # clear_sub_section_content()
     output$page <- renderUI({
       landing_ui
     })
     output$sub_section_content <- NULL
   })
+  
+  observeEvent(input$btn_home2, {
+    # home_button_clicked(TRUE)
+    # clear_main_content()
+    # clear_sub_section_content()
+    output$page <- renderUI({
+      landing_ui
+    })
+    output$sub_section_content <- NULL
+  })
+
   
   # # Function to update the currently displayed sub-section and tab
   # update_sub_section <- function(sub_section, tab) {
@@ -430,8 +443,31 @@ server <- function(input, output, session, content) {
         # sections = sections
       )
     })
+    output$sub_section_content <- renderUI({
+      fluidPage(
+        HTML("<div style='margin-top: 60px; font-weight: bold;'>Content under development</a></div>"),
+        br(),
+        br(),
+        #text found in "data_sort.R" script.
+        p(strong(struct_agri_txt1)),
+        tags$ul(
+          tags$li(struct_agri_txt2),
+          tags$li(struct_agri_txt3),
+          tags$li(struct_agri_txt4)
+        ),
+        br(),
+        p(struct_agri_txt5, struct_agri_txt6),
+        br(),
+        p(struct_agri_txt7, struct_agri_txt8, struct_agri_txt9, struct_agri_txt10, struct_agri_txt11, struct_agri_txt12),
+        br(),
+        br(),
+        actionLink("btn_home2", strong("Return to home page")),
+        br(),
+        br(),
+        br()
+      )
+    })
   })
-  
   
   observeEvent(input$btn_crops, {
     clear_main_content()
@@ -463,27 +499,44 @@ server <- function(input, output, session, content) {
     })
   })
   
+  # output$sub_section_content <- renderUI({
+  #   fluidPage(
+  #     HTML("<div style='margin-top: 60px; font-weight: bold;'>Content under development</a></div>"),
+      
+      
+  
   observeEvent(input$btn_agri_env, {
     clear_main_content()
     clear_sub_section_content()
     output$page <- renderUI({
-       fluidPage(
-         section_ui(
-        title = "Agriculture and the environment",
-        image = "agri_env.png",
-        #below is commented out because it doesn't seem to have a working function! (Jackie)
-        # content = HTML("Content Under Development. For More Information on 
-        #                Structures of Scottish Agriculture click <a href='enterURL_here' target='_blank'>here</a>"),
-        # sections = sections
-      ),
-     
-        HTML("<div style='margin-top: 60px; font-weight: 
-                                 bold;'>Content under development</a></div>"),
+      fluidPage(
+        section_ui(
+          title = "Agriculture and the environment",
+          image = "agri_env.png",
+          #below is commented out because it doesn't seem to have a working function! (Jackie)
+          # content = HTML("Content Under Development. For More Information on 
+          #                Structures of Scottish Agriculture click <a href='enterURL_here' target='_blank'>here</a>"),
+          # sections = sections
+        )
+      )}
+    )    
+    output$sub_section_content <- renderUI({
+      fluidPage(
+        HTML("<div style='margin-top: 60px; font-weight: bold;'>Content under development</a></div>"),
         br(),
         br(),
-        #text found in "data_sort.R" script.  
-        p(agri_env_txt1, agri_env_txt2, agri_env_txt3, agri_env_txt4),
+        #text found in "data_sort.R" script.
+        p(strong(agri_env_txt100)),
+        p(agri_env_txt101, agri_env_txt102),
+        br(),
+        p(strong(agri_env_txt103)),
+        p(agri_env_txt104, agri_env_txt105),
+        br(),
+        p(strong(agri_env_txt106)),
         p(agri_env_txt5, agri_env_txt6),
+        br(),
+        p(strong(agri_env_txt108)),
+        p(agri_env_txt109, agri_env_txt110),
         br(),
         p(strong(agri_env_txt7)),
         p(agri_env_txt8),
@@ -508,9 +561,17 @@ server <- function(input, output, session, content) {
         p(agri_env_txt24),
         p(agri_env_txt25),
         p(agri_env_txt26),
-        p(agri_env_txt27)
-       )
-        
+        p(agri_env_txt27),
+        br(),
+        br(),
+        actionLink("btn_home2", strong("Return to home page")),
+        br(),
+        br(),
+        br()
+      )
+    
+    
+    
     })
   })
   
@@ -550,8 +611,17 @@ server <- function(input, output, session, content) {
                     #text found in "data_sort.R" script. Taken from June Census 2023 publication 
                     p(land_use_summary_txt1),
                     p(land_use_summary_txt2),
-                    p(strong(land_use_summary_txt3, land_use_summary_txt4))),
-            tabPanel("Land use chart", h4("Land Use Interactive Plots"),
+                    p(strong(land_use_summary_txt3, land_use_summary_txt4)),
+                    p(land_use_summary_txt5, land_use_summary_txt6, land_use_summary_txt7),
+                    br(),
+                    br(),
+                    actionLink("btn_home2", strong("Return to home page")),
+                    br(),
+                    br(),
+                    br()
+                    ),
+            
+            tabPanel("Land use chart", h4("Explore agricultural land use results from the Agricultural Census in the interactive plot"),
                      p(land_use_plot_txt1),
                      p(land_use_plot_txt2),
                      p(land_use_plot_txt3),
@@ -571,7 +641,8 @@ server <- function(input, output, session, content) {
       })
       
       #module server
-      plot_data_one <- crops %>% filter(Crop %in% land_use) %>% 
+      plot_data_one <- crops %>% 
+        filter(Crop %in% land_use) %>% 
         select(Crop, Year, Area) %>% 
         pivot_wider(names_from = Year, values_from = Area)
       #plot_data <- filter(crops, item %in% input$item)%>%
@@ -1017,46 +1088,53 @@ server <- function(input, output, session, content) {
 # Agriculture and the environment sub section -----------------------------
   
   
-  observeEvent(input$btn_in_dev_env, {
-    output$sub_section_content <- renderUI({
-      fluidPage(
-        HTML("<div style='margin-top: 60px; font-weight: 
-                                 bold;'>Content under development</a></div>"),
-        br(),
-        br(),
-        #text found in "data_sort.R" script.  
-        p(agri_env_txt1, agri_env_txt2, agri_env_txt3, agri_env_txt4),
-        p(agri_env_txt5, agri_env_txt6),
-        br(),
-        p(strong(agri_env_txt7)),
-        p(agri_env_txt8),
-        br(),
-        p(strong(agri_env_txt9)),
-        p(agri_env_txt10),
-        p(agri_env_txt11),
-        p(agri_env_txt12),
-        p(agri_env_txt13),
-        br(),
-        p(strong(agri_env_txt14)),
-        p(agri_env_txt15),
-        p(agri_env_txt16),
-        p(agri_env_txt17),
-        br(),
-        p(strong(agri_env_txt18)),
-        p(agri_env_txt19),
-        p(agri_env_txt20),
-        p(agri_env_txt21),
-        p(agri_env_txt22),
-        p(agri_env_txt23),
-        p(agri_env_txt24),
-        p(agri_env_txt25),
-        p(agri_env_txt26),
-        p(agri_env_txt27)
-        
-        
-      )
-    })
-  })
+  # observeEvent(input$btn_in_dev_env, {
+    # output$sub_section_content <- renderUI({
+    #   fluidPage(
+    #     HTML("<div style='margin-top: 60px; font-weight: bold;'>Content under development</a></div>"),
+    #     br(),
+    #     br(),
+    #     #text found in "data_sort.R" script.
+    #     p(strong(agri_env_txt100)),
+    #     p(agri_env_txt101, agri_env_txt102),
+    #     br(),
+    #     p(strong(agri_env_txt103)),
+    #     p(agri_env_txt104, agri_env_txt105),
+    #     br(),
+    #     p(strong(agri_env_txt106)),
+    #     p(agri_env_txt5, agri_env_txt6),
+    #     br(),
+    #     p(strong(agri_env_txt108)),
+    #     p(agri_env_txt109, agri_env_txt110),
+    #     br(),
+    #     p(strong(agri_env_txt7)),
+    #     p(agri_env_txt8),
+    #     br(),
+    #     p(strong(agri_env_txt9)),
+    #     p(agri_env_txt10),
+    #     p(agri_env_txt11),
+    #     p(agri_env_txt12),
+    #     p(agri_env_txt13),
+    #     br(),
+    #     p(strong(agri_env_txt14)),
+    #     p(agri_env_txt15),
+    #     p(agri_env_txt16),
+    #     p(agri_env_txt17),
+    #     br(),
+    #     p(strong(agri_env_txt18)),
+    #     p(agri_env_txt19),
+    #     p(agri_env_txt20),
+    #     p(agri_env_txt21),
+    #     p(agri_env_txt22),
+    #     p(agri_env_txt23),
+    #     p(agri_env_txt24),
+    #     p(agri_env_txt25),
+    #     p(agri_env_txt26),
+    #     p(agri_env_txt27)
+    #   )
+    # })
+  # }
+  # )
   
   
   
