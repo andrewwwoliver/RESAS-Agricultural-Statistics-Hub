@@ -82,7 +82,7 @@ bar_chart_area <- function(plot_data) {
 }
 
 bar_chart_holdings <- function(plot_data) {
-
+  
   hchart(plot_data, "column", 
          hcaes(
            x = main_farm_type, 
@@ -103,4 +103,49 @@ bar_chart_holdings <- function(plot_data) {
     hc_tooltip(
       pointFormat = "{point.y:,.1f}")
   
+}
+bar_chart_total_SO <- function(plot_data) {
+  
+  hchart(plot_data, "column", 
+         hcaes(
+           x = main_farm_type, 
+           y = `Total from Standard Outputs (£)`,), 
+         style = list(fontFamily = "Roboto"))%>%   
+    hc_yAxis( 
+      labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto"), 
+                    format = "{value:,.0f}"),
+      title = list(text = "Total standard output (£)",
+                   style = list(color = "#000000", fontSize = "20px", fontFamily = "Roboto"))) %>% 
+    hc_xAxis(
+      labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto")),
+      title = list(text = "", style = list(color = "#000000", fontSize = "20px", fontFamily = "Roboto")),
+      type = "category") %>% 
+    hc_legend(align = "left",
+              alignColums = FALSE,
+              layout = "horizontal") %>% 
+    hc_tooltip(
+      pointFormat = "{point.y:,.1f}")
+  
+}
+
+bar_chart_average_SO <- function(plot_data) {
+  hchart(plot_data, "column", 
+         hcaes(
+           x = main_farm_type, 
+           y = `Average standard outputs per holding  (£)`,), 
+         style = list(fontFamily = "Roboto"))%>%   
+    hc_yAxis( 
+      labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto"), 
+                    format = "{value:,.0f}"),
+      title = list(text = "Average standard output (£)",
+                   style = list(color = "#000000", fontSize = "20px", fontFamily = "Roboto"))) %>% 
+    hc_xAxis(
+      labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto")),
+      title = list(text = "", style = list(color = "#000000", fontSize = "20px", fontFamily = "Roboto")),
+      type = "category") %>% 
+    hc_legend(align = "left",
+              alignColums = FALSE,
+              layout = "horizontal") %>% 
+    hc_tooltip(
+      pointFormat = "{point.y:,.1f}")
 }
