@@ -357,7 +357,6 @@ server <- function(input, output, session, content) {
     output$sub_section_content <- NULL
   })
   
-  
   # # Function to update the currently displayed sub-section and tab
   # update_sub_section <- function(sub_section, tab) {
   #   current_sub_section(sub_section)
@@ -425,7 +424,13 @@ server <- function(input, output, session, content) {
         HTML("<div style='margin-top: 30px'>
                               Farm business level estimates of average incomes from commercial farms in Scotland are available in the 
                               <a href='https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/'
-                              target='_blank'>Scottish farm business income publication.</a></div>")
+                              target='_blank'>Scottish farm business income publication.</a></div>"),
+        br(),
+        br(),
+        actionLink("btn_home2", strong("Return to home page")),
+        br(),
+        br(),
+        br()
       )
     })
   })
@@ -556,8 +561,6 @@ server <- function(input, output, session, content) {
   #   fluidPage(
   #     HTML("<div style='margin-top: 60px; font-weight: bold;'>Content under development</a></div>"),
   
-  
-  
   observeEvent(input$btn_agri_env, {
     clear_main_content()
     clear_sub_section_content()
@@ -622,9 +625,6 @@ server <- function(input, output, session, content) {
         br(),
         br()
       )
-      
-      
-      
     })
   })
   
@@ -677,7 +677,7 @@ server <- function(input, output, session, content) {
             tabPanel("Summary",  h4("Most of Scotland's area is used for agriculture"),
                      div(
                        # img(src = "land_use_map.svg", width = "50%", align = "center")), #height = "40%"),
-                     img(src = "land_use_map_01.png", width = "50%", align = "center")), #height = "40%"),
+                       img(src = "land_use_map_01.png", width = "50%", align = "center")), #height = "40%"),
                      #text found in "data_sort.R" script. Taken from June Census 2023 publication 
                      p(land_use_summary_txt1),
                      p(land_use_summary_txt2),
@@ -690,7 +690,6 @@ server <- function(input, output, session, content) {
                      br(),
                      br()
             ),
-            
             tabPanel("Land use chart", h4("Explore agricultural land use results from the Agricultural Census in the interactive plot"),
                      p(land_use_plot_txt1),
                      p(land_use_plot_txt2),
@@ -1232,8 +1231,6 @@ observeEvent(input$btn_pigs, {
 
 
 # Agriculture and the environment sub section -----------------------------
-
-
 # observeEvent(input$btn_in_dev_env, {
 # output$sub_section_content <- renderUI({
 #   fluidPage(
@@ -1375,7 +1372,6 @@ observeEvent(input$btn_pigs, {
 #     )
 #   })
 # })
-
 
 # Fodd and drink sub sections ---------------------------------------------
 
