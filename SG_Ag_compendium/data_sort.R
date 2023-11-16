@@ -189,6 +189,7 @@ farm_types_summary_txt13 <- "other"
 
 
 
+
 #Agriculture and the environment
 # agri_env_txt1 <- "Estimates for the emissions of greenhouse gases by the agriculutral industry are available" 
 # agri_env_txt2 <- tags$a(href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2021/", target = "_blank", "through Scottish Greenhouse Gas Statistics")
