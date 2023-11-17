@@ -65,15 +65,15 @@ landing_ui <- fluidPage(
     class = "btn-row",
     column(
       width = 4,
-      actionButton("btn_agri_econ",
-                   img(src = "agri_econ.png", width = "100%"),
+      actionButton("btn_struct_agri",
+                   img(src = "structures.png", width = "100%"),
                    class = "btn btn-custom"
       )
     ),
     column(
       width = 4,
-      actionButton("btn_struct_agri",
-                   img(src = "structures.png", width = "100%"),
+      actionButton("btn_livestock",
+                   img(src = "livestock.png", width = "100%"),
                    class = "btn btn-custom"
       )
     ),
@@ -87,13 +87,7 @@ landing_ui <- fluidPage(
   ),
   fluidRow(
     class = "btn-row",
-    column(
-      width = 4,
-      actionButton("btn_livestock",
-                   img(src = "livestock.png", width = "100%"),
-                   class = "btn btn-custom"
-      )
-    ),
+
     column(
       width = 4,
       actionButton("btn_agri_env",
@@ -105,6 +99,13 @@ landing_ui <- fluidPage(
       width = 4,
       actionButton("btn_food_drink",
                    img(src = "food_drink.png", width = "100%"),
+                   class = "btn btn-custom"
+      )
+    ),
+    column(
+      width = 4,
+      actionButton("btn_agri_econ",
+                   img(src = "agri_econ.png", width = "100%"),
                    class = "btn btn-custom"
       )
     )
@@ -186,7 +187,7 @@ sub_section_ui <- function(sub_section_title) {
 }
 
 # Define UI for each section
-section_ui <- function(title, image, content, sections) {
+section_ui <- function(title, image, return_button, content, sections) {
   fluidPage(
     fluidRow(
       column(width = 2, align = "left", 
@@ -202,7 +203,11 @@ section_ui <- function(title, image, content, sections) {
       actionButton("btn_home", "Home", class = "btn btn-custom",
                    #Define style of Home button here
                    style="font-weight: bold; font-size: 20px"),
-      img(src = image, width = "100%"),
+      actionButton(return_button,
+                   img(src = image, width = "100%"),
+                   class = "btn btn-custom"
+      ),
+      # img(src = image, width = "100%"),
       if (title == "Crops") {
         list(
           div(
@@ -403,6 +408,7 @@ server <- function(input, output, session, content) {
       fluidPage(
         
         section_ui(
+          return_button = "btn_agri_econ",
           title = "Agriculture and the economy",
           image = "agri_econ.png"
           #below is commented out because it doesn't seem to have a working function! (Jackie)
@@ -414,17 +420,11 @@ server <- function(input, output, session, content) {
     })
     output$sub_section_content <- renderUI({
       fluidPage(
-        HTML("<div style='margin-top: 40px; font-weight: 
-                                 bold;'>Content under development</a></div>"),
-        HTML("<div style='margin-top: 30px'>
-                              Estimates for the net income gained by the agriculture industry in Scotland are available in the
-                              <a href='https://www.gov.scot/collections/total-income-from-farming/'
-                              target='_blank'>Total income from farming (TIFF) publication.</a></div>"),
-        
-        HTML("<div style='margin-top: 30px'>
-                              Farm business level estimates of average incomes from commercial farms in Scotland are available in the 
-                              <a href='https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/'
-                              target='_blank'>Scottish farm business income publication.</a></div>"),
+        p(strong("Content under development")),
+        p("Estimates for the net income gained by the agriculture industry in Scotland are available in the",
+          tags$a(href="https://www.gov.scot/collections/total-income-from-farming/", target='_blank', "Total income from farming (TIFF) publication.")),
+        p("Farm business level estimates of average incomes from commercial farms in Scotland are available in the",
+          tags$a(href="https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/", target='_blank', "Scottish farm business income publication.")),
         br(),
         br(),
         actionLink("btn_home2", strong("Return to home page")),
@@ -441,6 +441,7 @@ server <- function(input, output, session, content) {
     clear_sub_section_content()
     output$page <- renderUI({
       section_ui(
+        return_button = "btn_struct_agri",
         title = "Structure of Scottish agriculture",
         image = "structures.png"
         # below is commented out because it doesn't seem to have a working function! (Jackie)
@@ -451,9 +452,6 @@ server <- function(input, output, session, content) {
     })
     output$sub_section_content <- renderUI({
       fluidPage(
-        HTML("<div style='margin-top: 60px; font-weight: bold;'>Content under development</a></div>"),
-        br(),
-        br(),
         #text found in "data_sort.R" script.
         p(strong(struct_agri_txt1)),
         tags$ul(
@@ -461,9 +459,7 @@ server <- function(input, output, session, content) {
           tags$li(struct_agri_txt3),
           tags$li(struct_agri_txt4)
         ),
-        br(),
         p(struct_agri_txt5, struct_agri_txt6),
-        br(),
         p(struct_agri_txt7, struct_agri_txt8, struct_agri_txt9, struct_agri_txt10, struct_agri_txt11, struct_agri_txt12),
         br(),
         br(),
@@ -480,6 +476,7 @@ server <- function(input, output, session, content) {
     clear_sub_section_content()
     output$page <- renderUI({
       section_ui(
+        return_button = "btn_crops",
         title = "Crops",
         image = "crops.png"
         #below is commented out because it doesn't seem to have a working function! (Jackie)
@@ -490,22 +487,18 @@ server <- function(input, output, session, content) {
     })
     output$sub_section_content <- renderUI({
       fluidPage(
-        br(),
         p(strong("Use the links on the left to explore our data on:")),
         tags$ul(
           tags$li("Crop areas"),
           tags$li("Crop production")),
-        br(),
         p("More data on crop areas are available in the ",
           tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target = "_blank", "Scottish Agricultural Census: results.")),
-        br(),
         p("More data on crop production are available in the ",
           tags$a(href="https://www.gov.scot/collections/scottish-cereal-harvest-estimates/", target = "_blank", "Scottish cereal harvest: estimates"),
           ", ",
           tags$a(href="https://www.gov.scot/collections/total-income-from-farming/", target = "_blank", "Total income from farming"),
           "publications and ",
           tags$a(href="https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target = "_blank", "Scottish agriculture: economic reports.")),
-        br(),
         p("Financial performance of cropping farms is available through ",
           tags$a(href="https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/", target = "_blank", "Scottish farm business income estimates.")),
         p("Data on cereal and oilseed markets, including prices and estimates of supply, demand, imports and exports are published on the ",
@@ -525,6 +518,11 @@ server <- function(input, output, session, content) {
     clear_sub_section_content()
     output$page <- renderUI({
       section_ui(
+        # actionButton("btn_livestock",
+        #              img(src = "livestock.png", width = "100%"),
+        #              class = "btn btn-custom"
+        # ),
+        return_button = "btn_livestock",
         title = "Livestock",
         image = "livestock.png",
         #below is commented out because it doesn't seem to have a working function! (Jackie)
@@ -535,18 +533,32 @@ server <- function(input, output, session, content) {
     })
     output$sub_section_content <- renderUI({
       fluidPage(
-        br(),
-        p("Use the links on the left to explore our data on livestock numbers by sector."),
-        p("More data on livestock numbers are available in the "),
-          tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target="_blank", "Scottish Agricultural Census: results"),
+        p(strong("Use the links on the left to explore our data on livestock numbers by sector:")),
+        tags$ul(
+          tags$li("dairy"),
+          tags$li("beef"),
+          tags$li("sheep"),
+          tags$li("pigs")
+        ),
+        p(strong("Livestock results from the Agricultural Census")),
+        p(" Poultry continue to be the largest livestock numbers in Scotland at 11.7 million. Sheep, where there are 6.61 million, also contribute a large number to the total number of livestock. There are 1.68 million cattle in Scotland and contribute the most value to Scottish agriculture out of the different livestock catoegories. There are 343,600 pigs in Scotland ( as of the 1st of June 2023)."),
+        p("Compared to the previous five year average (2017 – 2021, data are not currently available for 2022):"),
+        tags$ul(
+          tags$li("cattle numbers decreasing by three per cent"),
+          tags$li("sheep numbers decreasing by two per cent"),
+          tags$li("poultry number is at 11.7 million (no comparison with previous years due to methodology changes)"),
+          tags$li("pig numbers increasing by five per cent.")
+        ),
+        p("More data on livestock numbers are available in the ",
+          tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target="_blank", "Scottish Agricultural Census: results.")),
         p("Data on output are available in ",
           tags$a(href="https://www.gov.scot/collections/total-income-from-farming/", target="_blank", "Total income from farming"),
           " and ",
-          tags$a(href="https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target="_blank", "Scottish agriculture: economic reports")),
-        p("Financial performance of livestock farms is available through ",
-          tags$a(href="https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/", target="_blank", "Scottish farm business income estimates")),
+          tags$a(href="https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target="_blank", "Scottish agriculture: economic reports.")),
+        p("Data on financial performance of livestock farms is available through ",
+          tags$a(href="https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/", target="_blank", "Scottish farm business income estimates.")),
         p("More data on livestock prices can be found on the ",
-          tags$a(href="https://ahdb.org.uk/markets-and-prices", target="_blank", "AHDB website")),
+          tags$a(href="https://ahdb.org.uk/markets-and-prices", target="_blank", "AHDB website.")),
         br(),
         br(),
         actionLink("btn_home2", strong("Return to home page")),
@@ -567,6 +579,7 @@ server <- function(input, output, session, content) {
     output$page <- renderUI({
       fluidPage(
         section_ui(
+          return_button = "btn_agri_env",
           title = "Agriculture and the environment",
           image = "agri_env.png",
           #below is commented out because it doesn't seem to have a working function! (Jackie)
@@ -578,36 +591,27 @@ server <- function(input, output, session, content) {
     )    
     output$sub_section_content <- renderUI({
       fluidPage(
-        HTML("<div style='margin-top: 60px; font-weight: bold;'>Content under development</a></div>"),
-        br(),
-        br(),
+        p(strong("Content under development")),
         #text found in "data_sort.R" script.
         p(strong(agri_env_txt100)),
         p(agri_env_txt101, agri_env_txt102),
-        br(),
         p(strong(agri_env_txt103)),
         p(agri_env_txt104, agri_env_txt105),
-        br(),
         p(strong(agri_env_txt106)),
         p(agri_env_txt5, agri_env_txt6),
-        br(),
         p(strong(agri_env_txt108)),
         p(agri_env_txt109, agri_env_txt110),
-        br(),
         p(strong(agri_env_txt7)),
         p(agri_env_txt8),
-        br(),
         p(strong(agri_env_txt9)),
         p(agri_env_txt10),
         p(agri_env_txt11),
         p(agri_env_txt12),
         p(agri_env_txt13),
-        br(),
         p(strong(agri_env_txt14)),
         p(agri_env_txt15),
         p(agri_env_txt16),
         p(agri_env_txt17),
-        br(),
         p(strong(agri_env_txt18)),
         p(agri_env_txt19),
         p(agri_env_txt20),
@@ -633,6 +637,7 @@ server <- function(input, output, session, content) {
       clear_main_content()
       clear_sub_section_content()
       section_ui(
+        return_button = "btn_food_drink",
         title = "Food and drink",
         image = "food_drink.png",
         #below is commented out because it doesn't seem to have a working function! (Jackie)
@@ -643,9 +648,8 @@ server <- function(input, output, session, content) {
     })
     output$sub_section_content <- renderUI({
       fluidPage(
-        br(),
         p(strong("Content under development")),
-        p(tags$a(href="https://www.gov.scot/policies/food-and-drink/", target="_blank", "Food and drink is very important to Scotland. It creates jobs and wealth, impacts on health and sustainability, and helps attract people to visit our country.")),
+        p(tags$a(href="https://www.gov.scot/policies/food-and-drink/", target="_blank", "Food and drink"), " is very important to Scotland. It creates jobs and wealth, impacts on health and sustainability, and helps attract people to visit our country."),
         p("The Scottish food and drink industry spans the activities of agriculture, fishing & aquaculture, food manufacturing and drink manufacturing. The food and drink manufacturing sector is important to Scotland’s manufacturing workforce and accounts for a significant proportion of manufacturing exports. The production of Scotch whisky and other spirit drinks is of particular importance to Scotland. The agriculture industry provides input to the Scottish food and drink industry and, together with the fishing sector, is a major supplier of raw materials to the UK industry."),
         p("Find out more about Scotland's food and drink sector in ",
           tags$a(href="https://www.gov.scot/publications/growth-sector-statistics/", target = "_blank", "Growth Sector Statistics")),
@@ -676,12 +680,12 @@ server <- function(input, output, session, content) {
           tabsetPanel(
             tabPanel("Summary",  h4("Most of Scotland's area is used for agriculture"),
                      div(
-                       # img(src = "land_use_map.svg", width = "50%", align = "center")), #height = "40%"),
-                       img(src = "land_use_map_01.png", width = "50%", align = "center")), #height = "40%"),
+                       img(src = "land_use_map.svg", width = "50%", align = "center")), #height = "40%"),
+                       # img(src = "land_use_map_01.png", width = "50%", align = "center")), #height = "40%"),
                      #text found in "data_sort.R" script. Taken from June Census 2023 publication 
                      p(land_use_summary_txt1),
                      p(land_use_summary_txt2),
-                     p(strong(land_use_summary_txt3, land_use_summary_txt4)),
+                     p(land_use_summary_txt3, land_use_summary_txt4),
                      p(land_use_summary_txt5, land_use_summary_txt6, land_use_summary_txt7),
                      br(),
                      br(),
@@ -752,11 +756,7 @@ server <- function(input, output, session, content) {
       fluidPage(
         tabsetPanel(
           tabPanel("Summary", h4("Farm types Summary Content"),
-                   HTML("<div style='margin-top: 20px; font-weight: 
-                                   bold;'>Content under development</a></div>"),
-                   br(),
                    p(farm_types_summary_txt1),
-                   br(),
                    p(farm_types_summary_txt2),
                    tags$ul(
                      tags$li(farm_types_summary_txt3, farm_types_summary_txt4),
@@ -778,9 +778,7 @@ server <- function(input, output, session, content) {
                    br()
           ),
           tabPanel("Plot", h4("Explore farm type results from the Agricultural Census in the interactive plot"),
-                   br(),
                    p("The interactive charts display results by farm type from the 2023 Agricultural Census."),
-                   br(),
                    p("You can choose which data to display by selecting a tab."),
                    #module UI
                    barplotUI("bar_plot_tab"),
@@ -1034,7 +1032,7 @@ server <- function(input, output, session, content) {
                      tags$li("the area of potatoes dropped by six per cent")
                    ),
                    p("More data on crop areas are available in the ",
-                     tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target="_blank", "Scottish Agricultural Census: results")),
+                     tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target="_blank", "Scottish Agricultural Census: results.")),
                    br(),
                    br(),
                    actionLink("btn_home2", strong("Return to home page")),
@@ -1071,10 +1069,8 @@ server <- function(input, output, session, content) {
           tabPanel("Summary",  h4("Crop production results from the Scottish cereal harvest estimates"),
                    p("Industry experts predict an average year for cereal production. Total cereal production is expected to be around 3.0 million tonnes, in line with the ten-year average. Find out more in the ",
                      tags$a(href="https://www.gov.scot/publications/cereal-oilseed-rape-harvest-2023-first-estimates/", target="_blank", "Cereal and oilseed rape harvest - first estimates: 2023")),
-                   br(),
                    p("Interactive plots of cereal and oilseed rape data can be found in the ",
                      tags$a(href="https://scotland.shinyapps.io/sg-cereal-oilseed-rape-harvest/", target="_blank", "Cereals Oilseed Rape Harvest Shiny App")),
-                   br(),
                    p("More data on crop production are available in the ",
                      tags$a(href="https://www.gov.scot/collections/scottish-cereal-harvest-estimates/", target = "_blank", "Scottish cereal harvest: estimates"),
                      ", ",
@@ -1134,17 +1130,28 @@ observeEvent(input$btn_dairy, {
   output$sub_section_content <- renderUI({
     fluidPage(
       tabsetPanel(
-        tabPanel("Summary",  h4("Dairy Summary Content"),
+        tabPanel("Summary",  h4("Dairy results from the Agricultural Census"),
                  #moduleUI
                  tableUI("sector_summary"),
                  #moduleserver
-                 tableServer("sector_summary", plot_data ))
-        ,
-        tabPanel("Plot", h4("Dairy Interactive Plots"),
+                 tableServer("sector_summary", plot_data ),
+                 br(),
+                 br(),
+                 br(),
+                 p("More data on livestock numbers are available in the ",
+                   tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target="_blank", "Scottish Agricultural Census: results.")),
+                 br(),
+                 br(),
+                 actionLink("btn_home2", strong("Return to home page")),
+                 br(),
+                 br(),
+                 br()
+                 ),
+        tabPanel("Plot", h4("Explore dairy livestock number results from the Agricultural Census in the interactive plot"),
                  #moduleUI
                  dlivestocklinechartUI("dairy_plot")
         ),
-        tabPanel("Data", h4("Dairy Data Tables"),
+        tabPanel("Data", h4("Dairy livestock number data table from the Agricultural Census"),
                  HTML("<div style='margin-top: 20px; font-weight: bold;'>Content under development</a></div>"))
       )
     )
@@ -1158,17 +1165,29 @@ observeEvent(input$btn_beef, {
   output$sub_section_content <- renderUI({
     fluidPage(
       tabsetPanel(
-        tabPanel("Summary",  h4("Beef Summary Content"),
+        tabPanel("Summary",  h4("Beef cow results from the Agricultural Census"),
                  #moduleui
                  tableUI("bsector_summary"),
                  #moduleserver
-                 tableServer("bsector_summary", plot_data)),
-        tabPanel("Plot", h4("Beef Interactive Plots"),
+                 tableServer("bsector_summary", plot_data),
+                 br(),
+                 br(),
+                 br(),
+                 p("More data on livestock numbers are available in the ",
+                   tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target="_blank", "Scottish Agricultural Census: results.")),
+                 br(),
+                 br(),
+                 actionLink("btn_home2", strong("Return to home page")),
+                 br(),
+                 br(),
+                 br()
+                 ),
+        tabPanel("Plot", h4("Explore beef livestock number results from the Agricultural Census in the interactive plot"),
                  #moduleUI
                  livestocklinechartUI("beef_plot")
                  
         ),
-        tabPanel("Data", h4("Beef Data Tables"),
+        tabPanel("Data", h4("Beef livestock number data table from the Agricultural Census"),
                  #moduleUI
                  #tableUI("beef_plot_table"))
         )
@@ -1192,15 +1211,27 @@ observeEvent(input$btn_sheep, {
   output$sub_section_content <- renderUI({
     fluidPage(
       tabsetPanel(
-        tabPanel("Summary",  h4("Sheep Summary Content"),
+        tabPanel("Summary",  h4("Sheep results from the Agricultural Census"),
                  #moduleui
                  tableUI("ssector_summary"),
                  #moduleserver
-                 tableServer("ssector_summary", plot_data)),
-        tabPanel("Plot", h4("Sheep Interactive Plots"),
+                 tableServer("ssector_summary", plot_data),
+                 br(),
+                 br(),
+                 br(),
+                 p("More data on livestock numbers are available in the ",
+                   tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target="_blank", "Scottish Agricultural Census: results.")),
+                 br(),
+                 br(),
+                 actionLink("btn_home2", strong("Return to home page")),
+                 br(),
+                 br(),
+                 br()
+                 ),
+        tabPanel("Plot", h4("Explore sheep livestock number results from the Agricultural Census in the interactive plot"),
                  HTML("<div style='margin-top: 20px; font-weight: 
                                bold;'>Content under development</a></div>")),
-        tabPanel("Data", h4("Sheep Data Tables"),
+        tabPanel("Data", h4("Sheep livestock number data table from the Agricultural Census"),
                  HTML("<div style='margin-top: 20px; font-weight: bold;'>Content under development</a></div>"))
       )
     )
