@@ -49,7 +49,7 @@ load("./Data/JAC_crops.RData")
 #crops <- crops %>% select(-item, -total_item)
 #farmtypes
 load("./Data/JAC_farm_types.RData")
-
+colnames(farm_types) <- c("Main farm type", "Holdings", "Area (ha)", "Total from Standard Outputs (£)", "Average standard outputs per holding (£)")
 
 #livestock-
 #cattle
@@ -145,12 +145,12 @@ struct_agri_txt4 <- "Labour"
 struct_agri_txt5 <- "More data on land use, crop areas, livestock, farm structure and the number of people working on agricultural holdings are available in the "
 struct_agri_txt6 <- tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target = "_blank", "Scottish Agricultural Census: results.")
 
-struct_agri_txt7 <- "Economic data about Scottish agriculture, including the value of production, costs and support payments are available through "
-struct_agri_txt8 <- tags$a(href="https://www.gov.scot/collections/total-income-from-farming/", target = "_blank", "Total income from farming")
-struct_agri_txt9 <- ", the "
+struct_agri_txt7 <- "Economic data about Scottish agriculture, including the value of production, costs and support payments are available through"
+struct_agri_txt8 <- tags$a(href="https://www.gov.scot/collections/total-income-from-farming/", target = "_blank", "Total income from farming,")
+struct_agri_txt9 <- " the "
 struct_agri_txt10 <- tags$a(href="https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target = "_blank", "Scottish agriculture: economic reports")
 struct_agri_txt11 <- "and "
-struct_agri_txt12 <- tags$a(href="https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/", target = "_blank", "Scottish farm business income estimates")
+struct_agri_txt12 <- tags$a(href="https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/", target = "_blank", "Scottish farm business income estimates.")
 
 #Summary tab
 land_use_summary_txt1 <- "This map shows the main farming types found in each area. Large areas of Scotland have hilly or rocky land suitable for livestock, but limited growing conditions. These areas are shown in light green on the map. The areas in black have better soil and can support crops usually grown for animal feed. Dark green areas can support vegetables, fruit and cereal farming for human consumption."
@@ -170,7 +170,7 @@ land_use_plot_txt3 <-"You can choose which time period to display data for by se
 land_use_data_txt1 <- "The data in the table below is displayed in the interactive chart. You can download a .csv file of this data by clicking on the \"Download the data\" link under the table."
 land_use_data_txt2 <- "Detailed tables for land use, crop areas, livestock and the number of people working on agricultural holdings are available in the"
 #link tot 2023 publication
-land_use_data_txt3 <- tags$a(href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/", target = "_blank", "Scottish Agricultural Census detailed tables")
+land_use_data_txt3 <- tags$a(href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/", target = "_blank", "Scottish Agricultural Census detailed tables.")
 
 #Farm types summary tab
 farm_types_summary_txt1 <- "Farms are classified into farm types based on the relative contribution of their farming activities. A farm is allocated to a farm type where at least two thirds of their Standard Output is associated with that activity. Standard Output is the estimated worth of crops and livestock."

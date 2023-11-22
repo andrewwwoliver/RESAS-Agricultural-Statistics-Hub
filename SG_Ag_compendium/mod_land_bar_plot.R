@@ -19,8 +19,6 @@ barplotUI <- function(id) {
                          highchartOutput(ns("average_SO_plot")))
     )
   )
-  
-  
 }
 
 barplotServer <- function(id, plot_data) {
@@ -54,7 +52,7 @@ barplotServer <- function(id, plot_data) {
 #for testing module
 bar_plot_demo <- function() {
 
-  plot_data <- farm_types %>% filter(main_farm_type != "All")
+  plot_data <- farm_types %>% filter(`Main farm type` != "All")
   ui <- fluidPage(barplotUI("x"))
   server <- function(input, output, session) {
     

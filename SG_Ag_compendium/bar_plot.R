@@ -61,8 +61,8 @@ bar_chart_area <- function(plot_data) {
  
   hchart(plot_data, "column", 
        hcaes(
-         x = main_farm_type, 
-         y = hectares,), 
+         x = `Main farm type`, 
+         y = `Area (ha)`,), 
        style = list(fontFamily = "Roboto"))%>%   
   hc_yAxis( 
     labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto"), 
@@ -85,8 +85,8 @@ bar_chart_holdings <- function(plot_data) {
   
   hchart(plot_data, "column", 
          hcaes(
-           x = main_farm_type, 
-           y = holdings,), 
+           x = `Main farm type`, 
+           y = Holdings,), 
          style = list(fontFamily = "Roboto"))%>%   
     hc_yAxis( 
       labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto"), 
@@ -108,7 +108,7 @@ bar_chart_total_SO <- function(plot_data) {
   
   hchart(plot_data, "column", 
          hcaes(
-           x = main_farm_type, 
+           x = `Main farm type`, 
            y = `Total from Standard Outputs (£)`,), 
          style = list(fontFamily = "Roboto"))%>%   
     hc_yAxis( 
@@ -131,8 +131,8 @@ bar_chart_total_SO <- function(plot_data) {
 bar_chart_average_SO <- function(plot_data) {
   hchart(plot_data, "column", 
          hcaes(
-           x = main_farm_type, 
-           y = `Average standard outputs per holding  (£)`,), 
+           x = `Main farm type`, 
+           y = `Average standard outputs per holding (£)`,), 
          style = list(fontFamily = "Roboto"))%>%   
     hc_yAxis( 
       labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto"), 
