@@ -23,6 +23,7 @@ source("mod_land_plot_content.R")
 source("bar_plot.R")
 source("mod_land_bar_plot.R")
 source("stacked_col.R")
+source("pop_plot.R")
 
 #crops section modules
 source("mod_tab_line_plot.R")
@@ -109,6 +110,13 @@ landing_ui <- fluidPage(
                    class = "btn btn-custom"
       )
     )
+  ),
+  #Add blurb explaining alpha status, with link to feedback survey
+  fluidRow(
+    br(),
+    br(),
+    br(),
+    column(width = 6, align = "left", h4("This compendium is still in development. If you have any comments or suggestions for improvements, please let us know by filling in the survey [link], or email us at", tags$a(href="mailto:agric.surveys@gov.scot", target='_blank', "agric.surveys@gov.scot."))),
   )
   
 )
@@ -494,8 +502,8 @@ server <- function(input, output, session, content) {
         p("More data on crop areas are available in the ",
           tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target = "_blank", "Scottish Agricultural Census: results.")),
         p("More data on crop production are available in the ",
-          tags$a(href="https://www.gov.scot/collections/scottish-cereal-harvest-estimates/", target = "_blank", "Scottish cereal harvest: estimates"),
-          ", ",
+          tags$a(href="https://www.gov.scot/collections/scottish-cereal-harvest-estimates/", target = "_blank", "Scottish cereal harvest: estimates,"),
+          # ", ",
           tags$a(href="https://www.gov.scot/collections/total-income-from-farming/", target = "_blank", "Total income from farming"),
           "publications and ",
           tags$a(href="https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target = "_blank", "Scottish agriculture: economic reports.")),
@@ -800,7 +808,7 @@ server <- function(input, output, session, content) {
     #module server and data
     plot_data_one <- reactive({
       farm_types %>% 
-        filter(main_farm_type != "All")})
+        filter(`Main farm type` != "All")})
     plot_data_two <- farm_types
     barplotServer("bar_plot_tab", plot_data_one)
     tableServer("farm_type_table", plot_data_two)
@@ -828,14 +836,19 @@ server <- function(input, output, session, content) {
           )
           # ,
           # tabPanel("Plot", h4("Labour Interactive Plots"),
-          #          HTML("<div style='margin-top: 20px; font-weight: 
-          #                      bold;'>Content under development</a></div>")),
+          #          HTML("<div style='margin-top: 20px; font-weight:
+          #                      bold;'>Content under development</a></div>"),
+          #          genderplotUI("gender_plot_tab"),),
           # tabPanel("Data", h4("Labour Data Tables"),
-          #          HTML("<div style='margin-top: 20px; font-weight: 
-          #               bold;'>Content under development</a></div>"))
+          #          tableUI("Gender_data_table"))
         )
       )
     })
+    plot_gender_data <- reactive({
+      Gender_data
+    })
+    genderServer("gender_plot_tab", plot_gender_data)
+    tableServer("Gender_data_table", select(Gender_data,-Occupier.working.time))
   })
   # 
   # 
@@ -1068,12 +1081,12 @@ server <- function(input, output, session, content) {
         tabsetPanel(
           tabPanel("Summary",  h4("Crop production results from the Scottish cereal harvest estimates"),
                    p("Industry experts predict an average year for cereal production. Total cereal production is expected to be around 3.0 million tonnes, in line with the ten-year average. Find out more in the ",
-                     tags$a(href="https://www.gov.scot/publications/cereal-oilseed-rape-harvest-2023-first-estimates/", target="_blank", "Cereal and oilseed rape harvest - first estimates: 2023")),
+                     tags$a(href="https://www.gov.scot/publications/cereal-oilseed-rape-harvest-2023-first-estimates/", target="_blank", "Cereal and oilseed rape harvest - first estimates: 2023.")),
                    p("Interactive plots of cereal and oilseed rape data can be found in the ",
-                     tags$a(href="https://scotland.shinyapps.io/sg-cereal-oilseed-rape-harvest/", target="_blank", "Cereals Oilseed Rape Harvest Shiny App")),
+                     tags$a(href="https://scotland.shinyapps.io/sg-cereal-oilseed-rape-harvest/", target="_blank", "Cereals Oilseed Rape Harvest Shiny App.")),
                    p("More data on crop production are available in the ",
-                     tags$a(href="https://www.gov.scot/collections/scottish-cereal-harvest-estimates/", target = "_blank", "Scottish cereal harvest: estimates"),
-                     ", ",
+                     tags$a(href="https://www.gov.scot/collections/scottish-cereal-harvest-estimates/", target = "_blank", "Scottish cereal harvest: estimates,"),
+                     # " ",
                      tags$a(href="https://www.gov.scot/collections/total-income-from-farming/", target = "_blank", "Total income from farming"),
                      "publications and ",
                      tags$a(href="https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target = "_blank", "Scottish agriculture: economic reports.")),
