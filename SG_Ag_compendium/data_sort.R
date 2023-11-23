@@ -46,6 +46,9 @@ land_use <- c("Total crops and grass",
 
 #crops and structures of Scottish agriculture 
 load("./Data/JAC_crops.RData")
+#Round crop areas to 0 decimal places
+crops <- crops %>%
+  mutate(Area=round(Area,0))
 #crops <- crops %>% select(-item, -total_item)
 #farmtypes
 load("./Data/JAC_farm_types.RData")
