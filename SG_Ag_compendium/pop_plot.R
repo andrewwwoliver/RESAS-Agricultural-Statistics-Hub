@@ -58,7 +58,8 @@ gender_chart <- function(plot_data) {
          hcaes(
            x = `Age group`, 
            y = ifelse(test = Gender == "Male",
-                      yes = -Number, no = Number)), 
+                      yes = -Number, no = Number),
+           color=Gender), 
          style = list(fontFamily = "Roboto"))%>%   
     hc_yAxis(
       labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto"),
@@ -71,9 +72,11 @@ gender_chart <- function(plot_data) {
       title = list(text = "Age group", style = list(color = "#000000", fontSize = "20px", fontFamily = "Roboto")),
       type = "category",
       reversed = FALSE) %>%
-    hc_legend(align = "left",
-              alignColums = FALSE,
-              layout = "horizontal") %>%
+    # hc_legend(
+    #   align = "left",
+    #           verticalAlign = "top",
+    #           alignColums = FALSE,
+    #           layout = "vertical") %>%
     hc_tooltip(
       formatter = htmlwidgets::JS("function() {return Math.abs(this.y);}")
     )
