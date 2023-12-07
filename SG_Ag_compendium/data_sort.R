@@ -227,8 +227,7 @@ agri_env_txt101 <- "Official estimates of greenhouse gas emissions are available
 agri_env_txt102 <-  tags$a(href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2021/", target = "_blank", "Scottish Greenhouse Gas Statistics 2021 publication")
 
 agri_env_txt103 <- "Scottish Nitrogen Balance Sheet"
-agri_env_txt104 <- "The "
-agri_env_txt105 <- tags$a(href="https://www.gov.scot/publications/scottish-nitrogen-balance-sheet-2020/", target = "_blank", "Scottish Nitrogen Balance Sheet 2020")
+agri_env_txt104 <- tags$a(href="https://www.gov.scot/publications/scottish-nitrogen-balance-sheet-2020/", target = "_blank", "The Scottish Nitrogen Balance Sheet 2020")
 agri_env_txt105 <- " brings together evidence on flows of nitrogen in Scotland to understand and keep track of the use of nitrogen." 
 
 agri_env_txt106 <- "Scottish Government resources and commissioned reports"

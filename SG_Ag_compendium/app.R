@@ -59,7 +59,7 @@ landing_ui <- fluidPage(
     # class = "btn btn-custom")),
     column(width = 8, align = "center", h1("Scottish Agricultural Statistics Hub")),
     column(width = 2, align = "right", tags$img(src = "sg.png", width = "100%")),
-    column(width = 12, align = "center", h4("Collection of all Scottish agriculture statistics produced by RESAS (Scottish Government)"))
+    column(width = 12, align = "center", h4("Under development: Collection of all Scottish agriculture statistics produced by RESAS (Scottish Government)"))
   ),
   
   fluidRow(
@@ -116,7 +116,7 @@ landing_ui <- fluidPage(
     br(),
     br(),
     br(),
-    column(width = 6, align = "left", h4("This compendium is still in development. If you have any comments or suggestions for improvements, please let us know by filling in the survey [link], or email us at", tags$a(href="mailto:agric.surveys@gov.scot", target='_blank', "agric.surveys@gov.scot."))),
+    column(width = 6, align = "left", h4("This collection is still in development. If you have any comments or suggestions for improvements, please let us know by filling in the survey [link], or email us at", tags$a(href="mailto:agric.surveys@gov.scot", target='_blank', "agric.surveys@gov.scot."))),
   )
   
 )
@@ -204,7 +204,7 @@ section_ui <- function(title, image, return_button, content, sections) {
       # class = "btn btn-custom")),
       column(width = 8, align = "center", h1("Scottish Agricultural Statistics Hub")),
       column(width = 2, align = "right", tags$img(src = "sg.png", width = "100%")),
-      column(width = 12, align = "center", h4("Collection of all Scottish agriculture statistics produced by RESAS (Scottish Government)"))
+      column(width = 12, align = "center", h4("Under development: Collection of all Scottish agriculture statistics produced by RESAS (Scottish Government)"))
     ),
     
     sidebarPanel(
@@ -827,6 +827,12 @@ server <- function(input, output, session, content) {
                      tags$li("male and female working occupiers are generally similar ages"),
                      tags$li("the total workforce on agricultural holdings remained stable in 2023 at around 67,000 people.")
                    ),
+                   p("More data about people working on agricultural holdings are available in the ", tags$a(href="https://www.gov.scot/collections/june-scottish-agricultural-census/", target="_blank", "Scottish Agricultural Census: results.")),
+                   p("Economic data about Scottish agriculture, including the value of agriculutural labour and farm incomes, are available through ",
+                     tags$a(href="https://www.gov.scot/collections/total-income-from-farming/", target = "_blank", "Total income from farming,"),
+                     tags$a(href="https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target = "_blank", "Scottish agriculture: economic reports"),
+                     "and ",
+                     tags$a(href="https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/", target='_blank', "Scottish farm business incomes publication.")),
                    br(),
                    br(),
                    actionLink("btn_home2", strong("Return to home page")),
@@ -834,13 +840,13 @@ server <- function(input, output, session, content) {
                    br(),
                    br()
           )
-          # ,
-          # tabPanel("Plot", h4("Labour Interactive Plots"),
-          #          HTML("<div style='margin-top: 20px; font-weight:
-          #                      bold;'>Content under development</a></div>"),
-          #          genderplotUI("gender_plot_tab"),),
-          # tabPanel("Data", h4("Labour Data Tables"),
-          #          tableUI("Gender_data_table"))
+          ,
+          tabPanel("Plot", h4("Labour Interactive Plots"),
+                   HTML("<div style='margin-top: 20px; font-weight:
+                               bold;'>Content under development</a></div>"),
+                   genderplotUI("gender_plot_tab"),),
+          tabPanel("Data", h4("Labour Data Tables"),
+                   tableUI("Gender_data_table"))
         )
       )
     })
@@ -1082,6 +1088,7 @@ server <- function(input, output, session, content) {
           tabPanel("Summary",  h4("Crop production results from the Scottish cereal harvest estimates"),
                    p("Industry experts predict an average year for cereal production. Total cereal production is expected to be around 3.0 million tonnes, in line with the ten-year average. Find out more in the ",
                      tags$a(href="https://www.gov.scot/publications/cereal-oilseed-rape-harvest-2023-first-estimates/", target="_blank", "Cereal and oilseed rape harvest - first estimates: 2023.")),
+                   p("Final estimates of the 2023 cereal harvest will be available on 14th December. These are based on data gathered from a sample of farms across Scotland."),
                    p("Interactive plots of cereal and oilseed rape data can be found in the ",
                      tags$a(href="https://scotland.shinyapps.io/sg-cereal-oilseed-rape-harvest/", target="_blank", "Cereals Oilseed Rape Harvest Shiny App.")),
                    p("More data on crop production are available in the ",
@@ -1612,3 +1619,5 @@ output$page <- renderUI({
 
 # Run the application
 shinyApp(ui, server)
+
+# rsconnect::deployApp()
