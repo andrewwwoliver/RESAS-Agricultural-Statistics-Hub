@@ -50,20 +50,20 @@ thm <- hc_theme(
 )
 
 
-crops <- read_xlsx("~/R/JAC_compendium/SG_Ag_compendium/crops.xlsx")
-
-#shape data
-crops <- crops %>% select(-`5_year_av`) %>%  pivot_longer(., cols = !Crop,
-                      names_to = "Year",
-                      values_to = "Area"
-                      )
-crops$Crop <- as.factor(crops$Crop)
-levels(crops$Crop)
-
-crops$Year <- as.integer(crops$Year)
+# crops <- read_xlsx("~/R/JAC_compendium/SG_Ag_compendium/crops.xlsx")
+# 
+# #shape data
+# crops <- crops %>% select(-`5_year_av`) %>%  pivot_longer(., cols = !Crop,
+#                       names_to = "Year",
+#                       values_to = "Area"
+#                       )
+# crops$Crop <- as.factor(crops$Crop)
+# levels(crops$Crop)
+# 
+# crops$Year <- as.integer(crops$Year)
 
 #export
-save(crops, file = "C:/Users/z620777/OneDrive - SCOTS Connect/R/JAC_compendium/SG_Ag_compendium/JAC_crops.RData")
+#save(crops, file = "C:/Users/z620777/OneDrive - SCOTS Connect/R/JAC_compendium/SG_Ag_compendium/JAC_crops.RData")
 
 
 
