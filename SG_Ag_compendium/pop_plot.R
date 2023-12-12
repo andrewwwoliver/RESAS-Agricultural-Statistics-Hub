@@ -54,13 +54,14 @@ genderServer <- function(id, plot_data) {
 
 #Highcharter version
 gender_chart <- function(plot_data) {
-  hchart(filter(plot_data, `Age group` != "Total"), "bar", 
+  plot_data <- Gender_data
+  hchart(filter(plot_data, `Age group` != "Total"), "bar", stacking = "normal",
          hcaes(
            x = `Age group`, 
            y = ifelse(test = Gender == "Male",
-                      yes = -Number, no = Number),
-           color=Gender), 
-         style = list(fontFamily = "Roboto"))%>%   
+                      yes = Number, no = -Number),
+           group=Gender), 
+         style = list(fontFamily = "Roboto"))%>%
     hc_yAxis(
       labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto"),
                     format = "{value:,.0f}",
@@ -72,11 +73,15 @@ gender_chart <- function(plot_data) {
       title = list(text = "Age group", style = list(color = "#000000", fontSize = "20px", fontFamily = "Roboto")),
       type = "category",
       reversed = FALSE) %>%
-    # hc_legend(
-    #   align = "left",
-    #           verticalAlign = "top",
-    #           alignColums = FALSE,
-    #           layout = "vertical") %>%
+    hc_legend(
+      align = "center",
+              verticalAlign = "bottom",
+              alignColumns = T,
+              layout = "horizontal") %>%
+    # hc_title(text = "Male", align = "center", x = -0, y = 20, margin = 0,
+    #          style = list(fontSize = "20px", color = "#0d233a")) %>%
+    # hc_subtitle(text = "Female", align = "center", y = 20, margin = 0,
+    #             x = 250, style = list(fontSize = "20px", color = "#2f7ed8")) %>% 
     hc_tooltip(
       formatter = htmlwidgets::JS("function() {return Math.abs(this.y);}")
     )

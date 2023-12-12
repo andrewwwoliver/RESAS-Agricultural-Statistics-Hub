@@ -853,8 +853,11 @@ server <- function(input, output, session, content) {
     plot_gender_data <- reactive({
       Gender_data
     })
+    Gender_table <- Gender_data %>% 
+      select(-Occupier.working.time) %>% 
+      pivot_wider(names_from = Gender, values_from = Number)
     genderServer("gender_plot_tab", plot_gender_data)
-    tableServer("Gender_data_table", select(Gender_data,-Occupier.working.time))
+    tableServer("Gender_data_table", Gender_table)
   })
   # 
   # 
@@ -1173,10 +1176,14 @@ observeEvent(input$btn_dairy, {
         ),
         tabPanel("Data", h4("Dairy livestock number data table from the Agricultural Census"),
                  HTML("<div style='margin-top: 20px; font-weight: bold;'>Content under development</a></div>"))
+
       )
     )
   })
   dlivestocklinechartServer("dairy_plot") 
+  #module server
+  lineselectServer("crop_plot", plot_data_one, plot_data_two)
+
   
 })
 
