@@ -332,7 +332,7 @@ section_ui <- function(title, image, return_button, content, sections) {
 # Dynamic UI content will be rendered here
 # MAIN PAGE- WHAT YOU SEE WHEN YOU CLICK EACH BUTTON
 ui <- fluidPage(
-  
+  tags$head(includeHTML(("google-analytics.html"))),
   uiOutput("page"),
   
 )
