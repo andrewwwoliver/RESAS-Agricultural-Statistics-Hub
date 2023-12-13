@@ -116,7 +116,7 @@ landing_ui <- fluidPage(
     br(),
     br(),
     br(),
-    column(width = 6, align = "left", h4("This collection is still in development. If you have any comments or suggestions for improvements, please let us know by filling in our ", tags$a(href="https://forms.office.com/e/Y9Eixgf4c1?origin=lprLink", "feedback survey,"),  "or email us at", tags$a(href="mailto:agric.surveys@gov.scot", target='_blank', "agric.surveys@gov.scot."))),
+    column(width = 6, align = "left", h4("This collection is still in development. If you have any comments or suggestions for improvements, please let us know by filling in our ", tags$a(href="https://forms.office.com/e/Y9Eixgf4c1?origin=lprLink", "feedback survey,"),  "or email us at", tags$a(href="mailto:agricsurveys@gov.scot", target='_blank', "agric.surveys@gov.scot."))),
   )
   
 )
