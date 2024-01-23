@@ -67,7 +67,7 @@ line_chart_livestock <- function(plot_data) {
   hc_yAxis( 
     labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto"), 
                   format = "{value:,.0f}"),
-    title = list(text = "Hectares",
+    title = list(text = "Number of livestock",
                  style = list(color = "#000000", fontSize = "20px", fontFamily = "Roboto"))) %>% 
   hc_xAxis(
     labels = list(style = list(color =  "#000000", fontSize = "20px", fontFamily = "Roboto")),
