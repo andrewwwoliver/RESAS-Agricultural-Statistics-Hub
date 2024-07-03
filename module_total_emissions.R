@@ -1,0 +1,138 @@
+# module_total_emissions.R
+
+totalEmissionsUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    sidebarLayout(
+      sidebarPanel(
+        width = 3,
+        uiOutput(ns("variable_select")),
+        actionButton(ns("select_all_button"), "Select All"),
+        actionButton(ns("deselect_all_button"), "Deselect All"),
+        sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
+      ),
+      mainPanel(
+        id = ns("mainpanel"),
+        width = 9,
+        tabsetPanel(
+          id = ns("tabs"),
+          tabPanel("Summary Page",
+                   value = ns("summary"),
+                   fluidRow(
+                     column(width = 4, sliderInput(ns("summary_current_year"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1)),
+                     column(width = 4, sliderInput(ns("summary_comparison_year"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1)),
+                     column(width = 4,
+                            div(
+                              style = "margin-top: 25px; text-align: center; border: 4px solid #e3e3e3",
+                              h5("Adjust the sliders to compare data from different years.", style = "padding: 0px; font-weight: bold;")
+                            )
+                     )
+                   ),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Top 3 Categories:"))
+                   ),
+                   generate_top_industries("total"),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
+                   ),
+                   generate_summary_bottom_row("total", "Total Emissions")
+          ),
+          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
+          tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
+          tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
+          tabPanel("Data Table",
+                   DTOutput(ns("data_table")),
+                   downloadButton(ns("downloadData"), "Download Data"),
+                   value = ns("data"))
+        )
+      )
+    )
+  )
+}
+
+totalEmissionsServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    chart_data <- reactive({
+      data <- national_total
+      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
+      if (!is.null(input$variables)) {
+        data <- data %>%
+          filter(Industry %in% input$variables)
+      }
+      data
+    })
+    
+    output$variable_select <- renderUI({
+      choices <- unique(national_total$Industry)
+      selected <- if (is.null(input$variables)) choices else input$variables
+      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
+    })
+    
+    observeEvent(input$select_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = unique(national_total$Industry))
+    })
+    
+    observeEvent(input$deselect_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+    })
+    
+    areaChartServer(
+      id = "area",
+      chart_data = chart_data,
+      group_column = "Industry",
+      title = "National Greenhouse Gas Emissions by Source in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    timelapseBarChartServer(
+      id = "bar",
+      chart_data = chart_data,
+      group_column = "Industry",
+      title = "National Greenhouse Gas Emissions Timelapse",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    lineChartServer(
+      id = "line",
+      chart_data = chart_data,
+      group_column = "Industry",
+      title = "National Greenhouse Gas Emissions by Source in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    render_data_table(
+      id = "data_table",
+      chart_data = chart_data
+    )
+    
+    handle_data_download(
+      id = "downloadData",
+      chart_data = chart_data,
+      filename_prefix = "National_GHG_Emissions"
+    )
+    
+    # Summary Module
+    current_year <- reactive({ input$summary_current_year })
+    comparison_year <- reactive({ input$summary_comparison_year })
+    
+    valueBoxServer(ns("totalIndustry1"), chart_data, "Industry", get_industry(1, chart_data, current_year, "Industry"), current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry2"), chart_data, "Industry", get_industry(2, chart_data, current_year, "Industry"), current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry3"), chart_data, "Industry", get_industry(3, chart_data, current_year, "Industry"), current_year, comparison_year)
+    valueBoxServer(ns("totalValue"), chart_data, "Industry", reactive("Total"), current_year, comparison_year)
+    
+    summaryBarChartServer(ns("industryBarChart"), chart_data, current_year, comparison_year, "Industry")
+  })
+}
