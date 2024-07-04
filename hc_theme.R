@@ -98,7 +98,7 @@ thm <- hc_theme(
       )
     )
   ),
-  colors = c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
+  colors = c("#ca72a2", "#592c20", "#5d9f3c", "#0b4c0b", "#e5682a", "#6a2063", "#2b9c93", "#002d54")
 )
 
 # Apply the Highcharts theme globally

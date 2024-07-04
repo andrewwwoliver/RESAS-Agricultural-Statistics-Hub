@@ -5,17 +5,18 @@ code_files <- c(
   "hc_theme.R",
   "module_area_chart.R",
   "module_timelapse_bar_chart.R",
-  "module_chart_functions.R",
-  "module_data_functions.R",
   "module_data_table.R",
   "module_information.R",
   "module_line_chart.R",
   "module_summary.R",
   "options.R",
-  "panels.R",
   "server.R",
   "ui.R",
-  "www/styles.css"
+  "www/styles.css",
+  "module_subsector_emissions.R",
+  "module_total_emissions.R",
+  "module_gas_emissions.R"
+  
 )
 
 # Function to read and concatenate the contents of the files

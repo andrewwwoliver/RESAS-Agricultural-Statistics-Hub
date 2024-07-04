@@ -2,13 +2,10 @@
  #app.R
 
 # Source other elements
-source("panels.R")
 source("module_line_chart.R")
 source("module_area_chart.R")
 source("module_data_table.R")
 source("options.R")
-source("module_data_functions.R")
-source("module_chart_functions.R")
 source("module_summary.R")
 
 # Source the UI and server components
@@ -155,7 +152,7 @@ thm <- hc_theme(
       )
     )
   ),
-  colors = c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
+  colors = c("#ca72a2", "#592c20", "#5d9f3c", "#0b4c0b", "#e5682a", "#6a2063", "#2b9c93", "#002d54")
 )
 
 # Apply the Highcharts theme globally
@@ -222,142 +219,190 @@ areaChartServer <- function(id, chart_data, group_column, title, yAxisTitle, xAx
   })
 }
 
-## File: module_bar_chart.R 
- 
+## File: module_timelapse_bar_chart.R 
+ # module_timelapse_bar_chart.R
 
-## File: module_chart_functions.R 
- #module_chart_functions.R
-
-# Function to render line charts
-render_line_chart <- function(chart_id, chart_data, chart_type, input, output) {
-  column_name <- reactive({ names(chart_data())[1] })
-  
-  title <- reactive({
-    switch(chart_type,
-           "Total Emissions" = "National Greenhouse Gas Emissions by Source in Scotland",
-           "Subsector Emissions" = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
-           "Gas Emissions" = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland"
+timelapseBarChartUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    tags$style(HTML("
+      .chart-container {
+        position: relative;
+      }
+      .chart-controls {
+        display: flex;
+        align-items: center;
+      }
+      .chart-controls .form-group {
+        margin-bottom: 0;
+        margin-left: 10px;
+      }
+      .chart-controls .btn {
+        margin-left: 10px;
+      }
+      .year-label {
+        margin-right: 10px;
+        font-weight: bold;
+      }
+    ")),
+    div(class = "chart-container",
+        fluidRow(
+          column(8, htmlOutput(ns("title"))),
+          column(4, div(class = "chart-controls",
+                        div(class = "year-label", "Year:"),
+                        sliderInput(ns("year"), NULL, min = 1998, max = 2022, value = 1998, step = 1, sep = "", ticks = TRUE, animate = animationOptions(interval = 1000, loop = FALSE), width = '200px'),
+                        actionButton(ns("playPause"), "", icon = icon("play"), class = "btn btn-primary")
+          ))
+        ),
+        highchartOutput(ns("chart"), height = "500px")
+    ),
+    htmlOutput(ns("footer")),
+    div(
+      class = "note",
+      style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+      HTML(
+        "<strong>Note:</strong><ul>
+          <li>Press the play button at the top right of the screen to see the timelapse of the data. You can manually adjust the year by adjusting the slider.</li>
+          <li>To remove a series from the chart, deselect the variable from the sidebar menu.</li>
+          <li>You can see data values for a specific year by hovering your mouse over the line.</li>
+        </ul>"
+      )
     )
-  })
-  
-  yAxisTitle <- reactive({
-    switch(chart_type,
-           "Total Emissions" = "Emissions (MtCO₂e)",
-           "Subsector Emissions" = "Emissions (MtCO₂e)",
-           "Gas Emissions" = "Emissions (MtCO₂e)")
-  })
-  
-  footer_text <- reactive({
-    switch(chart_type,
-           "Total Emissions" = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
-           "Subsector Emissions" = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-           "Gas Emissions" = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>')
-  })
-  
-  lineChartServer(chart_id, chart_data, column_name, title, yAxisTitle, footer_text)
+  )
 }
 
-# Function to render area charts
-render_area_chart <- function(chart_id, chart_data, chart_type, input, output) {
-  column_name <- reactive({ names(chart_data())[1] })
-  
-  title <- reactive({
-    switch(chart_type,
-           "Total Emissions" = "National Greenhouse Gas Emissions by Source in Scotland",
-           "Subsector Emissions" = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
-           "Gas Emissions" = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland"
-    )
-  })
-  
-  yAxisTitle <- reactive({
-    switch(chart_type,
-           "Total Emissions" = "Emissions (MtCO₂e)",
-           "Subsector Emissions" = "Emissions (MtCO₂e)",
-           "Gas Emissions" = "Emissions (MtCO₂e)")
-  })
-  
-  footer_text <- reactive({
-    switch(chart_type,
-           "Total Emissions" = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
-           "Subsector Emissions" = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-           "Gas Emissions" = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>')
-  })
-  
-  areaChartServer(chart_id, chart_data, column_name, title, yAxisTitle, footer_text)
-}
-
-# Function to render bar charts
-render_bar_chart <- function(chart_id, chart_data, chart_type, input, output) {
-  column_name <- reactive({ names(chart_data())[1] })
-  
-  title <- reactive({
-    switch(chart_type,
-           "Total Emissions" = "National Greenhouse Gas Emissions Timelapse",
-           "Subsector Emissions" = "Agricultural Greenhouse Gas Emissions Timelapse",
-           "Gas Emissions" = "Agricultural Greenhouse Gas Emissions Breakdown Timelapse"
-    )
-  })
-  
-  yAxisTitle <- reactive({
-    switch(chart_type,
-           "Total Emissions" = "Emissions (MtCO₂e)",
-           "Subsector Emissions" = "Emissions (MtCO₂e)",
-           "Gas Emissions" = "Emissions (MtCO₂e)")
-  })
-  
-  footer_text <- reactive({
-    switch(chart_type,
-           "Total Emissions" = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
-           "Subsector Emissions" = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-           "Gas Emissions" = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>')
-  })
-  
-  barChartServer(chart_id, chart_data, column_name, title, yAxisTitle, footer_text)
-}
-
-## File: module_data_functions.R 
- #module_data_functions.R
-
-# Function to get data based on the chart type
-get_variables <- function(chart_type) {
-  switch(chart_type,
-         "Total Emissions" = national_total,
-         "Subsector Emissions" = subsector_total,
-         "Gas Emissions" = agri_gas)
-}
-
-# Function to create reactive chart data based on user inputs
-create_chart_data <- function(chart_type, year_input, variables_input, input) {
-  data <- get_variables(chart_type)
-  first_col_name <- names(data)[1]
-  data %>% filter(Year >= min(input[[year_input]]) & Year <= max(input[[year_input]])) %>%
-    filter(!!sym(first_col_name) %in% input[[variables_input]])
-}
-
-# Preset list of colors
-preset_colors <- c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
-
-# Function to assign colors to variables
-assign_colors <- function(data, colors) {
-  first_col_name <- names(data)[1]
-  variables <- unique(data[[first_col_name]])
-  setNames(colors[1:length(variables)], variables)
-}
-
-# Function to handle variable select and button events
-handle_variable_select_and_buttons <- function(id_prefix, variables, input, output, session) {
-  selected_variables <- reactive({ vars <- variables(); vars[vars != "Total"] })
-  
-  output[[paste0("variable_select_", id_prefix)]] <- renderUI({
-    checkboxGroupInput(paste0("variables_", id_prefix), "Choose variables to add to chart", choices = variables(), selected = selected_variables())
-  })
-  
-  observeEvent(input[[paste0("select_all_button_", id_prefix)]], {
-    updateCheckboxGroupInput(session, paste0("variables_", id_prefix), selected = variables())
-  })
-  
-  observeEvent(input[[paste0("deselect_all_button_", id_prefix)]], {
-    updateCheckboxGroupInput(session, paste0("variables_", id_prefix), selected = character(0))
+timelapseBarChartServer <- function(id, chart_data, group_column, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    max_value <- reactive({
+      all_data <- chart_data()
+      if (is.null(all_data) || nrow(all_data) == 0) return(0)
+      max_val <- max(all_data[[y_col]], na.rm = TRUE)
+      return(max_val)
+    })
+    
+    getData <- function(year, nbr) {
+      data <- chart_data()
+      if (is.null(data) || nrow(data) == 0) return(data.frame())
+      data %>%
+        filter(!!sym(x_col) == year) %>%
+        arrange(desc(!!sym(y_col))) %>%
+        slice(1:nbr) %>%
+        mutate(!!sym(y_col) := as.numeric(!!sym(y_col)))
+    }
+    
+    getSubtitle <- function(year, data) {
+      if (nrow(data) == 0) return("")
+      total_value <- sum(data[[y_col]], na.rm = TRUE)
+      paste0("<span style='font-size: 80px'>", year, "</span><br><span style='font-size: 22px'>Total: <b>", round(total_value, 2), "</b> MtCO₂e</span>")
+    }
+    
+    getDataList <- function(data, colors) {
+      if (nrow(data) == 0) return(list())
+      first_col_name <- names(data)[1]
+      lapply(1:nrow(data), function(i) {
+        list(
+          name = data[[first_col_name]][i],
+          y = data[[y_col]][i],
+          color = colors[[data[[first_col_name]][i]]]
+        )
+      })
+    }
+    
+    current_year <- reactiveVal(1998)
+    nbr <- 20
+    
+    current_data <- reactive({
+      getData(current_year(), nbr)
+    })
+    
+    current_subtitle <- reactive({
+      getSubtitle(current_year(), current_data())
+    })
+    
+    current_colors <- reactive({
+      assign_colors(chart_data(), preset_colors)
+    })
+    
+    current_data_list <- reactive({
+      getDataList(current_data(), current_colors())
+    })
+    
+    updateYear <- function() {
+      year <- current_year()
+      if (year < 2022) {
+        current_year(year + 1)
+      } else {
+        current_year(1998)
+        session$sendCustomMessage(type = 'resetPlayButton', message = NULL)
+      }
+    }
+    
+    observe({
+      if (!is.null(input$playPause) && input$playPause %% 2 == 1) {
+        isolate({
+          updateYear()
+        })
+        invalidateLater(1000, session)
+      }
+    })
+    
+    observe({
+      updateSliderInput(session, "year", value = current_year())
+    })
+    
+    output$title <- renderUI({
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
+    })
+    
+    output$footer <- renderUI({
+      HTML(footer)
+    })
+    
+    output$chart <- renderHighchart({
+      data <- current_data()
+      if (nrow(data) == 0) return(NULL)
+      first_col_name <- names(data)[1]
+      highchart() %>%
+        hc_chart(type = "bar", zoomType = "xy", animation = list(duration = 1000)) %>%
+        hc_xAxis(type = "category", categories = data[[first_col_name]]) %>%
+        hc_yAxis(opposite = TRUE, tickPixelInterval = 150, title = list(text = yAxisTitle), max = max_value() + 1) %>%
+        hc_plotOptions(series = list(
+          animation = FALSE,
+          groupPadding = 0,
+          pointPadding = 0.1,
+          borderWidth = 0,
+          colorByPoint = FALSE,
+          dataSorting = list(enabled = TRUE, matchByName = TRUE),
+          dataLabels = list(enabled = TRUE, format = '{point.y:.2f}')
+        )) %>%
+        hc_series(list(
+          name = as.character(current_year()),
+          data = current_data_list()
+        )) %>%
+        hc_legend(enabled = FALSE) %>%
+        hc_responsive(rules = list(
+          list(
+            condition = list(maxWidth = 550),
+            chartOptions = list(
+              xAxis = list(visible = FALSE),
+              plotOptions = list(
+                series = list(
+                  dataLabels = list(
+                    list(enabled = TRUE, y = 8),
+                    list(enabled = TRUE, format = '{point.name}', y = -8, style = list(fontWeight = 'normal', opacity = 0.7))
+                  )
+                )
+              )
+            )
+          )
+        ))
+    })
+    
+    observeEvent(input$year, {
+      current_year(input$year)
+    })
   })
 }
 
@@ -503,228 +548,6 @@ lineChartServer <- function(id, chart_data, group_column, title, yAxisTitle, xAx
   })
 }
 
-## File: module_summary.R 
- # module_summary.R
-
-library(shiny)
-library(shinydashboard)
-library(ggplot2)
-library(dplyr)
-library(highcharter)
-
-generate_top_industries <- function(id_prefix) {
-  ns <- NS(id_prefix)
-  fluidRow(
-    column(width = 4, valueBoxUI(ns("totalIndustry1")), style = "padding-right: 0; padding-left: 0;"),
-    column(width = 4, valueBoxUI(ns("totalIndustry2")), style = "padding-right: 0; padding-left: 0;"),
-    column(width = 4, valueBoxUI(ns("totalIndustry3")), style = "padding-right: 0; padding-left: 0;")
-  )
-}
-
-generate_summary_bottom_row <- function(id_prefix, chart_type) {
-  ns <- NS(id_prefix)
-  tagList(
-    fluidRow(
-      column(width = 4, 
-             valueBoxUI(ns("totalValue")), 
-             style = "padding-right: 0; padding-left: 0;"
-      ),
-      column(width = 4,
-             if (chart_type == "Total Emissions") {
-               chartUI(ns("industryLineChart"), "Industry Emissions Over Time")
-             } else {
-               chartUI(ns("industryPieChart"), "Category Breakdown")
-             },
-             style = "padding-right: 0; padding-left: 0;"
-      ),
-      column(width = 4, 
-             chartUI(ns("industryBarChart"), "Emissions by Category"), 
-             style = "padding-right: 0; padding-left: 0;"
-      )
-    )
-  )
-}
-
-small_line_plot <- function(data, color) {
-  ggplot(data, aes(x = Year, y = Value)) +
-    geom_line(color = "#002d54") +
-    theme_void() +
-    theme(plot.background = element_rect(fill = "transparent", color = NA))
-}
-
-create_yoy_arrow <- function(change) {
-  if (is.na(change) || is.nan(change)) {
-    icon("minus", style = "color: grey;")
-  } else if (change > 0) {
-    icon("arrow-up", style = "color: #2b9c93;")
-  } else {
-    icon("arrow-down", style = "color: #002d54;")
-  }
-}
-
-valueBoxUI <- function(id) {
-  ns <- NS(id)
-  uiOutput(ns("valueBox"))
-}
-
-valueBoxServer <- function(id, data, category, industry, current_year, comparison_year) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    reactive_data <- reactive({ data() %>% filter(!!sym(category) == !!industry(), Year %in% c(current_year(), comparison_year())) })
-    
-    output$valueBox <- renderUI({
-      data_filtered <- reactive_data()
-      current_value <- data_filtered %>% filter(Year == current_year()) %>% summarise(Value = sum(Value, na.rm = TRUE)) %>% pull(Value)
-      comparison_value <- data_filtered %>% filter(Year == comparison_year()) %>% summarise(Value = sum(Value, na.rm = TRUE)) %>% pull(Value)
-      yoy_change <- if (comparison_value == 0 || is.na(comparison_value)) NA else ((current_value - comparison_value) / comparison_value) * 100
-      
-      box(
-        class = "value-box",
-        title = NULL,
-        width = 12,
-        solidHeader = TRUE,
-        div(
-          style = "display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 5px;", # Adjusted padding
-          div(
-            style = "flex: 1; margin-bottom: 5px;", # Reduced margin-bottom
-            h5(class = "value-box-title", industry()),
-            div(
-              style = "display: flex; align-items: baseline; margin-bottom: 5px;", # Adjusted margin-bottom
-              h3(sprintf("%.2f", current_value), style = "margin: 0;"), # Removed margin
-              span("MtCO₂e", class = "value-box-units")
-            ),
-            div(
-              style = "display: flex; align-items: center; margin-bottom: -10px;", # Negative margin to move closer
-              create_yoy_arrow(yoy_change),
-              span(class = "value-box-yoy", ifelse(is.na(yoy_change), "NA", sprintf("%.2f%%", yoy_change)), style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
-            )
-          ),
-          div(
-            style = "margin-top: -30px;", # Apply the margin here to move the sparkline up
-            plotOutput(ns("sparkline"), height = "30px", width = "100%")
-          )
-        )
-      )
-    })
-    
-    output$sparkline <- renderPlot({
-      small_line_plot(data() %>% filter(!!sym(category) == !!industry()), "#28a745")
-    })
-  })
-}
-
-chartUI <- function(id, title) {
-  ns <- NS(id)
-  box(
-    title = span(class = "box-title", title),
-    width = 12,
-    solidHeader = TRUE,
-    div(class = "box-content", highchartOutput(ns("chartOutput"), height = "300px"))
-  )
-}
-
-summaryLineChartServer <- function(id, data) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$chartOutput <- renderHighchart({
-      summary_line_data <- data()
-      variable_col <- names(summary_line_data)[1]  # Get the first column name, which is the variable name
-      
-      series_list <- lapply(unique(summary_line_data[[variable_col]]), function(variable) {
-        df <- summary_line_data %>% filter(!!sym(variable_col) == variable)
-        list(
-          name = variable,
-          data = df %>% select(Year, Value) %>% list_parse2()
-        )
-      })
-      
-      highchart() %>%
-        hc_chart(type = "line", zoomType = "xy") %>%
-        hc_xAxis(categories = unique(summary_line_data$Year)) %>%
-        hc_yAxis(title = list(text = "MtCO₂e")) %>%
-        hc_legend(align = "left", alignColumns = FALSE, layout = "horizontal") %>%
-        hc_plotOptions(line = list(marker = list(enabled = FALSE))) %>%  # Disable markers
-        hc_add_theme(thm) %>%
-        hc_add_series_list(series_list)
-    })
-  })
-}
-
-summaryPieChartServer <- function(id, data, current_year, category) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    output$chartOutput <- renderHighchart({
-      pie_data <- data() %>% filter(Year == current_year() & !!sym(category) != "Total") %>% 
-        group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
-      highchart() %>%
-        hc_chart(type = "pie") %>%
-        hc_series(list(data = list_parse(pie_data %>% transmute(name = !!sym(category), y = Value)))) %>%
-        hc_plotOptions(pie = list(dataLabels = list(enabled = FALSE),
-                                  tooltip = list(pointFormat = '{point.y:.2f} MtCO₂e ({point.percentage:.2f}%)')))
-    })
-  })
-}
-
-render_summary_chart <- function(chart_type, id, data, current_year, category) {
-  if (chart_type == "Total Emissions") {
-    summaryLineChartServer(id, data)
-  } else {
-    summaryPieChartServer(id, data, current_year, category)
-  }
-}
-
-summaryBarChartServer <- function(id, data, current_year, comparison_year, category) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    output$chartOutput <- renderHighchart({
-      bar_data <- data() %>% filter(Year == current_year() & !!sym(category) != "Total") %>% group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
-      line_data <- data() %>% filter(Year == comparison_year() & !!sym(category) != "Total") %>% group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
-      
-      colors <- c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
-      
-      highchart() %>%
-        hc_chart(type = "bar") %>%
-        hc_xAxis(categories = bar_data[[category]]) %>%
-        hc_yAxis(title = list(text = "MtCO₂e")) %>%
-        hc_add_series(
-          name = as.character(current_year()), 
-          data = bar_data$Value, 
-          type = "bar", 
-          colorByPoint = TRUE, 
-          colors = colors
-        ) %>%
-        hc_add_series(
-          name = as.character(comparison_year()), 
-          data = line_data$Value, 
-          type = "scatter", 
-          color = "#ff0000", 
-          marker = list(enabled = TRUE, symbol = "circle", lineWidth = 2, radius = 3)
-        ) %>%
-        hc_plotOptions(series = list(groupPadding = 0, pointPadding = 0.1, borderWidth = 0)) %>%
-        hc_tooltip(shared = TRUE, pointFormat = '{series.name}: {point.y:.2f} MtCO₂e<br/>') %>%
-        hc_add_theme(thm)
-    })
-  })
-}
-
-get_industry <- function(index, data, current_year, first_col_name) {
-  reactive({
-    industries <- data() %>%
-      filter(Year == current_year() & !!sym(first_col_name) != "Total") %>%
-      group_by(!!sym(first_col_name)) %>%
-      summarise(Value = sum(Value, na.rm = TRUE)) %>%
-      arrange(desc(Value)) %>%
-      slice_head(n = 3) %>%
-      pull(!!sym(first_col_name))
-    if (length(industries) >= index) {
-      industries[index]
-    } else {
-      NA
-    }
-  })
-}
-
 ## File: options.R 
  ##options.R
 
@@ -755,127 +578,21 @@ thm <- source("hc_theme.R")$value
 load("ghg_data.RData")
 
 
-# Generate Titles
+# Preset list of colors
+preset_colors <- c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
 
-generate_title <- function(chart_type, data) {
-  year_min <- min(data$Year, na.rm = TRUE)
-  year_max <- max(data$Year, na.rm = TRUE)
-  
-  title <- switch(chart_type,
-                  "Subsector Emissions" = paste("Agricultural Emissions by Subsector in Scotland,", year_min, "to", year_max),
-                  "Total Emissions" = paste("National Emissions by Source in Scotland,", year_min, "to", year_max),
-                  "Gas Emissions" = paste("Agricultural Gas Emissions Breakdown in Scotland,", year_min, "to", year_max),
-                  paste("Unknown Chart Type")
-  )
-  
-  return(title)
-}
-
-## File: panels.R 
- # Function to generate the sidebar panel
-generate_sidebar_panel <- function(id_prefix) {
-  sidebarPanel(
-    width = 3,
-    uiOutput(paste0("variable_select_", id_prefix)),  # Placeholder for variable selection UI
-    actionButton(paste0("select_all_button_", id_prefix), "Select All"),  # 'Select All' button
-    actionButton(paste0("deselect_all_button_", id_prefix), "Deselect All"),  # 'Deselect All' button
-    div(chooseSliderSkin("Flat"),
-        # Slider input for selecting the year range
-        sliderInput(paste0("year_", id_prefix), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE))
-  )
-}
-
-# Function to generate the value boxes for the top 3 industries
-generate_top_industries <- function(id_prefix) {
-  fluidRow(
-    column(width = 4, valueBoxUI(paste0("totalIndustry1_", id_prefix)), style = "padding-right: 0; padding-left: 0;"),
-    column(width = 4, valueBoxUI(paste0("totalIndustry2_", id_prefix)), style = "padding-right: 0; padding-left: 0;"),
-    column(width = 4, valueBoxUI(paste0("totalIndustry3_", id_prefix)), style = "padding-right: 0; padding-left: 0;")
-  )
-}
-
-# Function to generate the bottom row of the summary page
-generate_summary_bottom_row <- function(id_prefix, chart_type) {
-  tagList(
-    fluidRow(
-      column(width = 4, 
-             valueBoxUI(paste0("totalValue_", id_prefix)), 
-             
-             style = "padding-right: 0; padding-left: 0;"
-      ),
-      column(width = 4,
-             if (chart_type == "Total Emissions") {
-               chartUI(paste0("industryLineChart_", id_prefix), "Industry Emissions Over Time")
-             } else {
-               chartUI(paste0("industryPieChart_", id_prefix), "Category Breakdown")
-             },
-             style = "padding-right: 0; padding-left: 0;"
-      ),
-      column(width = 4, 
-             chartUI(paste0("industryBarChart_", id_prefix), "Emissions by Category"), 
-             style = "padding-right: 0; padding-left: 0;"
-      )
-    )
-  )
-}
-
-
-# Function to generate the sidebar layout for each tab
-generate_sidebar_layout <- function(id_prefix, chart_type) {
-  sidebarLayout(
-    sidebarPanel(
-      id = paste0("sidebar_", id_prefix),
-      width = 3,
-      uiOutput(paste0("variable_select_", id_prefix)),
-      actionButton(paste0("select_all_button_", id_prefix), "Select All"),
-      actionButton(paste0("deselect_all_button_", id_prefix), "Deselect All"),
-      div(chooseSliderSkin("Flat"),
-          sliderInput(paste0("year_", id_prefix), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE))
-    ),
-    mainPanel(
-      id = paste0("mainpanel_", id_prefix),
-      width = 9,
-      tabsetPanel(
-        id = paste0(id_prefix, "_tabs"),
-        tabPanel("Summary Page",
-                 value = paste0(id_prefix, "_summary"),
-                 fluidRow(
-                   column(width = 4, sliderInput(paste0("summary_current_year_", id_prefix), "Current Year", min = 1990, max = 2022, value = 2022, step = 1)),
-                   column(width = 4, sliderInput(paste0("summary_comparison_year_", id_prefix), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1)),
-                   column(width = 4,
-                          div(
-                            style = "margin-top: 25px; text-align: center; border: 4px solid #e3e3e3", # Add border style
-                            h5("Adjust the sliders to compare data from different years.", style = "padding: 0px; font-weight: bold;")
-                          )
-                   )
-                 ),
-                 fluidRow(
-                   column(width = 12, div(class = "header-text", "Top 3 Categories:"))
-                 ),
-                 generate_top_industries(id_prefix),
-                 fluidRow(
-                   column(width = 12, div(class = "header-text", "Summary Analysis:"))
-                 ),
-                 generate_summary_bottom_row(id_prefix, chart_type)
-        ),
-        tabPanel("Timelapse", div(id = "chartArea", barChartUI(paste0("barChart_", id_prefix))), value = paste0(id_prefix, "_bar")),
-        tabPanel("Line Chart", div(id = "chartArea", lineChartUI(paste0("lineChart_", id_prefix))), value = paste0(id_prefix, "_line")),
-        tabPanel("Area Chart", div(id = "chartArea", areaChartUI(paste0("areaChart_", id_prefix))), value = paste0(id_prefix, "_area")),
-        tabPanel("Data Table",
-                 dataTableOutput(paste0("pay_table_", id_prefix)),
-                 downloadButton(paste0("downloadData_", id_prefix), "Download Data"),
-                 value = paste0(id_prefix, "_data"))       
-      )
-    )
-  )
+# Function to assign colors to variables
+assign_colors <- function(data, colors) {
+  first_col_name <- names(data)[1]
+  variables <- unique(data[[first_col_name]])
+  setNames(colors[1:length(variables)], variables)
 }
 
 ## File: server.R 
  # server.R
 
 # Source the necessary modules for server logic
-source("module_data_functions.R")
-source("module_chart_functions.R")
+
 source("module_timelapse_bar_chart.R")
 source("module_data_table.R")
 source("module_summary.R")
@@ -917,46 +634,7 @@ ui <- fluidPage(
   theme = shinytheme("flatly"),
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
-    includeHTML("google-analytics.html"),
-    tags$script(HTML("
-      $(document).ready(function() {
-        $('#toggleSidebar').on('click', function() {
-          var isVisible = $('#sidebar_total, #sidebar_subsector, #sidebar_gas').is(':visible');
-          $('#sidebar_total, #sidebar_subsector, #sidebar_gas').toggle();
-          if (isVisible) {
-            $('#mainpanel_total, #mainpanel_subsector, #mainpanel_gas').removeClass('col-sm-9').addClass('col-sm-12');
-          } else {
-            $('#mainpanel_total, #mainpanel_subsector, #mainpanel_gas').removeClass('col-sm-12').addClass('col-sm-9');
-          }
-          setTimeout(function() {
-            $(window).trigger('resize');
-            Highcharts.charts.forEach(function(chart) {
-              if (chart) {
-                chart.reflow();
-              }
-            });
-          }, 300); // Delay to ensure the toggle animation is complete
-        });
-
-        Shiny.addCustomMessageHandler('sidebarState', function(message) {
-          if (message === 'close') {
-            $('#sidebar_total, #sidebar_subsector, #sidebar_gas').hide();
-            $('#mainpanel_total, #mainpanel_subsector, #mainpanel_gas').removeClass('col-sm-9').addClass('col-sm-12');
-          } else {
-            $('#sidebar_total, #sidebar_subsector, #sidebar_gas').show();
-            $('#mainpanel_total, #mainpanel_subsector, #mainpanel_gas').removeClass('col-sm-12').addClass('col-sm-9');
-          }
-          setTimeout(function() {
-            $(window).trigger('resize');
-            Highcharts.charts.forEach(function(chart) {
-              if (chart) {
-                chart.reflow();
-              }
-            });
-          }, 300); // Delay to ensure the toggle animation is complete
-        });
-      });
-    "))
+    includeHTML("google-analytics.html")
   ),
   div(class = "container-fluid full-height",
       div(class = "content",
@@ -1162,4 +840,502 @@ h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, t
 /* Specific rule to remove bullet point */
 .nav-item {
   list-style: none !important;
+}
+
+## File: module_subsector_emissions.R 
+ # module_subsector_emissions.R
+
+subsectorEmissionsUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    sidebarLayout(
+      sidebarPanel(
+        width = 3,
+        uiOutput(ns("variable_select")),
+        actionButton(ns("select_all_button"), "Select All"),
+        actionButton(ns("deselect_all_button"), "Deselect All"),
+        sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
+      ),
+      mainPanel(
+        id = ns("mainpanel"),
+        width = 9,
+        tabsetPanel(
+          id = ns("tabs"),
+          tabPanel("Summary Page",
+                   value = ns("summary"),
+                   fluidRow(
+                     column(width = 4, sliderInput(ns("summary_current_year"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1)),
+                     column(width = 4, sliderInput(ns("summary_comparison_year"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1)),
+                     column(width = 4,
+                            div(
+                              style = "margin-top: 25px; text-align: center; border: 4px solid #e3e3e3",
+                              h5("Adjust the sliders to compare data from different years.", style = "padding: 0px; font-weight: bold;")
+                            )
+                     )
+                   ),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Top 3 Categories:"))
+                   ),
+                   generate_top_industries("subsector"),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
+                   ),
+                   generate_summary_bottom_row("subsector", "Subsector Emissions")
+          ),
+          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
+          tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
+          tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
+          tabPanel("Data Table",
+                   DTOutput(ns("data_table")),
+                   downloadButton(ns("downloadData"), "Download Data"),
+                   value = ns("data"))
+        )
+      )
+    )
+  )
+}
+
+subsectorEmissionsServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Reactive expression for filtered data
+    chart_data <- reactive({
+      data <- subsector_total
+      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
+      if (!is.null(input$variables)) {
+        data <- data %>%
+          filter(Subsector %in% input$variables)
+      }
+      data
+    })
+    
+    # Unfiltered dataset for summary
+    unfiltered_data <- subsector_total
+    
+    output$variable_select <- renderUI({
+      choices <- unique(subsector_total$Subsector)
+      selected <- if (is.null(input$variables)) choices else input$variables
+      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
+    })
+    
+    observeEvent(input$select_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = unique(subsector_total$Subsector))
+    })
+    
+    observeEvent(input$deselect_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+    })
+    
+    areaChartServer(
+      id = "area",
+      chart_data = chart_data,
+      group_column = "Subsector",
+      title = "Agricultural Emissions by Subsector in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    timelapseBarChartServer(
+      id = "bar",
+      chart_data = chart_data,
+      group_column = "Subsector",
+      title = "Agricultural Greenhouse Gas Emissions Timelapse",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    lineChartServer(
+      id = "line",
+      chart_data = chart_data,
+      group_column = "Subsector",
+      title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    render_data_table(
+      id = "data_table",
+      chart_data = chart_data
+    )
+    
+    handle_data_download(
+      id = "downloadData",
+      chart_data = chart_data,
+      filename_prefix = "Subsector_GHG_Emissions"
+    )
+    
+    # Summary Module
+    current_year <- reactive({ input$summary_current_year })
+    comparison_year <- reactive({ input$summary_comparison_year })
+    
+    valueBoxServer(ns("totalIndustry1"), unfiltered_data, "Subsector", get_industry(1, unfiltered_data, current_year, "Subsector"), current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry2"), unfiltered_data, "Subsector", get_industry(2, unfiltered_data, current_year, "Subsector"), current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry3"), unfiltered_data, "Subsector", get_industry(3, unfiltered_data, current_year, "Subsector"), current_year, comparison_year)
+    valueBoxServer(ns("totalValue"), unfiltered_data, "Subsector", reactive("Total"), current_year, comparison_year)
+    
+    summaryBarChartServer(ns("industryBarChart"), unfiltered_data, current_year, comparison_year, "Subsector")
+  })
+}
+
+## File: module_total_emissions.R 
+ # module_total_emissions.R
+
+totalEmissionsUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    sidebarLayout(
+      sidebarPanel(
+        width = 3,
+        uiOutput(ns("variable_select")),
+        actionButton(ns("select_all_button"), "Select All"),
+        actionButton(ns("deselect_all_button"), "Deselect All"),
+        sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
+      ),
+      mainPanel(
+        id = ns("mainpanel"),
+        width = 9,
+        tabsetPanel(
+          id = ns("tabs"),
+          tabPanel("Summary Page",
+                   value = ns("summary"),
+                   fluidRow(
+                     column(width = 4, sliderInput(ns("summary_current_year"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1)),
+                     column(width = 4, sliderInput(ns("summary_comparison_year"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1)),
+                     column(width = 4,
+                            div(
+                              style = "margin-top: 25px; text-align: center; border: 4px solid #e3e3e3",
+                              h5("Adjust the sliders to compare data from different years.", style = "padding: 0px; font-weight: bold;")
+                            )
+                     )
+                   ),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Top 3 Categories:"))
+                   ),
+                   generate_top_industries("total"),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
+                   ),
+                   generate_summary_bottom_row("total", "Total Emissions")
+          ),
+          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
+          tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
+          tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
+          tabPanel("Data Table",
+                   DTOutput(ns("data_table")),
+                   downloadButton(ns("downloadData"), "Download Data"),
+                   value = ns("data"))
+        )
+      )
+    )
+  )
+}
+
+totalEmissionsServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Reactive expression for filtered data
+    chart_data <- reactive({
+      data <- national_total
+      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
+      if (!is.null(input$variables)) {
+        data <- data %>%
+          filter(Industry %in% input$variables)
+      }
+      data
+    })
+    
+    # Unfiltered dataset for summary
+    unfiltered_data <- national_total
+    
+    output$variable_select <- renderUI({
+      choices <- unique(national_total$Industry)
+      selected <- if (is.null(input$variables)) choices else input$variables
+      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
+    })
+    
+    observeEvent(input$select_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = unique(national_total$Industry))
+    })
+    
+    observeEvent(input$deselect_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+    })
+    
+    areaChartServer(
+      id = "area",
+      chart_data = chart_data,
+      group_column = "Industry",
+      title = "National Greenhouse Gas Emissions by Source in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    timelapseBarChartServer(
+      id = "bar",
+      chart_data = chart_data,
+      group_column = "Industry",
+      title = "National Greenhouse Gas Emissions Timelapse",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    lineChartServer(
+      id = "line",
+      chart_data = chart_data,
+      group_column = "Industry",
+      title = "National Greenhouse Gas Emissions by Source in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    render_data_table(
+      id = "data_table",
+      chart_data = chart_data
+    )
+    
+    handle_data_download(
+      id = "downloadData",
+      chart_data = chart_data,
+      filename_prefix = "National_GHG_Emissions"
+    )
+    
+    # Summary Module
+    current_year <- reactive({ input$summary_current_year })
+    comparison_year <- reactive({ input$summary_comparison_year })
+    
+    output$totalIndustry1 <- renderValueBox({
+      valueBox(
+        get_industry(1, unfiltered_data, current_year(), "Industry"),
+        "Industry 1",
+        icon = icon("industry"),
+        color = "purple"
+      )
+    })
+    
+    output$totalIndustry2 <- renderValueBox({
+      valueBox(
+        get_industry(2, unfiltered_data, current_year(), "Industry"),
+        "Industry 2",
+        icon = icon("industry"),
+        color = "blue"
+      )
+    })
+    
+    output$totalIndustry3 <- renderValueBox({
+      valueBox(
+        get_industry(3, unfiltered_data, current_year(), "Industry"),
+        "Industry 3",
+        icon = icon("industry"),
+        color = "green"
+      )
+    })
+    
+    output$totalValue <- renderValueBox({
+      valueBox(
+        "Total",
+        "Total",
+        icon = icon("industry"),
+        color = "orange"
+      )
+    })
+    
+    summaryBarChartServer(ns("industryBarChart"), unfiltered_data, current_year, comparison_year, "Industry")
+  })
+}
+
+
+## File: module_gas_emissions.R 
+ # module_gas_emissions.R
+
+gasEmissionsUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    sidebarLayout(
+      sidebarPanel(
+        width = 3,
+        uiOutput(ns("variable_select")),
+        actionButton(ns("select_all_button"), "Select All"),
+        actionButton(ns("deselect_all_button"), "Deselect All"),
+        sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
+      ),
+      mainPanel(
+        id = ns("mainpanel"),
+        width = 9,
+        tabsetPanel(
+          id = ns("tabs"),
+          tabPanel("Summary Page",
+                   value = ns("summary"),
+                   fluidRow(
+                     column(width = 4, sliderInput(ns("summary_current_year"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1)),
+                     column(width = 4, sliderInput(ns("summary_comparison_year"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1)),
+                     column(width = 4,
+                            div(
+                              style = "margin-top: 25px; text-align: center; border: 4px solid #e3e3e3",
+                              h5("Adjust the sliders to compare data from different years.", style = "padding: 0px; font-weight: bold;")
+                            )
+                     )
+                   ),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Top 3 Categories:"))
+                   ),
+                   generate_top_industries("gas"),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
+                   ),
+                   generate_summary_bottom_row("gas", "Gas Emissions")
+          ),
+          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
+          tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
+          tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
+          tabPanel("Data Table",
+                   DTOutput(ns("data_table")),
+                   downloadButton(ns("downloadData"), "Download Data"),
+                   value = ns("data"))
+        )
+      )
+    )
+  )
+}
+
+gasEmissionsServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Reactive expression for filtered data
+    chart_data <- reactive({
+      data <- agri_gas
+      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
+      if (!is.null(input$variables)) {
+        data <- data %>%
+          filter(Gas %in% input$variables)
+      }
+      data
+    })
+    
+    # Unfiltered dataset for summary
+    unfiltered_data <- agri_gas
+    
+    output$variable_select <- renderUI({
+      choices <- unique(agri_gas$Gas)
+      selected <- if (is.null(input$variables)) choices else input$variables
+      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
+    })
+    
+    observeEvent(input$select_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = unique(agri_gas$Gas))
+    })
+    
+    observeEvent(input$deselect_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+    })
+    
+    areaChartServer(
+      id = "area",
+      chart_data = chart_data,
+      group_column = "Gas",
+      title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    timelapseBarChartServer(
+      id = "bar",
+      chart_data = chart_data,
+      group_column = "Gas",
+      title = "Agricultural Greenhouse Gas Emissions Breakdown Timelapse",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    lineChartServer(
+      id = "line",
+      chart_data = chart_data,
+      group_column = "Gas",
+      title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    render_data_table(
+      id = "data_table",
+      chart_data = chart_data
+    )
+    
+    handle_data_download(
+      id = "downloadData",
+      chart_data = chart_data,
+      filename_prefix = "Gas_GHG_Emissions"
+    )
+    
+    # Summary Module
+    current_year <- reactive({ input$summary_current_year })
+    comparison_year <- reactive({ input$summary_comparison_year })
+    
+    output$totalIndustry1 <- renderValueBox({
+      valueBox(
+        get_industry(1, unfiltered_data, current_year(), "Gas"),
+        "Gas 1",
+        icon = icon("industry"),
+        color = "purple"
+      )
+    })
+    
+    output$totalIndustry2 <- renderValueBox({
+      valueBox(
+        get_industry(2, unfiltered_data, current_year(), "Gas"),
+        "Gas 2",
+        icon = icon("industry"),
+        color = "blue"
+      )
+    })
+    
+    output$totalIndustry3 <- renderValueBox({
+      valueBox(
+        get_industry(3, unfiltered_data, current_year(), "Gas"),
+        "Gas 3",
+        icon = icon("industry"),
+        color = "green"
+      )
+    })
+    
+    output$totalValue <- renderValueBox({
+      valueBox(
+        "Total",
+        "Total",
+        icon = icon("industry"),
+        color = "orange"
+      )
+    })
+    
+    summaryBarChartServer(ns("industryBarChart"), unfiltered_data, current_year, comparison_year, "Gas")
+  })
 }
