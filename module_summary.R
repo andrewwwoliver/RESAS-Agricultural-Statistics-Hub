@@ -1,4 +1,4 @@
-# module_summary.R
+#module_summary.R
 
 library(shiny)
 library(shinydashboard)
@@ -6,39 +6,9 @@ library(ggplot2)
 library(dplyr)
 library(highcharter)
 
-generate_top_industries <- function(id_prefix) {
-  ns <- NS(id_prefix)
-  fluidRow(
-    column(width = 4, valueBoxUI(ns("totalIndustry1")), style = "padding-right: 0; padding-left: 0;"),
-    column(width = 4, valueBoxUI(ns("totalIndustry2")), style = "padding-right: 0; padding-left: 0;"),
-    column(width = 4, valueBoxUI(ns("totalIndustry3")), style = "padding-right: 0; padding-left: 0;")
-  )
-}
 
-generate_summary_bottom_row <- function(id_prefix, chart_type) {
-  ns <- NS(id_prefix)
-  tagList(
-    fluidRow(
-      column(width = 4, 
-             valueBoxUI(ns("totalValue")), 
-             style = "padding-right: 0; padding-left: 0;"
-      ),
-      column(width = 4,
-             if (chart_type == "Total Emissions") {
-               chartUI(ns("industryLineChart"), "Industry Emissions Over Time")
-             } else {
-               chartUI(ns("industryPieChart"), "Category Breakdown")
-             },
-             style = "padding-right: 0; padding-left: 0;"
-      ),
-      column(width = 4, 
-             chartUI(ns("industryBarChart"), "Emissions by Category"), 
-             style = "padding-right: 0; padding-left: 0;"
-      )
-    )
-  )
-}
 
+# Function to create a small line plot for the value boxes
 small_line_plot <- function(data, color) {
   ggplot(data, aes(x = Year, y = Value)) +
     geom_line(color = "#002d54") +
@@ -46,6 +16,7 @@ small_line_plot <- function(data, color) {
     theme(plot.background = element_rect(fill = "transparent", color = NA))
 }
 
+# Function to create an arrow for Year on Year change
 create_yoy_arrow <- function(change) {
   if (is.na(change) || is.nan(change)) {
     icon("minus", style = "color: grey;")
@@ -56,15 +27,17 @@ create_yoy_arrow <- function(change) {
   }
 }
 
+# UI Module for Value Box
 valueBoxUI <- function(id) {
   ns <- NS(id)
   uiOutput(ns("valueBox"))
 }
 
+# Server Module for Value Box
 valueBoxServer <- function(id, data, category, industry, current_year, comparison_year) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    reactive_data <- reactive({ data %>% filter(!!sym(category) == !!industry(), Year %in% c(current_year(), comparison_year())) })
+    reactive_data <- reactive({ data() %>% filter(!!sym(category()) == !!industry(), Year %in% c(current_year(), comparison_year())) })
     
     output$valueBox <- renderUI({
       data_filtered <- reactive_data()
@@ -102,11 +75,13 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
     })
     
     output$sparkline <- renderPlot({
-      small_line_plot(data %>% filter(!!sym(category) == !!industry()), "#28a745")
+      small_line_plot(data() %>% filter(!!sym(category()) == !!industry()), "#28a745")
     })
   })
 }
 
+
+# UI Module for Chart
 chartUI <- function(id, title) {
   ns <- NS(id)
   box(
@@ -117,12 +92,13 @@ chartUI <- function(id, title) {
   )
 }
 
+# Server Module for Line Chart on Summary Page
 summaryLineChartServer <- function(id, data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     output$chartOutput <- renderHighchart({
-      summary_line_data <- data
+      summary_line_data <- data()
       variable_col <- names(summary_line_data)[1]  # Get the first column name, which is the variable name
       
       series_list <- lapply(unique(summary_line_data[[variable_col]]), function(variable) {
@@ -145,21 +121,23 @@ summaryLineChartServer <- function(id, data) {
   })
 }
 
+# Server Module for Pie Chart
 summaryPieChartServer <- function(id, data, current_year, category) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     output$chartOutput <- renderHighchart({
-      pie_data <- data %>% filter(Year == current_year() & !!sym(category) != "Total") %>% 
-        group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
+      pie_data <- data() %>% filter(Year == current_year() & !!sym(category()) != "Total") %>% 
+        group_by(!!sym(category())) %>% summarise(Value = sum(Value, na.rm = TRUE))
       highchart() %>%
         hc_chart(type = "pie") %>%
-        hc_series(list(data = list_parse(pie_data %>% transmute(name = !!sym(category), y = Value)))) %>%
+        hc_series(list(data = list_parse(pie_data %>% transmute(name = !!sym(category()), y = Value)))) %>%
         hc_plotOptions(pie = list(dataLabels = list(enabled = FALSE),
                                   tooltip = list(pointFormat = '{point.y:.2f} MtCO₂e ({point.percentage:.2f}%)')))
     })
   })
 }
 
+# Helper function to render the appropriate summary chart
 render_summary_chart <- function(chart_type, id, data, current_year, category) {
   if (chart_type == "Total Emissions") {
     summaryLineChartServer(id, data)
@@ -168,18 +146,19 @@ render_summary_chart <- function(chart_type, id, data, current_year, category) {
   }
 }
 
+# Server Module for Bar Chart
 summaryBarChartServer <- function(id, data, current_year, comparison_year, category) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     output$chartOutput <- renderHighchart({
-      bar_data <- data %>% filter(Year == current_year() & !!sym(category) != "Total") %>% group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
-      line_data <- data %>% filter(Year == comparison_year() & !!sym(category) != "Total") %>% group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
+      bar_data <- data() %>% filter(Year == current_year() & !!sym(category()) != "Total") %>% group_by(!!sym(category())) %>% summarise(Value = sum(Value, na.rm = TRUE))
+      line_data <- data() %>% filter(Year == comparison_year() & !!sym(category()) != "Total") %>% group_by(!!sym(category())) %>% summarise(Value = sum(Value, na.rm = TRUE))
       
       colors <- c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
       
       highchart() %>%
         hc_chart(type = "bar") %>%
-        hc_xAxis(categories = bar_data[[category]]) %>%
+        hc_xAxis(categories = bar_data[[category()]]) %>%
         hc_yAxis(title = list(text = "MtCO₂e")) %>%
         hc_add_series(
           name = as.character(current_year()), 
@@ -202,19 +181,36 @@ summaryBarChartServer <- function(id, data, current_year, comparison_year, categ
   })
 }
 
-get_industry <- function(index, data, current_year, first_col_name) {
-  reactive({
-    industries <- data %>%
-      filter(Year == current_year() & !!sym(first_col_name) != "Total") %>%
-      group_by(!!sym(first_col_name)) %>%
-      summarise(Value = sum(Value, na.rm = TRUE)) %>%
-      arrange(desc(Value)) %>%
-      slice_head(n = 3) %>%
-      pull(!!sym(first_col_name))
-    if (length(industries) >= index) {
-      industries[index]
-    } else {
-      NA
-    }
-  })
+# Function to generate the value boxes for the top 3 industries
+generate_top_industries <- function(id_prefix) {
+  fluidRow(
+    column(width = 4, valueBoxUI(paste0("totalIndustry1_", id_prefix)), style = "padding-right: 0; padding-left: 0;"),
+    column(width = 4, valueBoxUI(paste0("totalIndustry2_", id_prefix)), style = "padding-right: 0; padding-left: 0;"),
+    column(width = 4, valueBoxUI(paste0("totalIndustry3_", id_prefix)), style = "padding-right: 0; padding-left: 0;")
+  )
+}
+
+# Function to generate the bottom row of the summary page
+generate_summary_bottom_row <- function(id_prefix, chart_type) {
+  tagList(
+    fluidRow(
+      column(width = 4, 
+             valueBoxUI(paste0("totalValue_", id_prefix)), 
+             
+             style = "padding-right: 0; padding-left: 0;"
+      ),
+      column(width = 4,
+             if (chart_type == "Total Emissions") {
+               chartUI(paste0("industryLineChart_", id_prefix), "Industry Emissions Over Time")
+             } else {
+               chartUI(paste0("industryPieChart_", id_prefix), "Category Breakdown")
+             },
+             style = "padding-right: 0; padding-left: 0;"
+      ),
+      column(width = 4, 
+             chartUI(paste0("industryBarChart_", id_prefix), "Emissions by Category"), 
+             style = "padding-right: 0; padding-left: 0;"
+      )
+    )
+  )
 }

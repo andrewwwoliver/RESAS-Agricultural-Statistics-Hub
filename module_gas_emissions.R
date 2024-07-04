@@ -1,5 +1,3 @@
-# module_gas_emissions.R
-
 gasEmissionsUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -80,7 +78,6 @@ gasEmissionsServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      group_column = "Gas",
       title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
@@ -92,36 +89,34 @@ gasEmissionsServer <- function(id) {
     timelapseBarChartServer(
       id = "bar",
       chart_data = chart_data,
-      group_column = "Gas",
       title = "Agricultural Greenhouse Gas Emissions Breakdown Timelapse",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>'
     )
     
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      group_column = "Gas",
       title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>'
     )
     
     render_data_table(
-      id = "data_table",
-      chart_data = chart_data
+      table_id = "data_table",
+      chart_data = chart_data,
+      output = output
     )
     
     handle_data_download(
-      id = "downloadData",
+      download_id = "downloadData",
+      chart_type = "Gas",
       chart_data = chart_data,
-      filename_prefix = "Gas_GHG_Emissions"
+      input = input,
+      output = output,
+      year_input = "year"
     )
     
     # Summary Module

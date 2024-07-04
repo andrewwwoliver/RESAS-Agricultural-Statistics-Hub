@@ -1,5 +1,3 @@
-# module_timelapse_bar_chart.R
-
 timelapseBarChartUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -49,7 +47,7 @@ timelapseBarChartUI <- function(id) {
   )
 }
 
-timelapseBarChartServer <- function(id, chart_data, group_column, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
+timelapseBarChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     

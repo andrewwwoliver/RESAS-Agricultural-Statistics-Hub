@@ -1,5 +1,3 @@
-# module_subsector_emissions.R
-
 subsectorEmissionsUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -80,7 +78,6 @@ subsectorEmissionsServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      group_column = "Subsector",
       title = "Agricultural Emissions by Subsector in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
@@ -92,7 +89,6 @@ subsectorEmissionsServer <- function(id) {
     timelapseBarChartServer(
       id = "bar",
       chart_data = chart_data,
-      group_column = "Subsector",
       title = "Agricultural Greenhouse Gas Emissions Timelapse",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
@@ -104,7 +100,6 @@ subsectorEmissionsServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      group_column = "Subsector",
       title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
@@ -114,14 +109,18 @@ subsectorEmissionsServer <- function(id) {
     )
     
     render_data_table(
-      id = "data_table",
-      chart_data = chart_data
+      table_id = "data_table",
+      chart_data = chart_data,
+      output = output
     )
     
     handle_data_download(
-      id = "downloadData",
+      download_id = "downloadData",
+      chart_type = "Subsector",
       chart_data = chart_data,
-      filename_prefix = "Subsector_GHG_Emissions"
+      input = input,
+      output = output,
+      year_input = "year"
     )
     
     # Summary Module

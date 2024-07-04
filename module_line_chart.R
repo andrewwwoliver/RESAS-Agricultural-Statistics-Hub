@@ -1,5 +1,3 @@
-# module_line_chart.R
-
 lineChartUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -20,7 +18,7 @@ lineChartUI <- function(id) {
   )
 }
 
-lineChartServer <- function(id, chart_data, group_column, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
+lineChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
@@ -38,6 +36,7 @@ lineChartServer <- function(id, chart_data, group_column, title, yAxisTitle, xAx
     output$line_chart <- renderHighchart({
       data <- chart_data()
       colors <- reactive_colors()
+      group_column <- setdiff(names(data), c(x_col, y_col))[1] # Assuming only one group column
       hc <- highchart() %>%
         hc_chart(type = "line", zoomType = "xy") %>%
         hc_yAxis(title = list(text = yAxisTitle)) %>%
