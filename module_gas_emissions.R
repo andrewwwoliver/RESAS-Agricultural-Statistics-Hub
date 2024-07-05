@@ -63,12 +63,12 @@ gasEmissionsServer <- function(id) {
     
     output$variable_select <- renderUI({
       choices <- unique(agri_gas$Gas)
-      selected <- if (is.null(input$variables)) choices else input$variables
+      selected <- setdiff(choices, "Total")
       checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
     })
     
     observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = unique(agri_gas$Gas))
+      updateCheckboxGroupInput(session, ns("variables"), selected = setdiff(unique(agri_gas$Gas), "Total"))
     })
     
     observeEvent(input$deselect_all_button, {
@@ -92,7 +92,9 @@ gasEmissionsServer <- function(id) {
       title = "Agricultural Greenhouse Gas Emissions Breakdown Timelapse",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>'
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
     )
     
     lineChartServer(
@@ -101,7 +103,9 @@ gasEmissionsServer <- function(id) {
       title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>'
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
     )
     
     render_data_table(

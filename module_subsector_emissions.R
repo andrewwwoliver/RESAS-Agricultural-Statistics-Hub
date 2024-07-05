@@ -63,12 +63,12 @@ subsectorEmissionsServer <- function(id) {
     
     output$variable_select <- renderUI({
       choices <- unique(subsector_total$Subsector)
-      selected <- if (is.null(input$variables)) choices else input$variables
+      selected <- setdiff(choices, "Total")
       checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
     })
     
     observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = unique(subsector_total$Subsector))
+      updateCheckboxGroupInput(session, ns("variables"), selected = setdiff(unique(subsector_total$Subsector), "Total"))
     })
     
     observeEvent(input$deselect_all_button, {
