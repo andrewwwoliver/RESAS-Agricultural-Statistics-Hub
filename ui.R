@@ -1,18 +1,19 @@
-# ui.R
+# File: ui.R
 
 # Source UI modules
 source("module_line_chart.R")
-source("module_data_table.R")
-source("options.R")
 source("module_area_chart.R")
+source("module_bar_chart.R")
 source("module_timelapse_bar_chart.R")
+source("module_data_table.R")
 source("module_total_emissions.R")
 source("module_subsector_emissions.R")
 source("module_gas_emissions.R")
 source("module_summary.R")
 source("module_information.R")
+source("module_manure_usage.R")
+source("options.R")
 source("hc_theme.R")
-source("module_bar_chart.R")
 library(shinyjs)
 
 create_footer <- function() {
@@ -43,6 +44,7 @@ ui <- fluidPage(
             tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
             tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
             tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
+            tabPanel("Manure Usage", manureUsageUI("manure")),
             tabPanel("Further Information", value = "info", informationUI("info"))
           )
       ),

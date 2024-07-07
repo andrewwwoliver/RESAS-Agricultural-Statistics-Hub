@@ -18,13 +18,13 @@ barChartUI <- function(id) {
   )
 }
 
-barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, year) {
+barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
     
     output$title <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, ", ", year, "</div>"))
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
     })
     
     output$footer <- renderUI({
@@ -32,13 +32,13 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
     })
     
     output$bar_chart <- renderHighchart({
-      data <- chart_data() %>% filter(!!sym(x_col) == year)
+      data <- chart_data()
       if (nrow(data) == 0) return(NULL)
       colors <- reactive_colors()
-      group_column <- setdiff(names(data), c(x_col, y_col))[1]
+      group_column <- setdiff(names(data), c(x_col, y_col()))[1]
       
       data <- data %>%
-        arrange(desc(!!sym(y_col)))  # Sort data by value in descending order
+        arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
       
       highchart() %>%
         hc_chart(type = "bar", inverted = TRUE) %>%
@@ -52,8 +52,8 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
           borderWidth = 0
         )) %>%
         hc_add_series(
-          name = as.character(year),
-          data = data %>% mutate(y = !!sym(y_col), color = colors[!!sym(group_column)]) %>% 
+          name = "Data",
+          data = data %>% mutate(y = !!sym(y_col()), color = colors[!!sym(group_column)]) %>% 
             select(name = !!sym(group_column), y, color),
           colorByPoint = TRUE,
           showInLegend = FALSE
