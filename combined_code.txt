@@ -51,6 +51,96 @@ save(subsector_total, agri_gas, national_total, subsector_source, file = "ghg_da
 # load data
 load("ghg_data.RData")
 
+
+
+# File: load_tables.R
+
+library(readxl)
+library(dplyr)
+library(stringr)
+
+
+# Could do with being more automated
+# Manually removed first x rows of metadata from each table
+# Define file path
+file_path <- "June+Agricultural+Census+2023+Tables.xlsx"
+
+# Define the simplified table names and corresponding sheet names
+table_names <- c(
+  "agricultural_area_hectares" = "Table_1",
+  "vegetables_bulbs_fruit_area" = "Table_2",
+  "number_of_cattle" = "Table_3 ",
+  "number_of_sheep" = "Table_4 ",
+  "number_of_pigs" = "Table_5",
+  "number_of_poultry" = "Table_6",
+  "number_of_other_livestock" = "Table_7",
+  "occupiers_employees" = "Table_8",
+  "occupiers_age_gender" = "Table_9",
+  "businesses_land_area" = "Table_10",
+  "owned_rented_land" = "Table_11",
+  "holdings_main_farm_type" = "Table_12",
+  "agricultural_area_lfa" = "Table_13",
+  "holdings_crops_grass_subregion" = "Table_14",
+  "crops_grass_area_subregion" = "Table_15",
+  "holdings_livestock_region_subregion" = "Table_16",
+  "livestock_subregion" = "Table_17",
+  "holdings_occupiers_employees_subregion" = "Table_18",
+  "occupiers_employees_subregion" = "Table_19",
+  "holdings_arable_land_crop_rotation" = "Table_20",
+  "manure_fertiliser" = "Table_21"
+)
+
+# Function to remove columns and rows that are all NAs
+clean_data <- function(data) {
+  data <- data[, colSums(is.na(data)) < nrow(data)]  # Remove columns with all NAs
+  data <- data[rowSums(is.na(data)) < ncol(data), ]  # Remove rows with all NAs
+  return(data)
+}
+
+# Function to clean header names by removing text within brackets, any '\r\n', and extra spaces
+clean_headers <- function(headers) {
+  headers <- str_replace_all(headers, "\\s*\\([^\\)]+\\)", "")  # Remove text within brackets
+  headers <- str_replace_all(headers, "\r\n", " ")  # Remove \r\n
+  headers <- str_replace_all(headers, "\\s+", " ")  # Replace multiple spaces with a single space
+  headers <- str_trim(headers)  # Trim any leading or trailing whitespace
+  return(headers)
+}
+
+# Read each table, clean it, and assign to a variable
+for (table in names(table_names)) {
+  sheet_name <- table_names[table]
+  data <- read_excel(file_path, sheet = sheet_name)
+  
+  # Clean headers
+  headers <- names(data)
+  cleaned_headers <- clean_headers(headers)
+  
+  # Remove columns with '5 year' in the header (case insensitive)
+  columns_to_remove <- grep("5 year", cleaned_headers, ignore.case = TRUE)
+  if (length(columns_to_remove) > 0) {
+    data <- data[, -columns_to_remove]
+    cleaned_headers <- cleaned_headers[-columns_to_remove]
+  }
+  
+  # Assign cleaned headers to the data
+  names(data) <- cleaned_headers
+  
+  # Remove '\r\n' from all character columns
+  data <- data %>% mutate(across(where(is.character), ~str_replace_all(.x, "\r\n", " ")))
+  
+  # Clean data
+  cleaned_data <- clean_data(data)
+  
+  assign(table, cleaned_data)
+}
+
+# Save all tables to an RData file
+save(list = names(table_names), file = "census_data.RData")
+
+load("census_data.RData")
+
+
+
 ## File: hc_theme.R 
  # hc_theme.R
 
@@ -219,7 +309,9 @@ areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, foote
 }
 
 ## File: module_timelapse_bar_chart.R 
- timelapseBarChartUI <- function(id) {
+ #module_timelapse_bar_chart.R
+
+timelapseBarChartUI <- function(id) {
   ns <- NS(id)
   tagList(
     tags$style(HTML("
@@ -824,6 +916,7 @@ source("module_gas_emissions.R")
 source("module_summary.R")
 source("module_information.R")
 source("hc_theme.R")
+source("module_bar_chart.R")
 library(shinyjs)
 
 create_footer <- function() {
@@ -1086,9 +1179,10 @@ h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, t
                    ),
                    generate_summary_bottom_row("subsector", "Subsector Emissions")
           ),
-          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
+          tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = ns("timelapse")),
           tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
           tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
+          tabPanel("Bar Chart", barChartUI(ns("normal_bar")), value = ns("bar")),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
                    downloadButton(ns("downloadData"), "Download Data"),
@@ -1098,6 +1192,7 @@ h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, t
     )
   )
 }
+
 
 subsectorEmissionsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -1138,7 +1233,7 @@ subsectorEmissionsServer <- function(id) {
     )
     
     timelapseBarChartServer(
-      id = "bar",
+      id = "timelapse_bar",
       chart_data = chart_data,
       title = "Agricultural Greenhouse Gas Emissions Timelapse",
       yAxisTitle = "Emissions (MtCO₂e)",
@@ -1150,6 +1245,17 @@ subsectorEmissionsServer <- function(id) {
     
     lineChartServer(
       id = "line",
+      chart_data = chart_data,
+      title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
+      yAxisTitle = "Emissions (MtCO₂e)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
+    
+    barChartServer(
+      id = "normal_bar",
       chart_data = chart_data,
       title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",

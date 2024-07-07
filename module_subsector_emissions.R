@@ -1,3 +1,5 @@
+# File: module_subsector_emissions.R
+
 subsectorEmissionsUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -35,9 +37,10 @@ subsectorEmissionsUI <- function(id) {
                    ),
                    generate_summary_bottom_row("subsector", "Subsector Emissions")
           ),
-          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
+          tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = ns("timelapse")),
           tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
           tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
+          tabPanel("Bar Chart", barChartUI(ns("normal_bar")), value = ns("bar")),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
                    downloadButton(ns("downloadData"), "Download Data"),
@@ -87,7 +90,7 @@ subsectorEmissionsServer <- function(id) {
     )
     
     timelapseBarChartServer(
-      id = "bar",
+      id = "timelapse_bar",
       chart_data = chart_data,
       title = "Agricultural Greenhouse Gas Emissions Timelapse",
       yAxisTitle = "Emissions (MtCO₂e)",
@@ -106,6 +109,18 @@ subsectorEmissionsServer <- function(id) {
       footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
       x_col = "Year",
       y_col = "Value"
+    )
+    
+    barChartServer(
+      id = "normal_bar",
+      chart_data = chart_data,
+      title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
+      yAxisTitle = "MtCO₂e",
+      xAxisTitle = "Subsector",
+      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      x_col = "Year",
+      y_col = "Value",
+      year = 2022
     )
     
     render_data_table(

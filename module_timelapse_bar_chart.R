@@ -1,3 +1,5 @@
+#module_timelapse_bar_chart.R
+
 timelapseBarChartUI <- function(id) {
   ns <- NS(id)
   tagList(

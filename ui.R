@@ -12,6 +12,7 @@ source("module_gas_emissions.R")
 source("module_summary.R")
 source("module_information.R")
 source("hc_theme.R")
+source("module_bar_chart.R")
 library(shinyjs)
 
 create_footer <- function() {

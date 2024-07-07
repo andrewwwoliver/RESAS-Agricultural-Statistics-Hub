@@ -79,9 +79,13 @@ clean_data <- function(data) {
   return(data)
 }
 
-# Function to clean header names by removing text within brackets
+# Function to clean header names by removing text within brackets, any '\r\n', and extra spaces
 clean_headers <- function(headers) {
-  str_replace_all(headers, "\\s*\\([^\\)]+\\)", "")
+  headers <- str_replace_all(headers, "\\s*\\([^\\)]+\\)", "")  # Remove text within brackets
+  headers <- str_replace_all(headers, "\r\n", " ")  # Remove \r\n
+  headers <- str_replace_all(headers, "\\s+", " ")  # Replace multiple spaces with a single space
+  headers <- str_trim(headers)  # Trim any leading or trailing whitespace
+  return(headers)
 }
 
 # Read each table, clean it, and assign to a variable
@@ -93,21 +97,24 @@ for (table in names(table_names)) {
   headers <- names(data)
   cleaned_headers <- clean_headers(headers)
   
-  # Remove columns with '5 year' in the header
-  columns_to_remove <- grep("5 year", headers, ignore.case = TRUE)
+  # Remove columns with '5 year' in the header (case insensitive)
+  columns_to_remove <- grep("5 year", cleaned_headers, ignore.case = TRUE)
   if (length(columns_to_remove) > 0) {
     data <- data[, -columns_to_remove]
     cleaned_headers <- cleaned_headers[-columns_to_remove]
   }
   
+  # Assign cleaned headers to the data
   names(data) <- cleaned_headers
+  
+  # Remove '\r\n' from all character columns
+  data <- data %>% mutate(across(where(is.character), ~str_replace_all(.x, "\r\n", " ")))
   
   # Clean data
   cleaned_data <- clean_data(data)
   
   assign(table, cleaned_data)
 }
-
 
 # Save all tables to an RData file
 save(list = names(table_names), file = "census_data.RData")
