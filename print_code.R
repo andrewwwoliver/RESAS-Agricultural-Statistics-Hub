@@ -4,6 +4,7 @@ code_files <- c(
   "data.R",
   "hc_theme.R",
   "module_area_chart.R",
+  "module_bar_chart.R",
   "module_timelapse_bar_chart.R",
   "module_data_table.R",
   "module_information.R",
@@ -15,7 +16,8 @@ code_files <- c(
   "www/styles.css",
   "module_subsector_emissions.R",
   "module_total_emissions.R",
-  "module_gas_emissions.R"
+  "module_gas_emissions.R",
+  "module_manure_usage.R"
   
 )
 

@@ -18,7 +18,7 @@ barChartUI <- function(id) {
   )
 }
 
-barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
+barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, tooltip_format) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
@@ -41,9 +41,9 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
         arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
       
       highchart() %>%
-        hc_chart(type = "bar", inverted = TRUE) %>%
-        hc_xAxis(categories = data[[group_column]], title = list(text = xAxisTitle)) %>%
-        hc_yAxis(title = list(text = yAxisTitle), allowDecimals = FALSE) %>%
+        hc_chart(type = "bar", inverted = TRUE, zoomType = "xy") %>%
+        hc_xAxis(categories = data[[x_col]], title = list(text = xAxisTitle)) %>%
+        hc_yAxis(title = list(text = yAxisTitle()), allowDecimals = FALSE) %>%
         hc_plotOptions(bar = list(
           dataLabels = list(enabled = FALSE),
           colorByPoint = TRUE,
@@ -52,9 +52,9 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
           borderWidth = 0
         )) %>%
         hc_add_series(
-          name = "Data",
-          data = data %>% mutate(y = !!sym(y_col()), color = colors[!!sym(group_column)]) %>% 
-            select(name = !!sym(group_column), y, color),
+          name = "",
+          data = data %>% mutate(y = !!sym(y_col()), color = colors[!!sym(x_col)]) %>% 
+            select(name = !!sym(x_col), y, color),
           colorByPoint = TRUE,
           showInLegend = FALSE
         ) %>%
@@ -65,7 +65,7 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
             color = "black"
           ),
           headerFormat = "<b>{point.key}</b><br/>",  
-          pointFormat = paste0("{series.name}: {point.y:.2f} ", yAxisTitle)
+          pointFormat = paste0(tooltip_format())
         ) %>%
         hc_add_theme(thm)
     })

@@ -31,7 +31,7 @@ ui <- fluidPage(
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
     includeHTML("google-analytics.html")
-  ),
+    ),
   div(class = "container-fluid full-height",
       div(class = "content",
           navbarPage(
@@ -41,11 +41,13 @@ ui <- fluidPage(
               tags$li(class = "nav-item", img(src = "RESAS Logo.png", class = "header-logo"))
             ),
             id = "navbar",
-            tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
-            tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
-            tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
-            tabPanel("Manure Usage", manureUsageUI("manure")),
-            tabPanel("Further Information", value = "info", informationUI("info"))
+            navbarMenu("Emissions",
+                       tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
+                       tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
+                       tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
+                       tabPanel("Further Information", value = "info", informationUI("info"))
+            ),
+            tabPanel("Manure Usage", manureUsageUI("manure"))
           )
       ),
       create_footer()

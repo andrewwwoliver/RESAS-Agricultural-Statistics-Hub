@@ -122,3 +122,53 @@ save(list = names(table_names), file = "census_data.RData")
 load("census_data.RData")
 
 
+library(sf)
+library(dplyr)
+library(highcharter)
+library(geojsonio)
+
+# Load the shapefile
+local_authorities <- st_read("pub_las.shp")
+
+mapping_data <- data.frame(
+  region = c("North West", "North West", "North West", "North West", 
+             "North East", "North East", "North East", 
+             "South East", "South East", "South East", "South East", "South East", 
+             "South East", "South East", "South East", "South East",
+             "South West", "South West", "South West", "South West", "South West", 
+             "South West", "South West", "South West", "South West", "South West", 
+             "South West", "South West", "South West", "South West", "South West", "South West"
+             ),
+  sub_region = c("Shetland", "Orkney", "Na h-Eileanan Siar", "Highland", 
+                 "Grampian", "Grampian", "Grampian", 
+                 "Tayside", "Tayside", "Tayside", "Fife", "Lothian", "Lothian", "Lothian", "Lothian", 
+                 "Scottish Borders", "East Central", "East Central", "East Central", 
+                 "Argyll & Bute", "Clyde Valley", "Clyde Valley", "Clyde Valley", "Clyde Valley", 
+                 "Clyde Valley", "Clyde Valley", "Clyde Valley", "Clyde Valley", "Ayrshire", "Ayrshire", "Ayrshire", 
+                 "Dumfries & Galloway"),
+  local_authority = c("Shetland Islands", "Orkney Islands", "Na h-Eileanan an Iar", "Highland", 
+                      "Aberdeen City", "Aberdeenshire", "Moray", 
+                      "Angus", "Dundee City", "Perth and Kinross", "Fife", "East Lothian", "City of Edinburgh", 
+                      "Midlothian", "West Lothian", "Scottish Borders", 
+                      "Clackmannanshire", "Falkirk", "Stirling", 
+                      "Argyll and Bute", "East Dunbartonshire", "East Renfrewshire", "Glasgow City", 
+                      "Inverclyde", "North Lanarkshire", "Renfrewshire", "South Lanarkshire", 
+                      "West Dunbartonshire", "East Ayrshire", "North Ayrshire", "South Ayrshire", 
+                      "Dumfries and Galloway")
+)
+
+# Merge the shapefile with the mapping data
+local_authorities <- local_authorities %>%
+  left_join(mapping_data, by = c("local_auth" = "local_authority"))
+
+# Ensure geometries are valid
+local_authorities <- st_make_valid(local_authorities)
+
+sub_regions <- local_authorities %>%
+  group_by(sub_region) %>%
+  summarise(geometry = st_union(geometry))
+
+st_write(sub_regions, "sub_regions.geojson", driver = "GeoJSON")
+
+
+

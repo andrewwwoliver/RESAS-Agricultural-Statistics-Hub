@@ -25,6 +25,7 @@ thm <- source("hc_theme.R")$value
 
 # Load the .RData file containing the datasets
 load("ghg_data.RData")
+load("census_data.RData")
 
 
 # Preset list of colors
