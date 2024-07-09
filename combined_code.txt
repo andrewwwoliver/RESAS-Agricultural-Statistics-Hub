@@ -140,6 +140,56 @@ save(list = names(table_names), file = "census_data.RData")
 load("census_data.RData")
 
 
+library(sf)
+library(dplyr)
+library(highcharter)
+library(geojsonio)
+
+# Load the shapefile
+local_authorities <- st_read("pub_las.shp")
+
+mapping_data <- data.frame(
+  region = c("North West", "North West", "North West", "North West", 
+             "North East", "North East", "North East", 
+             "South East", "South East", "South East", "South East", "South East", 
+             "South East", "South East", "South East", "South East",
+             "South West", "South West", "South West", "South West", "South West", 
+             "South West", "South West", "South West", "South West", "South West", 
+             "South West", "South West", "South West", "South West", "South West", "South West"
+             ),
+  sub_region = c("Shetland", "Orkney", "Na h-Eileanan Siar", "Highland", 
+                 "Grampian", "Grampian", "Grampian", 
+                 "Tayside", "Tayside", "Tayside", "Fife", "Lothian", "Lothian", "Lothian", "Lothian", 
+                 "Scottish Borders", "East Central", "East Central", "East Central", 
+                 "Argyll & Bute", "Clyde Valley", "Clyde Valley", "Clyde Valley", "Clyde Valley", 
+                 "Clyde Valley", "Clyde Valley", "Clyde Valley", "Clyde Valley", "Ayrshire", "Ayrshire", "Ayrshire", 
+                 "Dumfries & Galloway"),
+  local_authority = c("Shetland Islands", "Orkney Islands", "Na h-Eileanan an Iar", "Highland", 
+                      "Aberdeen City", "Aberdeenshire", "Moray", 
+                      "Angus", "Dundee City", "Perth and Kinross", "Fife", "East Lothian", "City of Edinburgh", 
+                      "Midlothian", "West Lothian", "Scottish Borders", 
+                      "Clackmannanshire", "Falkirk", "Stirling", 
+                      "Argyll and Bute", "East Dunbartonshire", "East Renfrewshire", "Glasgow City", 
+                      "Inverclyde", "North Lanarkshire", "Renfrewshire", "South Lanarkshire", 
+                      "West Dunbartonshire", "East Ayrshire", "North Ayrshire", "South Ayrshire", 
+                      "Dumfries and Galloway")
+)
+
+# Merge the shapefile with the mapping data
+local_authorities <- local_authorities %>%
+  left_join(mapping_data, by = c("local_auth" = "local_authority"))
+
+# Ensure geometries are valid
+local_authorities <- st_make_valid(local_authorities)
+
+sub_regions <- local_authorities %>%
+  group_by(sub_region) %>%
+  summarise(geometry = st_union(geometry))
+
+st_write(sub_regions, "sub_regions.geojson", driver = "GeoJSON")
+
+
+
 
 ## File: hc_theme.R 
  # hc_theme.R
@@ -304,6 +354,81 @@ areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, foote
       })
       
       hc
+    })
+  })
+}
+
+## File: module_bar_chart.R 
+ # File: module_bar_chart.R
+
+barChartUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    htmlOutput(ns("title")),
+    highchartOutput(ns("bar_chart")),
+    htmlOutput(ns("footer")),
+    div(
+      class = "note",
+      style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+      HTML(
+        "<strong>Note:</strong><ul>
+          <li>You can see data values for a specific variable by hovering your mouse over the bars.</li>
+        </ul>"
+      )
+    )
+  )
+}
+
+barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, tooltip_format) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
+    
+    output$title <- renderUI({
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
+    })
+    
+    output$footer <- renderUI({
+      HTML(footer)
+    })
+    
+    output$bar_chart <- renderHighchart({
+      data <- chart_data()
+      if (nrow(data) == 0) return(NULL)
+      colors <- reactive_colors()
+      group_column <- setdiff(names(data), c(x_col, y_col()))[1]
+      
+      data <- data %>%
+        arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
+      
+      highchart() %>%
+        hc_chart(type = "bar", inverted = TRUE, zoomType = "xy") %>%
+        hc_xAxis(categories = data[[x_col]], title = list(text = xAxisTitle)) %>%
+        hc_yAxis(title = list(text = yAxisTitle()), allowDecimals = FALSE) %>%
+        hc_plotOptions(bar = list(
+          dataLabels = list(enabled = FALSE),
+          colorByPoint = TRUE,
+          groupPadding = 0,
+          pointPadding = 0.1,
+          borderWidth = 0
+        )) %>%
+        hc_add_series(
+          name = "",
+          data = data %>% mutate(y = !!sym(y_col()), color = colors[!!sym(x_col)]) %>% 
+            select(name = !!sym(x_col), y, color),
+          colorByPoint = TRUE,
+          showInLegend = FALSE
+        ) %>%
+        hc_tooltip(
+          style = list(
+            fontFamily = "Arial, sans-serif",
+            fontSize = "16px",
+            color = "black"
+          ),
+          headerFormat = "<b>{point.key}</b><br/>",  
+          pointFormat = paste0(tooltip_format())
+        ) %>%
+        hc_add_theme(thm)
     })
   })
 }
@@ -497,27 +622,39 @@ timelapseBarChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitl
 
 ## File: module_data_table.R 
  library(DT)
+library(dplyr)
+library(tidyr)
 
 # Function to render data tables using DT::renderDT
 render_data_table <- function(table_id, chart_data, output) {
   output[[table_id]] <- DT::renderDT({
     data <- chart_data()
-    data$Year <- as.character(data$Year)
-    first_column_name <- names(data)[1]
-    data <- pivot_wider(data, names_from = !!sym(first_column_name), values_from = Value)
+    if ("Year" %in% colnames(data)) {
+      data$Year <- as.character(data$Year)
+      first_column_name <- names(data)[1]
+      data <- pivot_wider(data, names_from = !!sym(first_column_name), values_from = Value)
+    }
     data <- data %>% mutate(across(where(is.numeric), ~ formatC(.x, format = "f", digits = 2)))
     datatable(as_tibble(data), options = list(paging = FALSE, scrollX = TRUE, dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print')), rownames = FALSE)
   })
 }
 
 # Function to handle data download
-handle_data_download <- function(download_id, chart_type, chart_data, input, output, year_input) {
+handle_data_download <- function(download_id, chart_type, chart_data, input, output, year_input = NULL) {
   output[[download_id]] <- downloadHandler(
-    filename = function() { paste("Agricultural Emissions Data -", chart_type, min(input[[year_input]]), "to", max(input[[year_input]]), ".csv") },
+    filename = function() {
+      if (!is.null(year_input)) {
+        paste("Agricultural Emissions Data -", chart_type, min(input[[year_input]]), "to", max(input[[year_input]]), ".csv")
+      } else {
+        paste("Agricultural Emissions Data -", chart_type, ".csv")
+      }
+    },
     content = function(file) { 
       data <- chart_data()
-      first_column_name <- names(data)[1]
-      data <- pivot_wider(data, names_from = !!sym(first_column_name), values_from = Value)
+      if ("Year" %in% colnames(data)) {
+        first_column_name <- names(data)[1]
+        data <- pivot_wider(data, names_from = !!sym(first_column_name), values_from = Value)
+      }
       data <- data %>% mutate(across(where(is.numeric), ~ formatC(.x, format = "f", digits = 5)))
       write.csv(data, file, row.names = FALSE)
     }
@@ -874,6 +1011,7 @@ thm <- source("hc_theme.R")$value
 
 # Load the .RData file containing the datasets
 load("ghg_data.RData")
+load("census_data.RData")
 
 
 # Preset list of colors
@@ -887,36 +1025,38 @@ assign_colors <- function(data, colors) {
 }
 
 ## File: server.R 
- # server.R
+ # File: server.R
 
 # Source the necessary modules for server logic
-
-source("module_timelapse_bar_chart.R")
-source("module_data_table.R")
-source("module_summary.R")
+source("module_subsector_emissions.R")
+source("module_total_emissions.R")
+source("module_gas_emissions.R")
+source("module_manure_usage.R")
 
 server <- function(input, output, session) {
-  totalEmissionsServer("total")
   subsectorEmissionsServer("subsector")
+  totalEmissionsServer("total")
   gasEmissionsServer("gas")
+  manureUsageServer("manure")
 }
 
 ## File: ui.R 
- # ui.R
+ # File: ui.R
 
 # Source UI modules
 source("module_line_chart.R")
-source("module_data_table.R")
-source("options.R")
 source("module_area_chart.R")
+source("module_bar_chart.R")
 source("module_timelapse_bar_chart.R")
+source("module_data_table.R")
 source("module_total_emissions.R")
 source("module_subsector_emissions.R")
 source("module_gas_emissions.R")
 source("module_summary.R")
 source("module_information.R")
+source("module_manure_usage.R")
+source("options.R")
 source("hc_theme.R")
-source("module_bar_chart.R")
 library(shinyjs)
 
 create_footer <- function() {
@@ -934,7 +1074,7 @@ ui <- fluidPage(
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
     includeHTML("google-analytics.html")
-  ),
+    ),
   div(class = "container-fluid full-height",
       div(class = "content",
           navbarPage(
@@ -944,10 +1084,13 @@ ui <- fluidPage(
               tags$li(class = "nav-item", img(src = "RESAS Logo.png", class = "header-logo"))
             ),
             id = "navbar",
-            tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
-            tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
-            tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
-            tabPanel("Further Information", value = "info", informationUI("info"))
+            navbarMenu("Emissions",
+                       tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
+                       tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
+                       tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
+                       tabPanel("Further Information", value = "info", informationUI("info"))
+            ),
+            tabPanel("Manure Usage", manureUsageUI("manure"))
           )
       ),
       create_footer()
@@ -1142,7 +1285,9 @@ h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, t
 }
 
 ## File: module_subsector_emissions.R 
- subsectorEmissionsUI <- function(id) {
+ # File: module_subsector_emissions.R
+
+subsectorEmissionsUI <- function(id) {
   ns <- NS(id)
   tagList(
     sidebarLayout(
@@ -1182,7 +1327,7 @@ h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, t
           tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = ns("timelapse")),
           tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
           tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
-          tabPanel("Bar Chart", barChartUI(ns("normal_bar")), value = ns("bar")),
+         # tabPanel("Bar Chart", barChartUI(ns("normal_bar")), value = ns("bar")),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
                    downloadButton(ns("downloadData"), "Download Data"),
@@ -1192,7 +1337,6 @@ h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, t
     )
   )
 }
-
 
 subsectorEmissionsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -1254,16 +1398,17 @@ subsectorEmissionsServer <- function(id) {
       y_col = "Value"
     )
     
-    barChartServer(
-      id = "normal_bar",
-      chart_data = chart_data,
-      title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
+   # barChartServer(
+    #  id = "normal_bar",
+     # chart_data = chart_data,
+      #title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
+      #yAxisTitle = "MtCO₂e",
+      #xAxisTitle = "Subsector",
+      #footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
+      #x_col = "Year",
+      #y_col = "Value",
+      #year = 2022
+    #)
     
     render_data_table(
       table_id = "data_table",
@@ -1570,3 +1715,164 @@ gasEmissionsServer <- function(id) {
     summaryBarChartServer(ns("industryBarChart"), chart_data, current_year, comparison_year, "Gas")
   })
 }
+
+## File: module_manure_usage.R 
+ # File: module_manure_usage.R
+
+manureUsageUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    sidebarLayout(
+      sidebarPanel(
+        width = 3,
+        uiOutput(ns("variable_select")),
+        actionButton(ns("select_all_button"), "Select All"),
+        actionButton(ns("deselect_all_button"), "Deselect All"),
+        radioButtons(ns("data_type"), "Data Type", choices = c("Area" = "area", "Holdings" = "holdings"), selected = "area")
+      ),
+      mainPanel(
+        id = ns("mainpanel"),
+        width = 9,
+        tabsetPanel(
+          id = ns("tabs"),
+          tabPanel("Bar Chart", barChartUI(ns("bar_chart")), value = ns("bar")),
+          tabPanel("Data Table",
+                   DTOutput(ns("data_table")),
+                   downloadButton(ns("downloadData"), "Download Data"),
+                   value = ns("data"))
+        )
+      )
+    )
+  )
+}
+
+manureUsageServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    chart_data <- reactive({
+      data <- manure_fertiliser
+      if (!is.null(input$variables)) {
+        data <- data %>%
+          filter(`Fertiliser by type` %in% input$variables)
+      }
+      data
+    })
+    
+    output$variable_select <- renderUI({
+      choices <- unique(manure_fertiliser$`Fertiliser by type`)
+      selected <- choices
+      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
+    })
+    
+    observeEvent(input$select_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = unique(manure_fertiliser$`Fertiliser by type`))
+    })
+    
+    observeEvent(input$deselect_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+    })
+    
+    y_col <- reactive({
+      if (input$data_type == "area") {
+        "2023 area"
+      } else {
+        "2023 holdings"
+      }
+    })
+    
+    yAxisTitle <- reactive({
+      if (input$data_type == "area") {
+        "Area (1,000 hectares)"
+      } else {
+        "Holdings"
+      }
+    })
+    
+    tooltip_format <- reactive({
+      if (input$data_type == "area") {
+        "Area (hectares): {point.y:.2f}"
+      } else {
+        "Holdings: {point.y:.0f}"
+      }
+    })
+    
+    barChartServer(
+      id = "bar_chart",
+      chart_data = chart_data,
+      title = "Manure Usage by Type in Scotland",
+      yAxisTitle = yAxisTitle,
+      xAxisTitle = "Fertiliser Type",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "Fertiliser by type",
+      y_col = y_col,
+      tooltip_format = tooltip_format
+    )
+    
+    render_data_table(
+      table_id = "data_table",
+      chart_data = chart_data,
+      output = output
+    )
+    
+    handle_data_download(
+      download_id = ns("downloadData"),
+      chart_type = "Manure Usage",
+      chart_data = chart_data,
+      input = input,
+      output = output,
+      year_input = NULL
+    )
+  })
+}
+
+## File: map.R 
+ # Load the GeoJSON file
+geojson_data <- geojson_read("sub_regions.geojson", what = "sp")
+
+str(geojson_data)
+
+
+# Convert GeoJSON to a Highcharts-compatible format
+geojson_list <- geojson_list(geojson_data)
+
+
+
+# Sample data frame for demonstration purposes
+regions_data <- data.frame(
+  sub_region = c("Shetland", "Orkney", "Na h-Eileanan Siar", "Highland", 
+                 "Grampian", "Tayside", "Fife", "Lothian", "Scottish Borders", 
+                 "East Central", "Argyll & Bute", "Clyde Valley", "Ayrshire", 
+                 "Dumfries & Galloway"),
+  value = c(24, 37, 7, 90, 153, 55, 47, 37, 46, 67, 82, 221, 320, 503)
+)
+
+# Create the map with correct joinBy properties
+highchart(type = "map") %>%
+  hc_add_series(
+    mapData = geojson_list, 
+    name = "Regions Data",
+    joinBy = c("sub_region", "sub_region"),  # Make sure these properties match
+    data = regions_data,
+    borderColor = "#FFFFFF",
+    borderWidth = 0.5,
+    states = list(
+      hover = list(
+        color = "#BADA55"
+      )
+    ),
+    dataLabels = list(
+      enabled = TRUE,
+      format = '{point.name}'
+    ),
+    tooltip = list(
+      pointFormat = '{point.name}: {point.value}'
+    )
+  ) %>%
+  hc_mapNavigation(enabled = TRUE) %>%
+  hc_colorAxis(
+    min = 0,
+    max = 600,
+    stops = color_stops(5)
+  ) %>%
+  hc_title(text = "Custom Regions and Sub-regions Map")
