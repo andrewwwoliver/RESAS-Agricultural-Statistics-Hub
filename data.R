@@ -79,12 +79,13 @@ clean_data <- function(data) {
   return(data)
 }
 
-# Function to clean header names by removing text within brackets, any '\r\n', and extra spaces
+# Function to clean header names by removing text within brackets, any '\r\n', extra spaces, and specific region names
 clean_headers <- function(headers) {
   headers <- str_replace_all(headers, "\\s*\\([^\\)]+\\)", "")  # Remove text within brackets
   headers <- str_replace_all(headers, "\r\n", " ")  # Remove \r\n
   headers <- str_replace_all(headers, "\\s+", " ")  # Replace multiple spaces with a single space
-  headers <- str_trim(headers)  # Trim any leading or trailing whitespace
+  headers <- str_replace_all(headers, "\\b(North West|North East|South East|South West)\\b", "")  # Remove specific region names
+  headers <- str_trim(headers)  # Trim again to remove any resulting leading or trailing spaces
   return(headers)
 }
 
@@ -170,5 +171,10 @@ sub_regions <- local_authorities %>%
 
 st_write(sub_regions, "sub_regions.geojson", driver = "GeoJSON")
 
+# Load the GeoJSON file
+geojson_data <- geojson_read("sub_regions.geojson", what = "sp")
 
+geojson_data <- ms_simplify(geojson_data, keep = 0.01)
+
+geojson_write(geojson_data, file = "subregions_simplified.geojson")
 

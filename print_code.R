@@ -17,7 +17,9 @@ code_files <- c(
   "module_subsector_emissions.R",
   "module_total_emissions.R",
   "module_gas_emissions.R",
-  "module_manure_usage.R"
+  "module_manure_usage.R",
+  "module_map.R",
+  "module_occupiers_region.R"
   
 )
 

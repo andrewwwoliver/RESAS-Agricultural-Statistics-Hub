@@ -1,4 +1,4 @@
-# File: module_bar_chart.R
+# File: module_bar_chart_combined.R
 
 barChartUI <- function(id) {
   ns <- NS(id)
@@ -35,15 +35,22 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
       data <- chart_data()
       if (nrow(data) == 0) return(NULL)
       colors <- reactive_colors()
-      group_column <- setdiff(names(data), c(x_col, y_col()))[1]
+      group_column <- setdiff(names(data), c(x_col, if (is.reactive(y_col)) y_col() else y_col))[1]
       
-      data <- data %>%
-        arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
+      if (is.reactive(y_col)) {
+        data <- data %>%
+          arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
+        y_col_value <- y_col()
+      } else {
+        data <- data %>%
+          arrange(desc(!!sym(y_col)))  # Sort data by value in descending order
+        y_col_value <- y_col
+      }
       
       highchart() %>%
         hc_chart(type = "bar", inverted = TRUE, zoomType = "xy") %>%
         hc_xAxis(categories = data[[x_col]], title = list(text = xAxisTitle)) %>%
-        hc_yAxis(title = list(text = yAxisTitle()), allowDecimals = FALSE) %>%
+        hc_yAxis(title = list(text = if (is.reactive(yAxisTitle)) yAxisTitle() else yAxisTitle), allowDecimals = FALSE) %>%
         hc_plotOptions(bar = list(
           dataLabels = list(enabled = FALSE),
           colorByPoint = TRUE,
@@ -53,7 +60,7 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
         )) %>%
         hc_add_series(
           name = "",
-          data = data %>% mutate(y = !!sym(y_col()), color = colors[!!sym(x_col)]) %>% 
+          data = data %>% mutate(y = !!sym(y_col_value), color = colors[!!sym(x_col)]) %>% 
             select(name = !!sym(x_col), y, color),
           colorByPoint = TRUE,
           showInLegend = FALSE
@@ -65,7 +72,7 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
             color = "black"
           ),
           headerFormat = "<b>{point.key}</b><br/>",  
-          pointFormat = paste0(tooltip_format())
+          pointFormat = if (is.reactive(tooltip_format)) tooltip_format() else tooltip_format
         ) %>%
         hc_add_theme(thm)
     })

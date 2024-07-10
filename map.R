@@ -1,12 +1,16 @@
-# Load the GeoJSON file
-geojson_data <- geojson_read("sub_regions.geojson", what = "sp")
+library(sf)
+library(rmapshaper)
+library(highcharter)
+library(dplyr)
+library(geojsonio)
 
-str(geojson_data)
+
+
+geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
 
 
 # Convert GeoJSON to a Highcharts-compatible format
 geojson_list <- geojson_list(geojson_data)
-
 
 
 # Sample data frame for demonstration purposes
