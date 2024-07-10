@@ -1,4 +1,4 @@
-# File: ui.R
+# ui.R
 
 # Source UI modules
 source("options.R")
@@ -15,8 +15,9 @@ source("module_information.R")
 source("module_manure_usage.R")
 source("module_map.R")
 source("module_occupiers_region.R")
-source("module_land_use_summary.R")  # Added new module
-source("module_legal_responsibility.R")  # Added new module
+source("module_legal_responsibility.R")
+source("module_farm_types.R")
+source("module_occupiers.R")  # Added new module
 source("hc_theme.R")
 library(shinyjs)
 
@@ -54,10 +55,13 @@ ui <- fluidPage(
             ),
             navbarMenu("Structure",
                        tabPanel("Occupiers by Region", value = "occupiers", mapUI("occupiers")),
-                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use")),
-                       tabPanel("Legal Responsibility", value = "legal", legalResponsibilityUI("legal"))  # Add new page
+                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use")),  # Added new page
+                       tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility")),
+                       tabPanel("Farm Types", value = "farm_types", farmTypesUI("farm_types")),  # Added new page
+                       tabPanel("Population Pyramid", value = "population_pyramid", occupiersUI("population_pyramid"))  # Added new page
             )
           ),
           create_footer()
       )
-  ))
+  )
+)

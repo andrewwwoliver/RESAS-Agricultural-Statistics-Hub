@@ -6,10 +6,7 @@ manureUsageUI <- function(id) {
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        uiOutput(ns("variable_select")),
-        actionButton(ns("select_all_button"), "Select All"),
-        actionButton(ns("deselect_all_button"), "Deselect All"),
-        radioButtons(ns("data_type"), "Data Type", choices = c("Area" = "area", "Holdings" = "holdings"), selected = "area")
+        radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area"), selected = "holdings")  # Changed order here
       ),
       mainPanel(
         id = ns("mainpanel"),
@@ -55,26 +52,26 @@ manureUsageServer <- function(id) {
     })
     
     y_col <- reactive({
-      if (input$data_type == "area") {
-        "2023 area"
-      } else {
+      if (input$data_type == "holdings") {
         "2023 holdings"
+      } else {
+        "2023 area"
       }
     })
     
     yAxisTitle <- reactive({
-      if (input$data_type == "area") {
-        "Area (1,000 hectares)"
-      } else {
+      if (input$data_type == "holdings") {
         "Holdings"
+      } else {
+        "Area (1,000 hectares)"
       }
     })
     
     tooltip_format <- reactive({
-      if (input$data_type == "area") {
-        "Area (hectares): {point.y:.2f}"
-      } else {
+      if (input$data_type == "holdings") {
         "Holdings: {point.y:.0f}"
+      } else {
+        "Area (hectares): {point.y:.2f}"
       }
     })
     

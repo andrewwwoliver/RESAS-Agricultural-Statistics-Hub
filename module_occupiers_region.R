@@ -1,3 +1,5 @@
+# File: module_occupiers_region.R
+
 library(highcharter)
 library(geojsonio)
 library(dplyr)
@@ -18,7 +20,8 @@ occupiers_employees_subregion <- occupiers_employees_subregion %>%
 regions_data <- occupiers_employees_subregion %>% 
   select(-Scotland) %>% 
   pivot_longer(cols = -`Occupiers and employees by category`, names_to = "sub_region", values_to = "value") %>%
-  mutate(value = ifelse(value == "c", NA, as.numeric(value))) # Convert 'c' to NA and the rest to numeric
+  mutate(value = na_if(value, "c")) %>%  # Convert 'c' to NA
+  mutate(value = as.numeric(value))  # Convert the rest to numeric
 
 mapUI <- function(id) {
   ns <- NS(id)
@@ -79,7 +82,7 @@ mapServer <- function(id) {
           ),
           tooltip = list(
             useHTML = TRUE,
-             headerFormat = "<b>{point.key}</b><br/>", # doesnt work for some reason
+            headerFormat = "<b>{point.key}</b><br/>", # doesnt work for some reason
             pointFormatter = JS(sprintf("function() {
               return '<b>' + this.sub_region + '</b><br/>' +
                      '%s: ' + this.value;

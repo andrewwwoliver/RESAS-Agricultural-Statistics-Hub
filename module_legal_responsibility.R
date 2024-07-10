@@ -35,6 +35,13 @@ legalResponsibilityServer <- function(id) {
       data
     })
     
+    # Get initial order based on 'Holdings'
+    initial_order <- reactive({
+      data <- chart_data() %>%
+        arrange(desc(Holdings))
+      data$`Legal responsibility`
+    })
+    
     y_col <- reactive({
       if (input$data_type == "holdings") {
         "Holdings"
@@ -61,14 +68,21 @@ legalResponsibilityServer <- function(id) {
     
     barChartServer(
       id = "bar_chart",
-      chart_data = chart_data,
+      chart_data = reactive({
+        data <- chart_data()
+        data <- data %>%
+          mutate(`Legal responsibility` = factor(`Legal responsibility`, levels = initial_order())) %>%
+          arrange(`Legal responsibility`)
+        data
+      }),
       title = "Legal Responsibility of Holdings in Scotland",
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Legal Responsibility",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "Legal responsibility",
       y_col = y_col,
-      tooltip_format = tooltip_format
+      tooltip_format = tooltip_format,
+      maintain_order = TRUE
     )
     
     render_data_table(

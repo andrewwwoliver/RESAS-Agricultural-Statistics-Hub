@@ -60,7 +60,7 @@ table_names <- c(
   "occupiers_age_gender" = "Table_9",
   "legal_responsibility" = "Table_10",
   "owned_rented_land" = "Table_11",
-  "holdings_main_farm_type" = "Table_12",
+  "farm_type" = "Table_12",
   "agricultural_area_lfa" = "Table_13",
   "holdings_crops_grass_subregion" = "Table_14",
   "crops_grass_area_subregion" = "Table_15",
@@ -68,7 +68,7 @@ table_names <- c(
   "livestock_subregion" = "Table_17",
   "holdings_occupiers_employees_subregion" = "Table_18",
   "occupiers_employees_subregion" = "Table_19",
-  "holdings_arable_land_crop_rotation" = "Table_20",
+  "arable_rotation" = "Table_20",
   "manure_fertiliser" = "Table_21"
 )
 

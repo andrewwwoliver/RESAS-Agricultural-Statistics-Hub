@@ -18,7 +18,9 @@ barChartUI <- function(id) {
   )
 }
 
-barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, tooltip_format) {
+# File: module_bar_chart.R
+
+barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, tooltip_format, maintain_order = FALSE) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
@@ -38,13 +40,14 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
       group_column <- setdiff(names(data), c(x_col, if (is.reactive(y_col)) y_col() else y_col))[1]
       
       if (is.reactive(y_col)) {
-        data <- data %>%
-          arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
         y_col_value <- y_col()
       } else {
-        data <- data %>%
-          arrange(desc(!!sym(y_col)))  # Sort data by value in descending order
         y_col_value <- y_col
+      }
+      
+      if (!maintain_order) {
+        data <- data %>%
+          arrange(desc(!!sym(y_col_value)))  # Sort data by value in descending order
       }
       
       highchart() %>%

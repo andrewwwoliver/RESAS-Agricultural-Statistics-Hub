@@ -8,7 +8,10 @@ source("options.R")
 source("module_summary.R")
 source("module_map.R")
 source("module_occupiers_region.R")
-source("module_legal_responsibility.R")  # Add new module
+source("module_legal_responsibility.R")
+source("module_manure_usage.R")
+source("module_farm_types.R")
+source("module_occupiers.R")  # Added new module
 
 # Source the UI and server components
 source("ui.R")
