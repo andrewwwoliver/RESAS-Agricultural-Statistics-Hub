@@ -1,5 +1,3 @@
-# File: module_occupiers_region.R
-
 library(highcharter)
 library(geojsonio)
 library(dplyr)
@@ -20,14 +18,22 @@ occupiers_employees_subregion <- occupiers_employees_subregion %>%
 regions_data <- occupiers_employees_subregion %>% 
   select(-Scotland) %>% 
   pivot_longer(cols = -`Occupiers and employees by category`, names_to = "sub_region", values_to = "value") %>%
-  mutate(value = na_if(value, "c")) %>%  # Convert 'c' to NA
-  mutate(value = as.numeric(value))  # Convert the rest to numeric
+  mutate(value = ifelse(value == "c", NA, as.numeric(value))) # Convert 'c' to NA and the rest to numeric
 
-mapUI <- function(id) {
+# Filter for the specific categories
+categories <- c("Regular full-time staff total", 
+                "Regular part-time staff total", 
+                "Total Casual and seasonal staff", 
+                "Total agricultural workforce")
+
+filtered_regions_data <- regions_data %>%
+  filter(`Occupiers and employees by category` %in% categories)
+
+employeesMapUI <- function(id) {
   ns <- NS(id)
   tagList(
     sidebarPanel(
-      selectInput(ns("variable"), "Select Variable", choices = unique(regions_data$`Occupiers and employees by category`))
+      radioButtons(ns("variable"), "Select Variable", choices = categories)
     ),
     mainPanel(
       highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
@@ -36,10 +42,9 @@ mapUI <- function(id) {
         style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
         HTML(
           "<strong>Note:</strong><ul>
-            <li>To change the data shown, select a variable from the dropdown menu within the sidebar.</li>
+            <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
             <li>You can see data values for each variable by hovering your mouse over the region.</li>
             <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
-
           </ul>"
         )
       )
@@ -47,12 +52,12 @@ mapUI <- function(id) {
   )
 }
 
-mapServer <- function(id) {
+employeesMapServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     filtered_data <- reactive({
-      regions_data %>%
+      filtered_regions_data %>%
         filter(`Occupiers and employees by category` == input$variable)
     })
     
@@ -82,7 +87,7 @@ mapServer <- function(id) {
           ),
           tooltip = list(
             useHTML = TRUE,
-            headerFormat = "<b>{point.key}</b><br/>", # doesnt work for some reason
+            headerFormat = "<b>{point.key}</b><br/>",
             pointFormatter = JS(sprintf("function() {
               return '<b>' + this.sub_region + '</b><br/>' +
                      '%s: ' + this.value;
@@ -98,7 +103,7 @@ mapServer <- function(id) {
             format = "{value:,.0f}"  # Ensure the labels show the correct values
           )
         ) %>%
-        hc_title(text = "Occupiers and Employees by Region") %>%
+        hc_title(text = "Agricultural Employees by Region") %>%
         hc_chart(reflow = TRUE) %>% # Make chart responsive
         hc_legend(
           layout = "horizontal",
@@ -113,9 +118,9 @@ mapServer <- function(id) {
 
 # Testing module
 content_demo <- function() {
-  ui <- fluidPage(mapUI("map_test"))
+  ui <- fluidPage(employeesMapUI("employees_map_test"))
   server <- function(input, output, session) {
-    mapServer("map_test")
+    employeesMapServer("employees_map_test")
   }
   shinyApp(ui, server)
 }
