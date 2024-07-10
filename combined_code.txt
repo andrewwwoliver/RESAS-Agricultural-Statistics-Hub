@@ -367,7 +367,7 @@ areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, foote
 }
 
 ## File: module_bar_chart.R 
- # File: module_bar_chart.R
+ # File: module_bar_chart_combined.R
 
 barChartUI <- function(id) {
   ns <- NS(id)
@@ -404,15 +404,22 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
       data <- chart_data()
       if (nrow(data) == 0) return(NULL)
       colors <- reactive_colors()
-      group_column <- setdiff(names(data), c(x_col, y_col()))[1]
+      group_column <- setdiff(names(data), c(x_col, if (is.reactive(y_col)) y_col() else y_col))[1]
       
-      data <- data %>%
-        arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
+      if (is.reactive(y_col)) {
+        data <- data %>%
+          arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
+        y_col_value <- y_col()
+      } else {
+        data <- data %>%
+          arrange(desc(!!sym(y_col)))  # Sort data by value in descending order
+        y_col_value <- y_col
+      }
       
       highchart() %>%
         hc_chart(type = "bar", inverted = TRUE, zoomType = "xy") %>%
         hc_xAxis(categories = data[[x_col]], title = list(text = xAxisTitle)) %>%
-        hc_yAxis(title = list(text = yAxisTitle()), allowDecimals = FALSE) %>%
+        hc_yAxis(title = list(text = if (is.reactive(yAxisTitle)) yAxisTitle() else yAxisTitle), allowDecimals = FALSE) %>%
         hc_plotOptions(bar = list(
           dataLabels = list(enabled = FALSE),
           colorByPoint = TRUE,
@@ -422,7 +429,7 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
         )) %>%
         hc_add_series(
           name = "",
-          data = data %>% mutate(y = !!sym(y_col()), color = colors[!!sym(x_col)]) %>% 
+          data = data %>% mutate(y = !!sym(y_col_value), color = colors[!!sym(x_col)]) %>% 
             select(name = !!sym(x_col), y, color),
           colorByPoint = TRUE,
           showInLegend = FALSE
@@ -434,7 +441,7 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
             color = "black"
           ),
           headerFormat = "<b>{point.key}</b><br/>",  
-          pointFormat = paste0(tooltip_format())
+          pointFormat = if (is.reactive(tooltip_format)) tooltip_format() else tooltip_format
         ) %>%
         hc_add_theme(thm)
     })
@@ -1033,7 +1040,7 @@ assign_colors <- function(data, colors) {
 }
 
 ## File: server.R 
- # server.R
+ # File: server.R
 
 # Source the necessary modules for server logic
 source("module_subsector_emissions.R")
@@ -1041,18 +1048,20 @@ source("module_total_emissions.R")
 source("module_gas_emissions.R")
 source("module_manure_usage.R")
 source("module_map.R")
-source("module_occupiers_region.R")  # Added new module
+source("module_occupiers_region.R")
+source("module_land_use_summary.R")  # Added new module
 
 server <- function(input, output, session) {
   subsectorEmissionsServer("subsector")
   totalEmissionsServer("total")
   gasEmissionsServer("gas")
   manureUsageServer("manure")
-  mapServer("occupiers")  # Added new module server
+  mapServer("occupiers")
+  landUseSummaryServer("land_use")  # Added new module server
 }
 
 ## File: ui.R 
- # ui.R
+ # File: ui.R
 
 # Source UI modules
 source("options.R")
@@ -1068,7 +1077,8 @@ source("module_summary.R")
 source("module_information.R")
 source("module_manure_usage.R")
 source("module_map.R")
-source("module_occupiers_region.R")  # Added new module
+source("module_occupiers_region.R")
+source("module_land_use_summary.R")  # Added new module
 source("hc_theme.R")
 library(shinyjs)
 
@@ -1105,12 +1115,13 @@ ui <- fluidPage(
                        tabPanel("Further Information", value = "info", informationUI("info"))
             ),
             navbarMenu("Structure",
-                       tabPanel("Occupiers by Region", value = "occupiers", mapUI("occupiers")) 
+                       tabPanel("Occupiers by Region", value = "occupiers", mapUI("occupiers")),
+                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use"))  # Added new page
             )
-      ),
-      create_footer()
-  )
-))
+          ),
+          create_footer()
+      )
+  ))
 
 ## File: www/styles.css 
  /* styles.css */
@@ -1957,6 +1968,8 @@ mapUI <- function(id) {
           "<strong>Note:</strong><ul>
             <li>To change the data shown, select a variable from the dropdown menu within the sidebar.</li>
             <li>You can see data values for each variable by hovering your mouse over the region.</li>
+            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
+
           </ul>"
         )
       )

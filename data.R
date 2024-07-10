@@ -58,7 +58,7 @@ table_names <- c(
   "number_of_other_livestock" = "Table_7",
   "occupiers_employees" = "Table_8",
   "occupiers_age_gender" = "Table_9",
-  "businesses_land_area" = "Table_10",
+  "legal_responsibility" = "Table_10",
   "owned_rented_land" = "Table_11",
   "holdings_main_farm_type" = "Table_12",
   "agricultural_area_lfa" = "Table_13",

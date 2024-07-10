@@ -16,6 +16,7 @@ source("module_manure_usage.R")
 source("module_map.R")
 source("module_occupiers_region.R")
 source("module_land_use_summary.R")  # Added new module
+source("module_legal_responsibility.R")  # Added new module
 source("hc_theme.R")
 library(shinyjs)
 
@@ -53,7 +54,8 @@ ui <- fluidPage(
             ),
             navbarMenu("Structure",
                        tabPanel("Occupiers by Region", value = "occupiers", mapUI("occupiers")),
-                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use"))  # Added new page
+                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use")),
+                       tabPanel("Legal Responsibility", value = "legal", legalResponsibilityUI("legal"))  # Add new page
             )
           ),
           create_footer()

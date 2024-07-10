@@ -7,7 +7,8 @@ source("module_data_table.R")
 source("options.R")
 source("module_summary.R")
 source("module_map.R")
-source("module_occupiers_region.R")  # Added new module
+source("module_occupiers_region.R")
+source("module_legal_responsibility.R")  # Add new module
 
 # Source the UI and server components
 source("ui.R")
