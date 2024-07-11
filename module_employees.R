@@ -87,4 +87,4 @@ content_demo <- function() {
   shinyApp(ui, server)
 }
 
-content_demo()
+# content_demo()

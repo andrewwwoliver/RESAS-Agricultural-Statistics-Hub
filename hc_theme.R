@@ -64,7 +64,7 @@ thm <- hc_theme(
       color = "black"
     ),
     headerFormat = "<b>{point.key}</b><br/>",  
-    pointFormat = "{series.name}: {point.y:.2f} MtCO₂e"
+    pointFormat = "{series.name}: {point.y:.2f}"
   ),
   legend = list(
     itemStyle = list(
