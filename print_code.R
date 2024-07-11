@@ -19,7 +19,10 @@ code_files <- c(
   "module_gas_emissions.R",
   "module_manure_usage.R",
   "module_map.R",
-  "module_occupiers_region.R"
+  "module_employees.R",
+  "module_legal_responsibility.R",
+  "module_farm_types.R",
+  "module_occupiers.R"
   
 )
 

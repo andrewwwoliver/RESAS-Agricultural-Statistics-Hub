@@ -1,8 +1,9 @@
+# File: module_map.R
+
+library(shiny)
 library(highcharter)
 library(geojsonio)
 library(dplyr)
-library(shiny)
-library(tidyr)
 
 # Load the GeoJSON file
 geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
@@ -10,55 +11,23 @@ geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
 # Convert GeoJSON to a Highcharts-compatible format
 geojson_list <- geojson_list(geojson_data)
 
-# Coerce all relevant columns to character before pivoting
-occupiers_employees_subregion <- occupiers_employees_subregion %>%
-  mutate(across(-`Occupiers and employees by category`, as.character))
-
-# Transform the data
-regions_data <- occupiers_employees_subregion %>% 
-  select(-Scotland) %>% 
-  pivot_longer(cols = -`Occupiers and employees by category`, names_to = "sub_region", values_to = "value") %>%
-  mutate(value = ifelse(value == "c", NA, as.numeric(value))) # Convert 'c' to NA and the rest to numeric
-
-# Filter for the specific categories
-categories <- c("Regular full-time staff total", 
-                "Regular part-time staff total", 
-                "Total Casual and seasonal staff", 
-                "Total agricultural workforce")
-
-filtered_regions_data <- regions_data %>%
-  filter(`Occupiers and employees by category` %in% categories)
-
 mapUI <- function(id) {
   ns <- NS(id)
   tagList(
-    sidebarPanel(
-      radioButtons(ns("variable"), "Select Variable", choices = categories)
-    ),
-    mainPanel(
-      highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
-      div(
-        class = "note",
-        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-        HTML(
-          "<strong>Note:</strong><ul>
-            <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
-            <li>You can see data values for each variable by hovering your mouse over the region.</li>
-            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
-          </ul>"
-        )
-      )
-    )
+    highchartOutput(ns("map"), height = "75vh")
   )
 }
 
-mapServer <- function(id) {
+mapServer <- function(id, data, variable, title) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     filtered_data <- reactive({
-      filtered_regions_data %>%
-        filter(`Occupiers and employees by category` == input$variable)
+      req(variable)  # Ensure that variable is not null or missing
+      req(variable())  # Ensure that variable() is not null or missing
+      req(data())      # Ensure that data() is not null or missing
+      data() %>%  # Make sure to call data() to evaluate the reactive expression
+        filter(`Occupiers and employees by category` == variable())
     })
     
     output$map <- renderHighchart({
@@ -68,7 +37,7 @@ mapServer <- function(id) {
         select(sub_region, value) %>%
         list_parse()
       
-      variable_name <- input$variable  # Get the selected variable name
+      variable_name <- variable()  # Get the selected variable name
       
       highchart(type = "map") %>%
         hc_add_series(
@@ -103,7 +72,7 @@ mapServer <- function(id) {
             format = "{value:,.0f}"  # Ensure the labels show the correct values
           )
         ) %>%
-        hc_title(text = "Occupiers and Employees by Region") %>%
+        hc_title(text = title) %>%
         hc_chart(reflow = TRUE) %>% # Make chart responsive
         hc_legend(
           layout = "horizontal",
@@ -115,14 +84,3 @@ mapServer <- function(id) {
     })
   })
 }
-
-# Testing module
-content_demo <- function() {
-  ui <- fluidPage(mapUI("map_test"))
-  server <- function(input, output, session) {
-    mapServer("map_test")
-  }
-  shinyApp(ui, server)
-}
-
-content_demo()

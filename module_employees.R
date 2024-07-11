@@ -1,14 +1,14 @@
-library(highcharter)
-library(geojsonio)
-library(dplyr)
+# File: module_employees.R
+
 library(shiny)
+library(highcharter)
+library(dplyr)
 library(tidyr)
 
-# Load the GeoJSON file
-geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
-
-# Convert GeoJSON to a Highcharts-compatible format
-geojson_list <- geojson_list(geojson_data)
+# Load the module_map.R
+source("module_map.R")
+# Load the existing module_data_table.R
+source("module_data_table.R")
 
 # Coerce all relevant columns to character before pivoting
 occupiers_employees_subregion <- occupiers_employees_subregion %>%
@@ -31,22 +31,17 @@ filtered_regions_data <- regions_data %>%
 
 employeesMapUI <- function(id) {
   ns <- NS(id)
-  tagList(
+  sidebarLayout(
     sidebarPanel(
+      width = 3,
       radioButtons(ns("variable"), "Select Variable", choices = categories)
     ),
     mainPanel(
-      highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
-      div(
-        class = "note",
-        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-        HTML(
-          "<strong>Note:</strong><ul>
-            <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
-            <li>You can see data values for each variable by hovering your mouse over the region.</li>
-            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
-          </ul>"
-        )
+      width = 9,
+      tabsetPanel(
+        id = ns("tabs"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"))
       )
     )
   )
@@ -61,58 +56,25 @@ employeesMapServer <- function(id) {
         filter(`Occupiers and employees by category` == input$variable)
     })
     
-    output$map <- renderHighchart({
-      data <- filtered_data()
-      hc_data <- data %>% 
-        mutate(sub_region = as.character(sub_region)) %>%
-        select(sub_region, value) %>%
-        list_parse()
-      
-      variable_name <- input$variable  # Get the selected variable name
-      
-      highchart(type = "map") %>%
-        hc_add_series(
-          mapData = geojson_list, 
-          joinBy = c("sub_region", "sub_region"),
-          data = hc_data,
-          borderColor = "#FFFFFF",
-          borderWidth = 0.5,
-          states = list(
-            hover = list(
-              color = "#BADA55"
-            )
-          ),
-          dataLabels = list(
-            enabled = FALSE  # Disable the overlays
-          ),
-          tooltip = list(
-            useHTML = TRUE,
-            headerFormat = "<b>{point.key}</b><br/>",
-            pointFormatter = JS(sprintf("function() {
-              return '<b>' + this.sub_region + '</b><br/>' +
-                     '%s: ' + this.value;
-            }", variable_name))
-          ),
-          nullColor = '#E0E0E0'  # Color for regions with no data
-        ) %>%
-        hc_mapNavigation(enabled = TRUE) %>%
-        hc_colorAxis(
-          min = 0,
-          stops = color_stops(5),
-          labels = list(
-            format = "{value:,.0f}"  # Ensure the labels show the correct values
-          )
-        ) %>%
-        hc_title(text = "Agricultural Employees by Region") %>%
-        hc_chart(reflow = TRUE) %>% # Make chart responsive
-        hc_legend(
-          layout = "horizontal",
-          align = "center",
-          verticalAlign = "bottom",
-          title = list(text = "Legend", style = list(fontSize = '15px')),
-          itemStyle = list(width = '100px')
-        )
+    mapServer(
+      id = "map",
+      data = filtered_data,
+      variable = reactive(input$variable),
+      title = "Agricultural Employees by Region"
+    )
+    
+    output$data_table <- renderDT({
+      datatable(filtered_regions_data)
     })
+    
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste("employees_data_", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(filtered_regions_data, file, row.names = FALSE)
+      }
+    )
   })
 }
 

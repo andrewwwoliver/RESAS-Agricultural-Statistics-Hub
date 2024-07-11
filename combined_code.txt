@@ -7,8 +7,11 @@ source("module_area_chart.R")
 source("module_data_table.R")
 source("options.R")
 source("module_summary.R")
-source("module_map.R")
-source("module_occupiers_region.R")  # Added new module
+source("module_employees.R")
+source("module_legal_responsibility.R")
+source("module_manure_usage.R")
+source("module_farm_types.R")
+source("module_occupiers.R")  # Added new module
 
 # Source the UI and server components
 source("ui.R")
@@ -78,9 +81,9 @@ table_names <- c(
   "number_of_other_livestock" = "Table_7",
   "occupiers_employees" = "Table_8",
   "occupiers_age_gender" = "Table_9",
-  "businesses_land_area" = "Table_10",
+  "legal_responsibility" = "Table_10",
   "owned_rented_land" = "Table_11",
-  "holdings_main_farm_type" = "Table_12",
+  "farm_type" = "Table_12",
   "agricultural_area_lfa" = "Table_13",
   "holdings_crops_grass_subregion" = "Table_14",
   "crops_grass_area_subregion" = "Table_15",
@@ -88,7 +91,7 @@ table_names <- c(
   "livestock_subregion" = "Table_17",
   "holdings_occupiers_employees_subregion" = "Table_18",
   "occupiers_employees_subregion" = "Table_19",
-  "holdings_arable_land_crop_rotation" = "Table_20",
+  "arable_rotation" = "Table_20",
   "manure_fertiliser" = "Table_21"
 )
 
@@ -387,7 +390,9 @@ barChartUI <- function(id) {
   )
 }
 
-barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, tooltip_format) {
+# File: module_bar_chart.R
+
+barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, tooltip_format, maintain_order = FALSE) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
@@ -407,13 +412,14 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
       group_column <- setdiff(names(data), c(x_col, if (is.reactive(y_col)) y_col() else y_col))[1]
       
       if (is.reactive(y_col)) {
-        data <- data %>%
-          arrange(desc(!!sym(y_col())))  # Sort data by value in descending order
         y_col_value <- y_col()
       } else {
-        data <- data %>%
-          arrange(desc(!!sym(y_col)))  # Sort data by value in descending order
         y_col_value <- y_col
+      }
+      
+      if (!maintain_order) {
+        data <- data %>%
+          arrange(desc(!!sym(y_col_value)))  # Sort data by value in descending order
       }
       
       highchart() %>%
@@ -1048,20 +1054,26 @@ source("module_total_emissions.R")
 source("module_gas_emissions.R")
 source("module_manure_usage.R")
 source("module_map.R")
-source("module_occupiers_region.R")
+source("module_employees.R")
+source("module_legal_responsibility.R")
 source("module_land_use_summary.R")  # Added new module
+source("module_farm_types.R")  # Added new module
+source("module_occupiers.R")  # Added new module
 
 server <- function(input, output, session) {
   subsectorEmissionsServer("subsector")
   totalEmissionsServer("total")
   gasEmissionsServer("gas")
   manureUsageServer("manure")
-  mapServer("occupiers")
+  employeesMapServer("employees")
   landUseSummaryServer("land_use")  # Added new module server
+  legalResponsibilityServer("legal_responsibility")  # Added new module server
+  farmTypesServer("farm_types")  # Added new module server
+  occupiersServer("occupiers")  # Added new module server
 }
 
 ## File: ui.R 
- # File: ui.R
+ # ui.R
 
 # Source UI modules
 source("options.R")
@@ -1077,8 +1089,11 @@ source("module_summary.R")
 source("module_information.R")
 source("module_manure_usage.R")
 source("module_map.R")
-source("module_occupiers_region.R")
-source("module_land_use_summary.R")  # Added new module
+source("module_employees.R")
+source("module_legal_responsibility.R")
+source("module_farm_types.R")
+source("module_occupiers.R")  # Added new module
+source("module_land_use_summary.R")
 source("hc_theme.R")
 library(shinyjs)
 
@@ -1115,13 +1130,17 @@ ui <- fluidPage(
                        tabPanel("Further Information", value = "info", informationUI("info"))
             ),
             navbarMenu("Structure",
-                       tabPanel("Occupiers by Region", value = "occupiers", mapUI("occupiers")),
-                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use"))  # Added new page
+                       tabPanel("Employees", value = "employees", employeesMapUI("employees")),
+                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use")),  # Added new page
+                       tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility")),
+                       tabPanel("Farm Types", value = "farm_types", farmTypesUI("farm_types")),  # Added new page
+                       tabPanel("Occupiers", value = "occupiers", occupiersUI("occupiers"))  # Added new page
             )
           ),
           create_footer()
       )
-  ))
+  )
+)
 
 ## File: www/styles.css 
  /* styles.css */
@@ -1751,10 +1770,7 @@ manureUsageUI <- function(id) {
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        uiOutput(ns("variable_select")),
-        actionButton(ns("select_all_button"), "Select All"),
-        actionButton(ns("deselect_all_button"), "Deselect All"),
-        radioButtons(ns("data_type"), "Data Type", choices = c("Area" = "area", "Holdings" = "holdings"), selected = "area")
+        radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area"), selected = "holdings")  # Changed order here
       ),
       mainPanel(
         id = ns("mainpanel"),
@@ -1800,26 +1816,26 @@ manureUsageServer <- function(id) {
     })
     
     y_col <- reactive({
-      if (input$data_type == "area") {
-        "2023 area"
-      } else {
+      if (input$data_type == "holdings") {
         "2023 holdings"
+      } else {
+        "2023 area"
       }
     })
     
     yAxisTitle <- reactive({
-      if (input$data_type == "area") {
-        "Area (1,000 hectares)"
-      } else {
+      if (input$data_type == "holdings") {
         "Holdings"
+      } else {
+        "Area (1,000 hectares)"
       }
     })
     
     tooltip_format <- reactive({
-      if (input$data_type == "area") {
-        "Area (hectares): {point.y:.2f}"
-      } else {
+      if (input$data_type == "holdings") {
         "Holdings: {point.y:.0f}"
+      } else {
+        "Area (hectares): {point.y:.2f}"
       }
     })
     
@@ -1853,137 +1869,29 @@ manureUsageServer <- function(id) {
 }
 
 ## File: module_map.R 
- # module_map.R
+ # File: module_map.R
 
+library(shiny)
 library(highcharter)
-library(geojsonio)
 library(dplyr)
-library(shiny)
-
-# Load the GeoJSON file
-geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
-
-# Convert GeoJSON to a Highcharts-compatible format
-geojson_list <- geojson_list(geojson_data)
-
-# Sample data frame for demonstration purposes
-regions_data <- data.frame(
-  sub_region = c("Shetland", "Orkney", "Na h-Eileanan Siar", "Highland", 
-                 "Grampian", "Tayside", "Fife", "Lothian", "Scottish Borders", 
-                 "East Central", "Argyll & Bute", "Clyde Valley", "Ayrshire", 
-                 "Dumfries & Galloway"),
-  value = c(24, 37, 7, 90, 153, 55, 47, 37, 46, 67, 82, 221, 320, 503)
-)
 
 mapUI <- function(id) {
   ns <- NS(id)
   tagList(
-    highchartOutput(ns("map"))
+    highchartOutput(ns("map"), height = "75vh")
   )
 }
 
-mapServer <- function(id) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$map <- renderHighchart({
-      highchart(type = "map") %>%
-        hc_add_series(
-          mapData = geojson_list, 
-          name = "Regions Data",
-          joinBy = c("sub_region", "sub_region"),  # Make sure these properties match
-          data = regions_data,
-          borderColor = "#FFFFFF",
-          borderWidth = 0.5,
-          states = list(
-            hover = list(
-              color = "#BADA55"
-            )
-          ),
-          dataLabels = list(
-            enabled = TRUE,
-            format = '{point.name}'
-          ),
-          tooltip = list(
-            pointFormat = '{point.name}: {point.value}'
-          )
-        ) %>%
-        hc_mapNavigation(enabled = TRUE) %>%
-        hc_colorAxis(
-          min = 0,
-          max = 600,
-          stops = color_stops(5)
-        ) %>%
-        hc_title(text = "Custom Regions and Sub-regions Map")
-    })
-  })
-}
-
-# Testing module
-content_demo <- function() {
-  ui <- fluidPage(mapUI("map_test"))
-  server <- function(input, output, session) {
-    mapServer("map_test")
-  }
-  shinyApp(ui, server)
-}
-
-content_demo()
-
-## File: module_occupiers_region.R 
- library(highcharter)
-library(geojsonio)
-library(dplyr)
-library(shiny)
-library(tidyr)
-
-# Load the GeoJSON file
-geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
-
-# Convert GeoJSON to a Highcharts-compatible format
-geojson_list <- geojson_list(geojson_data)
-
-# Coerce all relevant columns to character before pivoting
-occupiers_employees_subregion <- occupiers_employees_subregion %>%
-  mutate(across(-`Occupiers and employees by category`, as.character))
-
-# Transform the data
-regions_data <- occupiers_employees_subregion %>% 
-  select(-Scotland) %>% 
-  pivot_longer(cols = -`Occupiers and employees by category`, names_to = "sub_region", values_to = "value") %>%
-  mutate(value = ifelse(value == "c", NA, as.numeric(value))) # Convert 'c' to NA and the rest to numeric
-
-mapUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    sidebarPanel(
-      selectInput(ns("variable"), "Select Variable", choices = unique(regions_data$`Occupiers and employees by category`))
-    ),
-    mainPanel(
-      highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
-      div(
-        class = "note",
-        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-        HTML(
-          "<strong>Note:</strong><ul>
-            <li>To change the data shown, select a variable from the dropdown menu within the sidebar.</li>
-            <li>You can see data values for each variable by hovering your mouse over the region.</li>
-            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
-
-          </ul>"
-        )
-      )
-    )
-  )
-}
-
-mapServer <- function(id) {
+mapServer <- function(id, data, variable, title) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     filtered_data <- reactive({
-      regions_data %>%
-        filter(`Occupiers and employees by category` == input$variable)
+      req(variable)  # Ensure that variable is not null or missing
+      req(variable())  # Ensure that variable() is not null or missing
+      req(data())      # Ensure that data() is not null or missing
+      data() %>%  # Make sure to call data() to evaluate the reactive expression
+        filter(`Occupiers and employees by category` == variable())
     })
     
     output$map <- renderHighchart({
@@ -1992,8 +1900,6 @@ mapServer <- function(id) {
         mutate(sub_region = as.character(sub_region)) %>%
         select(sub_region, value) %>%
         list_parse()
-      
-      variable_name <- input$variable  # Get the selected variable name
       
       highchart(type = "map") %>%
         hc_add_series(
@@ -2008,28 +1914,28 @@ mapServer <- function(id) {
             )
           ),
           dataLabels = list(
-            enabled = FALSE  # Disable the overlays
+            enabled = FALSE
           ),
           tooltip = list(
             useHTML = TRUE,
-             headerFormat = "<b>{point.key}</b><br/>", # doesnt work for some reason
+            headerFormat = "<b>{point.key}</b><br/>",
             pointFormatter = JS(sprintf("function() {
               return '<b>' + this.sub_region + '</b><br/>' +
                      '%s: ' + this.value;
-            }", variable_name))
+            }", variable()))
           ),
-          nullColor = '#E0E0E0'  # Color for regions with no data
+          nullColor = '#E0E0E0'
         ) %>%
         hc_mapNavigation(enabled = TRUE) %>%
         hc_colorAxis(
           min = 0,
           stops = color_stops(5),
           labels = list(
-            format = "{value:,.0f}"  # Ensure the labels show the correct values
+            format = "{value:,.0f}"
           )
         ) %>%
-        hc_title(text = "Occupiers and Employees by Region") %>%
-        hc_chart(reflow = TRUE) %>% # Make chart responsive
+        hc_title(text = title) %>%
+        hc_chart(reflow = TRUE) %>%
         hc_legend(
           layout = "horizontal",
           align = "center",
@@ -2041,13 +1947,501 @@ mapServer <- function(id) {
   })
 }
 
-# Testing module
+## File: module_employees.R 
+ # File: module_employees.R
+
+library(shiny)
+library(highcharter)
+library(dplyr)
+library(tidyr)
+
+# Load the module_map.R
+source("module_map.R")
+
+employeesMapUI <- function(id) {
+  ns <- NS(id)
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      uiOutput(ns("sidebar_ui"))
+    ),
+    mainPanel(
+      width = 9,
+      tabsetPanel(
+        id = ns("tabs"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"))
+      )
+    )
+  )
+}
+
+employeesMapServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Data Processing for Map
+    regions_data <- reactive({
+      occupiers_employees_subregion %>%
+        select(-Scotland) %>%
+        mutate(across(everything(), as.character)) %>%  # Ensure all columns are characters
+        pivot_longer(cols = -`Occupiers and employees by category`, names_to = "sub_region", values_to = "value") %>%
+        mutate(value = ifelse(is.na(as.numeric(value)), NA, as.numeric(value))) %>%
+        filter(`Occupiers and employees by category` %in% c(
+          "Regular full-time staff total", 
+          "Regular part-time staff total", 
+          "Total Casual and seasonal staff", 
+          "Total agricultural workforce"
+        ))
+    })
+    
+    # Map - Use the new map module
+    mapServer(
+      id = "map",
+      data = regions_data,
+      variable = reactive(input$variable),
+      title = "Employees by Region"
+    )
+    
+    # Dynamic UI for Sidebar
+    output$sidebar_ui <- renderUI({
+      radioButtons(ns("variable"), "Select Variable", choices = c(
+        "Regular full-time staff total", 
+        "Regular part-time staff total", 
+        "Total Casual and seasonal staff", 
+        "Total agricultural workforce"
+      ))
+    })
+    
+    # Data Table
+    output$data_table <- renderDT({
+      regions_data()
+    })
+    
+    # Download Data
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste("employees_data_", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(regions_data(), file, row.names = FALSE)
+      }
+    )
+  })
+}
+
+# Testing Module
 content_demo <- function() {
-  ui <- fluidPage(mapUI("map_test"))
+  ui <- fluidPage(employeesMapUI("employees_test"))
   server <- function(input, output, session) {
-    mapServer("map_test")
+    employeesMapServer("employees_test")
   }
   shinyApp(ui, server)
 }
 
 content_demo()
+
+## File: module_legal_responsibility.R 
+ # File: module_legal_responsibility.R
+
+legalResponsibilityUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    sidebarLayout(
+      sidebarPanel(
+        width = 3,
+        radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area"), selected = "holdings")
+      ),
+      mainPanel(
+        id = ns("mainpanel"),
+        width = 9,
+        tabsetPanel(
+          id = ns("tabs"),
+          tabPanel("Bar Chart", barChartUI(ns("bar_chart")), value = ns("bar")),
+          tabPanel("Data Table",
+                   DTOutput(ns("data_table")),
+                   downloadButton(ns("downloadData"), "Download Data"),
+                   value = ns("data"))
+        )
+      )
+    )
+  )
+}
+
+legalResponsibilityServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Create reactive data excluding 'Total'
+    chart_data <- reactive({
+      data <- legal_responsibility %>%
+        filter(`Legal responsibility` != "Total")
+      data
+    })
+    
+    # Get initial order based on 'Holdings'
+    initial_order <- reactive({
+      data <- chart_data() %>%
+        arrange(desc(Holdings))
+      data$`Legal responsibility`
+    })
+    
+    y_col <- reactive({
+      if (input$data_type == "holdings") {
+        "Holdings"
+      } else {
+        "Area of holdings"
+      }
+    })
+    
+    yAxisTitle <- reactive({
+      if (input$data_type == "holdings") {
+        "Number of Holdings"
+      } else {
+        "Area of Holdings (hectares)"
+      }
+    })
+    
+    tooltip_format <- reactive({
+      if (input$data_type == "holdings") {
+        "Holdings: {point.y:.0f}"
+      } else {
+        "Area (hectares): {point.y:.2f}"
+      }
+    })
+    
+    barChartServer(
+      id = "bar_chart",
+      chart_data = reactive({
+        data <- chart_data()
+        data <- data %>%
+          mutate(`Legal responsibility` = factor(`Legal responsibility`, levels = initial_order())) %>%
+          arrange(`Legal responsibility`)
+        data
+      }),
+      title = "Legal Responsibility of Holdings in Scotland",
+      yAxisTitle = yAxisTitle,
+      xAxisTitle = "Legal Responsibility",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "Legal responsibility",
+      y_col = y_col,
+      tooltip_format = tooltip_format,
+      maintain_order = TRUE
+    )
+    
+    render_data_table(
+      table_id = "data_table",
+      chart_data = chart_data,
+      output = output
+    )
+    
+    handle_data_download(
+      download_id = ns("downloadData"),
+      chart_type = "Legal Responsibility",
+      chart_data = chart_data,
+      input = input,
+      output = output,
+      year_input = NULL
+    )
+  })
+}
+
+## File: module_farm_types.R 
+ # File: module_farm_types.R
+
+farmTypesUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    sidebarLayout(
+      sidebarPanel(
+        width = 3,
+        radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area", "Total from Standard Outputs" = "total", "Average standard outputs per holding" = "average"), selected = "holdings"),
+        uiOutput(ns("variable_select")),  # Added variable select UI
+        actionButton(ns("select_all_button"), "Select All"),
+        actionButton(ns("deselect_all_button"), "Deselect All")
+      ),
+      mainPanel(
+        id = ns("mainpanel"),
+        width = 9,
+        tabsetPanel(
+          id = ns("tabs"),
+          tabPanel("Bar Chart", barChartUI(ns("bar_chart")), value = ns("bar")),
+          tabPanel("Data Table",
+                   DTOutput(ns("data_table")),
+                   downloadButton(ns("downloadData"), "Download Data"),
+                   value = ns("data"))
+        )
+      )
+    )
+  )
+}
+
+farmTypesServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Create reactive data excluding 'All'
+    chart_data <- reactive({
+      data <- farm_type %>%
+        filter(`Main farm type` != "All")
+      if (!is.null(input$variables)) {
+        data <- data %>%
+          filter(`Main farm type` %in% input$variables)
+      }
+      data
+    })
+    
+    # Get initial order based on 'Holdings'
+    initial_order <- reactive({
+      data <- chart_data() %>%
+        arrange(desc(Holdings))
+      data$`Main farm type`
+    })
+    
+    output$variable_select <- renderUI({
+      choices <- unique(farm_type$`Main farm type`)
+      selected <- setdiff(choices, "All")
+      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
+    })
+    
+    observeEvent(input$select_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = setdiff(unique(farm_type$`Main farm type`), "All"))
+    })
+    
+    observeEvent(input$deselect_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+    })
+    
+    y_col <- reactive({
+      switch(input$data_type,
+             "holdings" = "Holdings",
+             "area" = "Hectares",
+             "total" = "Total from Standard Outputs",
+             "average" = "Average standard outputs per holding")
+    })
+    
+    yAxisTitle <- reactive({
+      switch(input$data_type,
+             "holdings" = "Number of Holdings",
+             "area" = "Area (hectares)",
+             "total" = "Total from Standard Outputs",
+             "average" = "Average Standard Outputs per Holding")
+    })
+    
+    tooltip_format <- reactive({
+      switch(input$data_type,
+             "holdings" = "Holdings: {point.y:.0f}",
+             "area" = "Area (hectares): {point.y:.2f}",
+             "total" = "Total from Standard Outputs: {point.y:.0f}",
+             "average" = "Average Standard Outputs per Holding: {point.y:.2f}")
+    })
+    
+    barChartServer(
+      id = "bar_chart",
+      chart_data = reactive({
+        data <- chart_data()
+        data <- data %>%
+          mutate(`Main farm type` = factor(`Main farm type`, levels = initial_order())) %>%
+          arrange(`Main farm type`)
+        data
+      }),
+      title = "Farm Types in Scotland",
+      yAxisTitle = yAxisTitle,
+      xAxisTitle = "Main Farm Type",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "Main farm type",
+      y_col = y_col,
+      tooltip_format = tooltip_format,
+      maintain_order = TRUE
+    )
+    
+    render_data_table(
+      table_id = "data_table",
+      chart_data = chart_data,
+      output = output
+    )
+    
+    handle_data_download(
+      download_id = ns("downloadData"),
+      chart_type = "Farm Types",
+      chart_data = chart_data,
+      input = input,
+      output = output,
+      year_input = NULL
+    )
+  })
+}
+
+## File: module_occupiers.R 
+ # File: module_occupiers.R
+
+library(shiny)
+library(highcharter)
+library(dplyr)
+library(tidyr)
+library(DT)
+library(geojsonio)
+
+# Load the module_map.R
+source("module_map.R")
+
+occupiersUI <- function(id) {
+  ns <- NS(id)
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      uiOutput(ns("sidebar_ui"))
+    ),
+    mainPanel(
+      width = 9,
+      tabsetPanel(
+        id = ns("tabs"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Bar Chart", highchartOutput(ns("pyramid_chart"), height = "500px")),
+        tabPanel("Data Table", 
+                 DTOutput(ns("data_table")),
+                 downloadButton(ns("downloadData"), "Download Data"))
+      )
+    )
+  )
+}
+
+occupiersServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Data Processing for Bar Chart
+    chart_data <- reactive({
+      occupiers_age_gender %>%
+        filter(`Occupier working time` == "Total working occupiers") %>%
+        select(-`Male Total`, -`Female Total`) %>%
+        pivot_longer(cols = -`Occupier working time`, names_to = "Gender_Age", values_to = "Count") %>%
+        separate(Gender_Age, into = c("Gender", "Age"), sep = " ", extra = "merge") %>%
+        mutate(Count = as.numeric(Count))
+    })
+    
+    # Data Processing for Map
+    regions_data <- reactive({
+      occupiers_employees_subregion %>%
+        select(-Scotland) %>%
+        mutate(across(everything(), as.character)) %>%  # Ensure all columns are characters
+        pivot_longer(cols = -`Occupiers and employees by category`, names_to = "sub_region", values_to = "value") %>%
+        mutate(value = ifelse(is.na(as.numeric(value)), NA, as.numeric(value))) %>%
+        filter(`Occupiers and employees by category` %in% c(
+          "Total working Occupiers", 
+          "Occupiers not working on the holding"
+        ))
+    })
+    
+    # Sidebar UI
+    output$sidebar_ui <- renderUI({
+      if (input$tabs == "Map") {
+        radioButtons(ns("variable"), "Select Variable", choices = c(
+          "Total working Occupiers", 
+          "Occupiers not working on the holding"
+        ))
+      } else if (input$tabs == "Data Table") {
+        radioButtons(ns("data_source"), "Choose data to show:", choices = c("Chart Data", "Map Data"))
+      } else {
+        tagList(
+          checkboxGroupInput(ns("variables"), "Choose age groups to display", choices = unique(chart_data()$Age), selected = unique(chart_data()$Age)),
+          actionButton(ns("select_all_button"), "Select All"),
+          actionButton(ns("deselect_all_button"), "Deselect All")
+        )
+      }
+    })
+    
+    # Bar Chart - Observers
+    observe({
+      choices <- unique(chart_data()$Age)
+      updateCheckboxGroupInput(session, ns("variables"), choices = choices, selected = choices)
+    })
+    
+    observeEvent(input$select_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = unique(chart_data()$Age))
+    })
+    
+    observeEvent(input$deselect_all_button, {
+      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+    })
+    
+    # Bar Chart - Filtered Data
+    filtered_data <- reactive({
+      req(input$variables)
+      chart_data() %>%
+        filter(Age %in% input$variables) %>%
+        mutate(Count = ifelse(Gender == "Female", -Count, Count))
+    })
+    
+    # Bar Chart - Output
+    output$pyramid_chart <- renderHighchart({
+      data <- filtered_data()
+      female_data <- data %>% filter(Gender == "Female") %>% select(y = Count) %>% pull()
+      male_data <- data %>% filter(Gender == "Male") %>% select(y = Count) %>% pull()
+      categories <- data %>% filter(Gender == "Male") %>% select(Age) %>% pull()
+      max_count <- max(abs(c(male_data, female_data)), na.rm = TRUE)
+      
+      highchart() %>%
+        hc_chart(type = "bar") %>%
+        hc_xAxis(categories = categories, reversed = FALSE) %>%
+        hc_yAxis(
+          min = -max_count,
+          max = max_count,
+          title = list(text = "Number of working occupiers"), 
+          labels = list(formatter = JS("function () {
+            return Math.abs(this.value);
+          }"))
+        ) %>%
+        hc_plotOptions(bar = list(stacking = "normal")) %>%
+        hc_add_series(name = "Female", data = as.list(female_data), color = "#002d54", tooltip = list(pointFormatter = JS("function() { return 'Female: ' + Math.abs(this.y); }"))) %>%
+        hc_add_series(name = "Male", data = as.list(male_data), color = "#2b9c93", tooltip = list(pointFormatter = JS("function() { return 'Male: ' + this.y; }"))) %>%
+        hc_tooltip(shared = FALSE) %>%
+        hc_title(text = "Labour Interactive Plots") %>%
+        hc_subtitle(text = "Population pyramid") %>%
+        hc_legend(align = "center") %>%
+        hc_xAxis(title = list(text = "Age group")) %>%
+        hc_yAxis(title = list(text = "Number of working occupiers"),
+                 labels = list(formatter = JS("function () {
+                   return Math.abs(this.value);
+                 }")))
+    })
+    
+    # Map - Use the new map module
+    mapServer(
+      id = "map",
+      data = regions_data,
+      variable = reactive(input$variable),
+      title = "Occupiers by Region"
+    )
+    
+    # Data Table - Output
+    render_data_table <- function(table_id, chart_data, map_data, input, output) {
+      output[[table_id]] <- renderDT({
+        if (input$data_source == "Chart Data") {
+          datatable(chart_data())
+        } else {
+          datatable(map_data())
+        }
+      })
+    }
+    
+    # Data Table - Download Handler
+    handle_data_download <- function(download_id, chart_data, map_data, input, output) {
+      output[[download_id]] <- downloadHandler(
+        filename = function() {
+          paste(input$data_source, Sys.Date(), ".csv", sep = "")
+        },
+        content = function(file) {
+          if (input$data_source == "Chart Data") {
+            write.csv(chart_data(), file)
+          } else {
+            write.csv(map_data(), file)
+          }
+        }
+      )
+    }
+    
+    render_data_table("data_table", chart_data, regions_data, input, output)
+    handle_data_download("downloadData", chart_data, regions_data, input, output)
+  })
+}

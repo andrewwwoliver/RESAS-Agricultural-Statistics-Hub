@@ -7,38 +7,30 @@ library(tidyr)
 library(DT)
 library(geojsonio)
 
-# Load the GeoJSON file
-geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
+# Load the module_map.R
+source("module_map.R")
 
-# Convert GeoJSON to a Highcharts-compatible format
-geojson_list <- geojson_list(geojson_data)
-
-# UI Function
 occupiersUI <- function(id) {
   ns <- NS(id)
-  tagList(
-    sidebarLayout(
-      sidebarPanel(
-        width = 3,
-        uiOutput(ns("sidebar_ui"))
-      ),
-      mainPanel(
-        id = ns("mainpanel"),
-        width = 9,
-        tabsetPanel(
-          id = ns("tabs"),
-          tabPanel("Map", highchartOutput(ns("map"), height = "75vh")),
-          tabPanel("Bar Chart", highchartOutput(ns("pyramid_chart"), height = "500px")),
-          tabPanel("Data Table", 
-                   DTOutput(ns("data_table")),
-                   downloadButton(ns("downloadData"), "Download Data"))
-        )
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      uiOutput(ns("sidebar_ui"))
+    ),
+    mainPanel(
+      width = 9,
+      tabsetPanel(
+        id = ns("tabs"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Bar Chart", highchartOutput(ns("pyramid_chart"), height = "500px")),
+        tabPanel("Data Table", 
+                 DTOutput(ns("data_table")),
+                 downloadButton(ns("downloadData"), "Download Data"))
       )
     )
   )
 }
 
-# Server Function
 occupiersServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -57,28 +49,45 @@ occupiersServer <- function(id) {
     regions_data <- reactive({
       occupiers_employees_subregion %>%
         select(-Scotland) %>%
+        mutate(across(everything(), as.character)) %>%  # Ensure all columns are characters
         pivot_longer(cols = -`Occupiers and employees by category`, names_to = "sub_region", values_to = "value") %>%
         mutate(value = ifelse(is.na(as.numeric(value)), NA, as.numeric(value))) %>%
         filter(`Occupiers and employees by category` %in% c(
-          "Regular full-time staff total", 
-          "Regular part-time staff total", 
-          "Total Casual and seasonal staff", 
-          "Total agricultural workforce"
+          "Total working Occupiers", 
+          "Occupiers not working on the holding"
         ))
+    })
+    
+    # Sidebar UI
+    output$sidebar_ui <- renderUI({
+      if (input$tabs == "Map") {
+        radioButtons(ns("variable"), "Select Variable", choices = c(
+          "Total working Occupiers", 
+          "Occupiers not working on the holding"
+        ))
+      } else if (input$tabs == "Data Table") {
+        radioButtons(ns("data_source"), "Choose data to show:", choices = c("Chart Data", "Map Data"))
+      } else {
+        tagList(
+          checkboxGroupInput(ns("variables"), "Choose age groups to display", choices = unique(chart_data()$Age), selected = unique(chart_data()$Age)),
+          actionButton(ns("select_all_button"), "Select All"),
+          actionButton(ns("deselect_all_button"), "Deselect All")
+        )
+      }
     })
     
     # Bar Chart - Observers
     observe({
       choices <- unique(chart_data()$Age)
-      updateCheckboxGroupInput(session, "variables", choices = choices, selected = choices)
+      updateCheckboxGroupInput(session, ns("variables"), choices = choices, selected = choices)
     })
     
     observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, "variables", selected = unique(chart_data()$Age))
+      updateCheckboxGroupInput(session, ns("variables"), selected = unique(chart_data()$Age))
     })
     
     observeEvent(input$deselect_all_button, {
-      updateCheckboxGroupInput(session, "variables", selected = character(0))
+      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
     })
     
     # Bar Chart - Filtered Data
@@ -122,66 +131,13 @@ occupiersServer <- function(id) {
                  }")))
     })
     
-    # Map - Filtered Data
-    filtered_map_data <- reactive({
-      req(input$variable)
-      regions_data() %>%
-        filter(`Occupiers and employees by category` == input$variable)
-    })
-    
-    # Map - Output
-    output$map <- renderHighchart({
-      data <- filtered_map_data()
-      hc_data <- data %>%
-        mutate(sub_region = as.character(sub_region)) %>%
-        select(sub_region, value) %>%
-        list_parse()
-      
-      variable_name <- input$variable
-      
-      highchart(type = "map") %>%
-        hc_add_series(
-          mapData = geojson_list, 
-          joinBy = c("sub_region", "sub_region"),
-          data = hc_data,
-          borderColor = "#FFFFFF",
-          borderWidth = 0.5,
-          states = list(
-            hover = list(
-              color = "#BADA55"
-            )
-          ),
-          dataLabels = list(
-            enabled = FALSE
-          ),
-          tooltip = list(
-            useHTML = TRUE,
-            headerFormat = "<b>{point.key}</b><br/>",
-            pointFormatter = JS(sprintf("function() {
-              return '<b>' + this.sub_region + '</b><br/>' +
-                     '%s: ' + this.value;
-            }", variable_name))
-          ),
-          nullColor = '#E0E0E0'
-        ) %>%
-        hc_mapNavigation(enabled = TRUE) %>%
-        hc_colorAxis(
-          min = 0,
-          stops = color_stops(5),
-          labels = list(
-            format = "{value:,.0f}"
-          )
-        ) %>%
-        hc_title(text = "Occupiers and Employees by Region") %>%
-        hc_chart(reflow = TRUE) %>%
-        hc_legend(
-          layout = "horizontal",
-          align = "center",
-          verticalAlign = "bottom",
-          title = list(text = "Legend", style = list(fontSize = '15px')),
-          itemStyle = list(width = '100px')
-        )
-    })
+    # Map - Use the new map module
+    mapServer(
+      id = "map",
+      data = regions_data,
+      variable = reactive(input$variable),
+      title = "Occupiers by Region"
+    )
     
     # Data Table - Output
     render_data_table <- function(table_id, chart_data, map_data, input, output) {
@@ -210,53 +166,7 @@ occupiersServer <- function(id) {
       )
     }
     
-    # Render Data Table
-    render_data_table(
-      table_id = "data_table",
-      chart_data = chart_data,
-      map_data = regions_data,
-      input = input,
-      output = output
-    )
-    
-    # Handle Data Download
-    handle_data_download(
-      download_id = "downloadData",
-      chart_data = chart_data,
-      map_data = regions_data,
-      input = input,
-      output = output
-    )
-    
-    # Dynamic UI for Sidebar
-    output$sidebar_ui <- renderUI({
-      if (input$tabs == "Map") {
-        radioButtons(ns("variable"), "Select Variable", choices = c(
-          "Regular full-time staff total", 
-          "Regular part-time staff total", 
-          "Total Casual and seasonal staff", 
-          "Total agricultural workforce"
-        ))
-      } else if (input$tabs == "Data Table") {
-        radioButtons(ns("data_source"), "Choose data to show:", choices = c("Chart Data", "Map Data"))
-      } else {
-        tagList(
-          checkboxGroupInput(ns("variables"), "Choose age groups to display", choices = unique(chart_data()$Age), selected = unique(chart_data()$Age)),
-          actionButton(ns("select_all_button"), "Select All"),
-          actionButton(ns("deselect_all_button"), "Deselect All")
-        )
-      }
-    })
+    render_data_table("data_table", chart_data, regions_data, input, output)
+    handle_data_download("downloadData", chart_data, regions_data, input, output)
   })
 }
-
-# Testing Module
-content_demo <- function() {
-  ui <- fluidPage(occupiersUI("occupiers_test"))
-  server <- function(input, output, session) {
-    occupiersServer("occupiers_test")
-  }
-  shinyApp(ui, server)
-}
-
-content_demo()
