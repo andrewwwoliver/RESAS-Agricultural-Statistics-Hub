@@ -1,4 +1,4 @@
-# File: module_occupiers.R
+## File: module_occupiers.R
 
 library(shiny)
 library(highcharter)
@@ -21,11 +21,26 @@ occupiersUI <- function(id) {
       width = 9,
       tabsetPanel(
         id = ns("tabs"),
-        tabPanel("Map", mapUI(ns("map"))),
-        tabPanel("Bar Chart", highchartOutput(ns("pyramid_chart"), height = "500px")),
+        tabPanel("Map", mapUI(ns("map")), value = "map"),
+        tabPanel("Bar Chart", highchartOutput(ns("pyramid_chart"), height = "500px"), value = "bar_chart"),
+        tabPanel("Timeseries", 
+                 highchartOutput(ns("line_chart")), 
+                 div(
+                   class = "note",
+                   style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+                   HTML(
+                     "<strong>Note:</strong><ul>
+                       <li>To add or remove a series from the chart, select/deselect the variable from the sidebar menu.</li>
+                       <li>Select a year range by adjusting the slider on the sidebar or by zooming into the graph by clicking and dragging over an area you wish to see.</li>
+                       <li>You can see data values for a specific year by hovering your mouse over the line.</li>
+                     </ul>"
+                   )
+                 ), 
+                 value = "timeseries"),
         tabPanel("Data Table", 
                  DTOutput(ns("data_table")),
-                 downloadButton(ns("downloadData"), "Download Data"))
+                 downloadButton(ns("downloadData"), "Download Data"),
+                 value = "data_table")
       )
     )
   )
@@ -58,43 +73,72 @@ occupiersServer <- function(id) {
         ))
     })
     
+    # Data Processing for Timeseries
+    
+    occupiers_employees <- occupiers_employees %>%
+      mutate(across(starts_with("20"), as.numeric))
+    
+    occupiers_timeseries_data <- reactive({
+      occupiers_employees %>%
+        pivot_longer(cols = -`Occupiers and employees by category`, names_to = "Year", values_to = "Value") %>%
+        mutate(Year = as.numeric(Year)) %>%
+        filter(grepl("occupiers", `Occupiers and employees by category`, ignore.case = TRUE))
+    })
+    
+    
     # Sidebar UI
     output$sidebar_ui <- renderUI({
-      if (input$tabs == "Map") {
+      req(input$tabs)
+      if (input$tabs == "map") {
         radioButtons(ns("variable"), "Select Variable", choices = c(
           "Total working Occupiers", 
           "Occupiers not working on the holding"
         ))
-      } else if (input$tabs == "Data Table") {
-        radioButtons(ns("data_source"), "Choose data to show:", choices = c("Chart Data", "Map Data"))
+      } else if (input$tabs == "data_table") {
+        radioButtons(ns("data_source"), "Choose data to show:", choices = c("Chart Data", "Map Data", "Timeseries Data"))
+      } else if (input$tabs == "timeseries") {
+        tagList(
+          checkboxGroupInput(
+            ns("variables"), 
+            "Select variables to display", 
+            choices = unique(occupiers_timeseries_data()$`Occupiers and employees by category`), 
+            selected = c('Occupiers - full time', 'Total working occupiers', 'Occupiers not working on the holding')
+          ),
+          sliderInput(
+            ns("year_range"),
+            "Select Year Range",
+            min = 2012,
+            max = 2023,
+            value = c(2012, 2023),
+            step = 1,
+            sep = "",
+            ticks = TRUE
+          )
+        )
       } else {
         tagList(
-          checkboxGroupInput(ns("variables"), "Choose age groups to display", choices = unique(chart_data()$Age), selected = unique(chart_data()$Age)),
+          checkboxGroupInput(ns("variables_bar"), "Choose age groups to display", choices = unique(chart_data()$Age), selected = unique(chart_data()$Age)),
           actionButton(ns("select_all_button"), "Select All"),
           actionButton(ns("deselect_all_button"), "Deselect All")
         )
       }
     })
     
-    # Bar Chart - Observers
-    observe({
-      choices <- unique(chart_data()$Age)
-      updateCheckboxGroupInput(session, ns("variables"), choices = choices, selected = choices)
-    })
-    
-    observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = unique(chart_data()$Age))
-    })
-    
-    observeEvent(input$deselect_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+    filtered_timeseries_data <- reactive({
+      req(input$variables, input$year_range)
+      data <- occupiers_timeseries_data()
+      data %>% 
+        filter(
+          `Occupiers and employees by category` %in% input$variables,
+          Year >= input$year_range[1] & Year <= input$year_range[2]
+        )
     })
     
     # Bar Chart - Filtered Data
     filtered_data <- reactive({
-      req(input$variables)
+      req(input$variables_bar)
       chart_data() %>%
-        filter(Age %in% input$variables) %>%
+        filter(Age %in% input$variables_bar) %>%
         mutate(Count = ifelse(Gender == "Female", -Count, Count))
     })
     
@@ -131,6 +175,19 @@ occupiersServer <- function(id) {
                  }")))
     })
     
+    # Timeseries Chart - Output
+    output$line_chart <- renderHighchart({
+      data <- filtered_timeseries_data()
+      if (nrow(data) == 0) return(NULL)
+      highchart() %>%
+        hc_chart(type = "line") %>%
+        hc_title(text = "Agricultural Occupiers Timeseries") %>%
+        hc_xAxis(title = list(text = "Year")) %>%
+        hc_yAxis(title = list(text = "Occupiers (1,000)")) %>%
+        hc_add_series(data = data, hcaes(x = Year, y = Value, group = `Occupiers and employees by category`), type = "line") %>%
+        hc_tooltip(shared = FALSE)
+    })
+    
     # Map - Use the new map module
     mapServer(
       id = "map",
@@ -140,33 +197,51 @@ occupiersServer <- function(id) {
     )
     
     # Data Table - Output
-    render_data_table <- function(table_id, chart_data, map_data, input, output) {
-      output[[table_id]] <- renderDT({
-        if (input$data_source == "Chart Data") {
-          datatable(chart_data())
-        } else {
-          datatable(map_data())
-        }
-      })
-    }
+    output$data_table <- renderDT({
+      req(input$data_source)
+      if (input$data_source == "Chart Data") {
+        datatable(chart_data())
+      } else if (input$data_source == "Map Data") {
+        datatable(regions_data())
+      } else {
+        datatable(filtered_timeseries_data())
+      }
+    })
     
     # Data Table - Download Handler
-    handle_data_download <- function(download_id, chart_data, map_data, input, output) {
-      output[[download_id]] <- downloadHandler(
-        filename = function() {
-          paste(input$data_source, Sys.Date(), ".csv", sep = "")
-        },
-        content = function(file) {
-          if (input$data_source == "Chart Data") {
-            write.csv(chart_data(), file)
-          } else {
-            write.csv(map_data(), file)
-          }
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste(input$data_source, Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        if (input$data_source == "Chart Data") {
+          write.csv(chart_data(), file, row.names = FALSE)
+        } else if (input$data_source == "Map Data") {
+          write.csv(regions_data(), file, row.names = FALSE)
+        } else {
+          write.csv(filtered_timeseries_data(), file, row.names = FALSE)
         }
-      )
-    }
+      }
+    )
     
-    render_data_table("data_table", chart_data, regions_data, input, output)
-    handle_data_download("downloadData", chart_data, regions_data, input, output)
+    # Select/Deselect all for bar chart
+    observeEvent(input$select_all_button, {
+      updateCheckboxGroupInput(session, ns("variables_bar"), selected = unique(chart_data()$Age))
+    })
+    
+    observeEvent(input$deselect_all_button, {
+      updateCheckboxGroupInput(session, ns("variables_bar"), selected = character(0))
+    })
   })
 }
+
+# Testing module
+content_demo <- function() {
+  ui <- fluidPage(occupiersUI("occupiers_map_test"))
+  server <- function(input, output, session) {
+    occupiersServer("occupiers_map_test")
+  }
+  shinyApp(ui, server)
+}
+
+content_demo()
