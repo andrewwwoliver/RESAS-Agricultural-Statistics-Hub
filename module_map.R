@@ -1,5 +1,3 @@
-# File: module_map.R
-
 library(shiny)
 library(highcharter)
 library(geojsonio)
@@ -26,8 +24,10 @@ mapServer <- function(id, data, variable, title) {
       req(variable)  # Ensure that variable is not null or missing
       req(variable())  # Ensure that variable() is not null or missing
       req(data())      # Ensure that data() is not null or missing
-      data() %>%  # Make sure to call data() to evaluate the reactive expression
-        filter(`Occupiers and employees by category` == variable())
+      
+      first_col_name <- names(data())[1]  # Get the name of the first column dynamically
+      data() %>%
+        filter(!!sym(first_col_name) == variable())  # Use the first column name for filtering
     })
     
     output$map <- renderHighchart({

@@ -1,5 +1,3 @@
-# ui.R
-
 # Source UI modules
 source("options.R")
 source("module_line_chart.R")
@@ -17,8 +15,14 @@ source("module_map.R")
 source("module_employees.R")
 source("module_legal_responsibility.R")
 source("module_farm_types.R")
-source("module_occupiers.R")  # Added new module
+source("module_occupiers.R")
 source("module_land_use_summary.R")
+source("module_owned_land.R")
+source("module_cattle.R")
+source("module_sheep.R")
+source("module_pigs.R")
+source("module_poultry.R")
+source("module_other_animals.R")
 source("hc_theme.R")
 library(shinyjs)
 
@@ -55,11 +59,19 @@ ui <- fluidPage(
                        tabPanel("Further Information", value = "info", informationUI("info"))
             ),
             navbarMenu("Structure",
+                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use")),
+                       tabPanel("Farm Types", value = "farm_types", farmTypesUI("farm_types")),
                        tabPanel("Employees", value = "employees", employeesMapUI("employees")),
-                       tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use")),  # Added new page
-                       tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility")),
-                       tabPanel("Farm Types", value = "farm_types", farmTypesUI("farm_types")),  # Added new page
-                       tabPanel("Occupiers", value = "occupiers", occupiersUI("occupiers"))  # Added new page
+                       tabPanel("Occupiers", value = "occupiers", occupiersUI("occupiers")),
+                       tabPanel("Ownership Status", value = "owned_land", ownedLandUI("owned_land")),
+                       tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility"))
+            ),
+            navbarMenu("Livestock",
+                       tabPanel("Cattle", value = "cattle_module", cattleUI("cattle_module")),
+                       tabPanel("Sheep", value = "sheep_module", sheepUI("sheep_module")),
+                       tabPanel("Pigs", value = "pigs_module", pigsUI("pigs_module")),
+                       tabPanel("Poultry", value = "poultry_module", poultryUI("poultry_module")),
+                       tabPanel("Other Animals", value = "other_animals_module", otherAnimalsUI("other_animals_module"))
             )
           ),
           create_footer()

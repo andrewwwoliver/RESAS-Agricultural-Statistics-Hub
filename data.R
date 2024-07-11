@@ -41,9 +41,6 @@ library(readxl)
 library(dplyr)
 library(stringr)
 
-
-# Could do with being more automated
-# Manually removed first x rows of metadata from each table
 # Define file path
 file_path <- "June+Agricultural+Census+2023+Tables.xlsx"
 
@@ -89,6 +86,12 @@ clean_headers <- function(headers) {
   return(headers)
 }
 
+# Function to clean cell values by replacing multiple spaces with a single space
+clean_cells <- function(data) {
+  data <- data %>% mutate(across(where(is.character), ~str_replace_all(.x, "\\s+", " ")))
+  return(data)
+}
+
 # Read each table, clean it, and assign to a variable
 for (table in names(table_names)) {
   sheet_name <- table_names[table]
@@ -108,14 +111,16 @@ for (table in names(table_names)) {
   # Assign cleaned headers to the data
   names(data) <- cleaned_headers
   
-  # Remove '\r\n' from all character columns
+  # Remove '\r\n' from all character columns and clean multiple spaces
   data <- data %>% mutate(across(where(is.character), ~str_replace_all(.x, "\r\n", " ")))
+  data <- clean_cells(data)
   
   # Clean data
   cleaned_data <- clean_data(data)
   
   assign(table, cleaned_data)
 }
+
 
 # Save all tables to an RData file
 save(list = names(table_names), file = "census_data.RData")

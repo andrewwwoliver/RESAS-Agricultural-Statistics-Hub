@@ -7,8 +7,9 @@ library(tidyr)
 library(DT)
 library(geojsonio)
 
-# Load the module_map.R
+# Load the required modules
 source("module_map.R")
+source("module_line_chart.R")
 
 occupiersUI <- function(id) {
   ns <- NS(id)
@@ -23,20 +24,7 @@ occupiersUI <- function(id) {
         id = ns("tabs"),
         tabPanel("Map", mapUI(ns("map")), value = "map"),
         tabPanel("Bar Chart", highchartOutput(ns("pyramid_chart"), height = "500px"), value = "bar_chart"),
-        tabPanel("Timeseries", 
-                 highchartOutput(ns("line_chart")), 
-                 div(
-                   class = "note",
-                   style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-                   HTML(
-                     "<strong>Note:</strong><ul>
-                       <li>To add or remove a series from the chart, select/deselect the variable from the sidebar menu.</li>
-                       <li>Select a year range by adjusting the slider on the sidebar or by zooming into the graph by clicking and dragging over an area you wish to see.</li>
-                       <li>You can see data values for a specific year by hovering your mouse over the line.</li>
-                     </ul>"
-                   )
-                 ), 
-                 value = "timeseries"),
+        tabPanel("Timeseries", lineChartUI(ns("line_chart")), value = "timeseries"),
         tabPanel("Data Table", 
                  DTOutput(ns("data_table")),
                  downloadButton(ns("downloadData"), "Download Data"),
@@ -74,7 +62,6 @@ occupiersServer <- function(id) {
     })
     
     # Data Processing for Timeseries
-    
     occupiers_employees <- occupiers_employees %>%
       mutate(across(starts_with("20"), as.numeric))
     
@@ -84,7 +71,6 @@ occupiersServer <- function(id) {
         mutate(Year = as.numeric(Year)) %>%
         filter(grepl("occupiers", `Occupiers and employees by category`, ignore.case = TRUE))
     })
-    
     
     # Sidebar UI
     output$sidebar_ui <- renderUI({
@@ -100,7 +86,7 @@ occupiersServer <- function(id) {
         tagList(
           checkboxGroupInput(
             ns("variables"), 
-            "Select variables to display", 
+            "Choose variables to add to chart", 
             choices = unique(occupiers_timeseries_data()$`Occupiers and employees by category`), 
             selected = c('Occupiers - full time', 'Total working occupiers', 'Occupiers not working on the holding')
           ),
@@ -122,16 +108,6 @@ occupiersServer <- function(id) {
           actionButton(ns("deselect_all_button"), "Deselect All")
         )
       }
-    })
-    
-    filtered_timeseries_data <- reactive({
-      req(input$variables, input$year_range)
-      data <- occupiers_timeseries_data()
-      data %>% 
-        filter(
-          `Occupiers and employees by category` %in% input$variables,
-          Year >= input$year_range[1] & Year <= input$year_range[2]
-        )
     })
     
     # Bar Chart - Filtered Data
@@ -175,18 +151,27 @@ occupiersServer <- function(id) {
                  }")))
     })
     
-    # Timeseries Chart - Output
-    output$line_chart <- renderHighchart({
-      data <- filtered_timeseries_data()
-      if (nrow(data) == 0) return(NULL)
-      highchart() %>%
-        hc_chart(type = "line") %>%
-        hc_title(text = "Agricultural Occupiers Timeseries") %>%
-        hc_xAxis(title = list(text = "Year")) %>%
-        hc_yAxis(title = list(text = "Occupiers (1,000)")) %>%
-        hc_add_series(data = data, hcaes(x = Year, y = Value, group = `Occupiers and employees by category`), type = "line") %>%
-        hc_tooltip(shared = FALSE)
+    # Timeseries Chart - Using the modular line chart
+    filtered_timeseries_data <- reactive({
+      req(input$variables, input$year_range)
+      data <- occupiers_timeseries_data()
+      data %>% 
+        filter(
+          `Occupiers and employees by category` %in% input$variables,
+          Year >= input$year_range[1] & Year <= input$year_range[2]
+        )
     })
+    
+    lineChartServer(
+      id = "line_chart",
+      chart_data = filtered_timeseries_data,
+      title = "Agricultural Occupiers Timeseries",
+      yAxisTitle = "Occupiers (1,000)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
     
     # Map - Use the new map module
     mapServer(

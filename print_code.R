@@ -22,7 +22,9 @@ code_files <- c(
   "module_employees.R",
   "module_legal_responsibility.R",
   "module_farm_types.R",
-  "module_occupiers.R"
+  "module_occupiers.R",
+  "module_owned_land.R",
+  "module_land_use_summary.R"
   
 )
 
