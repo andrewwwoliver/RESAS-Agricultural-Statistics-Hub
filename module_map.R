@@ -12,9 +12,25 @@ geojson_list <- geojson_list(geojson_data)
 mapUI <- function(id) {
   ns <- NS(id)
   tagList(
-    highchartOutput(ns("map"), height = "75vh")
+    mainPanel(
+      highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
+      div(
+        class = "note",
+        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+        HTML(
+          "<strong>Note:</strong><ul>
+            <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
+            <li>You can see data values for each variable by hovering your mouse over the region.</li>
+            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
+          </ul>"
+        )
+      )
+    )
   )
 }
+
+
+
 
 mapServer <- function(id, data, variable, title) {
   moduleServer(id, function(input, output, session) {

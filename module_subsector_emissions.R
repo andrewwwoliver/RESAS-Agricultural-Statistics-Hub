@@ -1,3 +1,4 @@
+## File: module_subsector_emissions.R 
 # File: module_subsector_emissions.R
 
 subsectorEmissionsUI <- function(id) {
@@ -38,9 +39,9 @@ subsectorEmissionsUI <- function(id) {
                    generate_summary_bottom_row("subsector", "Subsector Emissions")
           ),
           tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = ns("timelapse")),
+          tabPanel("Breakdown", highchartOutput(ns("breakdown")), value = ns("breakdown")),  # Added Breakdown tab
           tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
           tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
-         # tabPanel("Bar Chart", barChartUI(ns("normal_bar")), value = ns("bar")),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
                    downloadButton(ns("downloadData"), "Download Data"),
@@ -111,17 +112,51 @@ subsectorEmissionsServer <- function(id) {
       y_col = "Value"
     )
     
-   # barChartServer(
-    #  id = "normal_bar",
-     # chart_data = chart_data,
-      #title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
-      #yAxisTitle = "MtCO₂e",
-      #xAxisTitle = "Subsector",
-      #footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      #x_col = "Year",
-      #y_col = "Value",
-      #year = 2022
-    #)
+    # Breakdown chart server logic
+    output$breakdown <- renderHighchart({
+      data_long <- subsector_source %>%
+        pivot_longer(cols = -Source, names_to = "Subsector", values_to = "Value") %>%
+        arrange(match(Source, rev(unique(Source))))
+      
+      unique_sources <- unique(data_long$Source)
+      color_map <- setNames(rev(preset_colors)[1:length(unique_sources)], unique_sources)
+      
+      series_data <- lapply(unique_sources, function(source) {
+        list(
+          name = source,
+          data = data_long %>%
+            filter(Source == source) %>%
+            arrange(match(Subsector, unique(data_long$Subsector))) %>%
+            pull(Value),
+          color = color_map[[source]]
+        )
+      })
+      
+      highchart() %>%
+        hc_chart(type = "bar", zoomType = "xy") %>%
+        hc_xAxis(categories = unique(data_long$Subsector), 
+                 labels = list(style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial'))) %>%
+        hc_yAxis(title = list(text = "Emissions (MtCO₂e)", style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial')),
+                 labels = list(style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial')),
+                 tickInterval = 0.5) %>%
+        hc_plotOptions(bar = list(
+          stacking = "normal",
+          groupPadding = 0,
+          pointPadding = 0.1,
+          borderWidth = 0
+        )) %>%
+        hc_tooltip(
+          headerFormat = "<span style='font-size: 16px; font-family: Arial'>{point.key}</span><br/>",
+          pointFormat = "<span style='font-size: 16px; font-family: Arial'>{series.name}: <b>{point.y:.2f} MtCO₂e</b>", 
+          style = list(fontSize = "16px", fontFamily = "Arial")) %>%
+        hc_legend(
+          align = "right", 
+          verticalAlign = "middle", 
+          layout = "vertical",
+          itemStyle = list(fontSize = '16px', fontFamily = 'Arial', fontWeight = 'normal')
+        ) %>%
+        hc_add_series_list(series_data)
+    })
     
     render_data_table(
       table_id = "data_table",
