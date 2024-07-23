@@ -51,7 +51,7 @@ ui <- fluidPage(
               tags$li(class = "nav-item", img(src = "RESAS Logo.png", class = "header-logo"))
             ),
             id = "navbar",
-            navbarMenu("Emissions",
+            navbarMenu("Agri-Environment",
                        tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
                        tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
                        tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),

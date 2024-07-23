@@ -24,7 +24,12 @@ code_files <- c(
   "module_farm_types.R",
   "module_occupiers.R",
   "module_owned_land.R",
-  "module_land_use_summary.R"
+  "module_land_use_summary.R",
+  "module_cattle.R",
+  "module_sheep.R",
+  "module_pigs.R",
+  "module_poultry.R",
+  "module_other_animals.R"
   
 )
 

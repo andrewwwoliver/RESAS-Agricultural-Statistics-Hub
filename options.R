@@ -37,3 +37,13 @@ assign_colors <- function(data, colors) {
   variables <- unique(data[[first_col_name]])
   setNames(colors[1:length(variables)], variables)
 }
+
+safe_as_numeric <- function(x) {
+  suppressWarnings({
+    result <- as.numeric(x)
+    if (is.na(result) && !is.na(x)) {
+      return(NA_real_)
+    }
+    return(result)
+  })
+}

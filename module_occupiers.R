@@ -63,7 +63,7 @@ occupiersServer <- function(id) {
     
     # Data Processing for Timeseries
     occupiers_employees <- occupiers_employees %>%
-      mutate(across(starts_with("20"), as.numeric))
+      mutate(across(starts_with("20"), safe_as_numeric))
     
     occupiers_timeseries_data <- reactive({
       occupiers_employees %>%

@@ -98,7 +98,7 @@ cattleServer <- function(id) {
       select(-Scotland) %>%
       mutate(across(everything(), as.character)) %>%
       pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
-      mutate(value = as.numeric(value))
+      mutate(value = safe_as_numeric(value))
     
     mapServer(
       id = "map",
