@@ -33,7 +33,11 @@ totalEmissionsUI <- function(id) {
                    fluidRow(
                      column(width = 12, div(class = "header-text", "Summary Analysis:"))
                    ),
-                   generate_summary_bottom_row("total", "Total Emissions")
+                   fluidRow(
+                     column(width = 4, valueBoxUI(ns("totalValue")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryLineChart"), "Industry Emissions Over Time"), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryBarChart"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
+                   )
           ),
           tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
           tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
@@ -47,7 +51,6 @@ totalEmissionsUI <- function(id) {
     )
   )
 }
-
 totalEmissionsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -99,7 +102,7 @@ totalEmissionsServer <- function(id) {
     
     lineChartServer(
       id = "line",
-      chart_data = chart_data,
+      chart_data = agri_gas,
       title = "National Greenhouse Gas Emissions by Source in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
@@ -116,7 +119,7 @@ totalEmissionsServer <- function(id) {
     
     handle_data_download(
       download_id = "downloadData",
-      chart_type = "National",
+      chart_name = "Scottish Emissions Data - Agricultural Comparison",
       chart_data = chart_data,
       input = input,
       output = output,
@@ -127,11 +130,12 @@ totalEmissionsServer <- function(id) {
     current_year <- reactive({ input$summary_current_year })
     comparison_year <- reactive({ input$summary_comparison_year })
     
-    valueBoxServer(ns("totalIndustry1"), chart_data, "Industry", get_industry(1, chart_data, current_year, "Industry"), current_year, comparison_year)
-    valueBoxServer(ns("totalIndustry2"), chart_data, "Industry", get_industry(2, chart_data, current_year, "Industry"), current_year, comparison_year)
-    valueBoxServer(ns("totalIndustry3"), chart_data, "Industry", get_industry(3, chart_data, current_year, "Industry"), current_year, comparison_year)
-    valueBoxServer(ns("totalValue"), chart_data, "Industry", reactive("Total"), current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry1"), reactive(national_total %>% filter(Industry == get_industry(1, national_total, current_year, "Industry"))), "Industry", current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry2"), reactive(national_total %>% filter(Industry == get_industry(2, national_total, current_year, "Industry"))), "Industry", current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry3"), reactive(national_total %>% filter(Industry == get_industry(3, national_total, current_year, "Industry"))), "Industry", current_year, comparison_year)
+    valueBoxServer(ns("totalValue"), reactive(national_total %>% filter(Industry == "Total")), "Total", current_year, comparison_year)
     
-    summaryBarChartServer(ns("industryBarChart"), chart_data, current_year, comparison_year, "Industry")
+    summaryLineChartServer(ns("industryLineChart"), reactive(national_total))
+    summaryBarChartServer(ns("industryBarChart"), reactive(national_total), current_year, comparison_year, "Industry")
   })
 }

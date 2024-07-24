@@ -33,11 +33,12 @@ valueBoxUI <- function(id) {
   uiOutput(ns("valueBox"))
 }
 
-# Server Module for Value Box
-valueBoxServer <- function(id, data, category, industry, current_year, comparison_year) {
+valueBoxServer <- function(id, data, category, current_year, comparison_year) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    reactive_data <- reactive({ data() %>% filter(!!sym(category()) == !!industry(), Year %in% c(current_year(), comparison_year())) })
+    reactive_data <- reactive({
+      data() %>% filter(Year %in% c(current_year(), comparison_year()))
+    })
     
     output$valueBox <- renderUI({
       data_filtered <- reactive_data()
@@ -51,23 +52,23 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
         width = 12,
         solidHeader = TRUE,
         div(
-          style = "display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 5px;", # Adjusted padding
+          style = "display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 5px;",
           div(
-            style = "flex: 1; margin-bottom: 5px;", # Reduced margin-bottom
-            h5(class = "value-box-title", industry()),
+            style = "flex: 1; margin-bottom: 5px;",
+            h5(class = "value-box-title", category),
             div(
-              style = "display: flex; align-items: baseline; margin-bottom: 5px;", # Adjusted margin-bottom
-              h3(sprintf("%.2f", current_value), style = "margin: 0;"), # Removed margin
+              style = "display: flex; align-items: baseline; margin-bottom: 5px;",
+              h3(sprintf("%.2f", current_value), style = "margin: 0;"),
               span("MtCO₂e", class = "value-box-units")
             ),
             div(
-              style = "display: flex; align-items: center; margin-bottom: -10px;", # Negative margin to move closer
+              style = "display: flex; align-items: center; margin-bottom: -10px;",
               create_yoy_arrow(yoy_change),
               span(class = "value-box-yoy", ifelse(is.na(yoy_change), "NA", sprintf("%.2f%%", yoy_change)), style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
             )
           ),
           div(
-            style = "margin-top: -30px;", # Apply the margin here to move the sparkline up
+            style = "margin-top: -30px;",
             plotOutput(ns("sparkline"), height = "30px", width = "100%")
           )
         )
@@ -75,10 +76,11 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
     })
     
     output$sparkline <- renderPlot({
-      small_line_plot(data() %>% filter(!!sym(category()) == !!industry()), "#28a745")
+      small_line_plot(data(), "#28a745")
     })
   })
 }
+
 
 
 # UI Module for Chart
@@ -137,14 +139,7 @@ summaryPieChartServer <- function(id, data, current_year, category) {
   })
 }
 
-# Helper function to render the appropriate summary chart
-render_summary_chart <- function(chart_type, id, data, current_year, category) {
-  if (chart_type == "Total Emissions") {
-    summaryLineChartServer(id, data)
-  } else {
-    summaryPieChartServer(id, data, current_year, category)
-  }
-}
+
 
 # Server Module for Bar Chart
 summaryBarChartServer <- function(id, data, current_year, comparison_year, category) {
@@ -190,27 +185,4 @@ generate_top_industries <- function(id_prefix) {
   )
 }
 
-# Function to generate the bottom row of the summary page
-generate_summary_bottom_row <- function(id_prefix, chart_type) {
-  tagList(
-    fluidRow(
-      column(width = 4, 
-             valueBoxUI(paste0("totalValue_", id_prefix)), 
-             
-             style = "padding-right: 0; padding-left: 0;"
-      ),
-      column(width = 4,
-             if (chart_type == "Total Emissions") {
-               chartUI(paste0("industryLineChart_", id_prefix), "Industry Emissions Over Time")
-             } else {
-               chartUI(paste0("industryPieChart_", id_prefix), "Category Breakdown")
-             },
-             style = "padding-right: 0; padding-left: 0;"
-      ),
-      column(width = 4, 
-             chartUI(paste0("industryBarChart_", id_prefix), "Emissions by Category"), 
-             style = "padding-right: 0; padding-left: 0;"
-      )
-    )
-  )
-}
+

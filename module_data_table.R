@@ -17,13 +17,13 @@ render_data_table <- function(table_id, chart_data, output) {
 }
 
 # Function to handle data download
-handle_data_download <- function(download_id, chart_type, chart_data, input, output, year_input = NULL) {
+handle_data_download <- function(download_id, chart_name, chart_data, input, output, year_input = NULL) {
   output[[download_id]] <- downloadHandler(
     filename = function() {
       if (!is.null(year_input)) {
-        paste("Agricultural Emissions Data -", chart_type, min(input[[year_input]]), "to", max(input[[year_input]]), ".csv")
+        paste(chart_name, min(input[[year_input]]), "to", max(input[[year_input]]), ".csv")
       } else {
-        paste("Agricultural Emissions Data -", chart_type, ".csv")
+        paste(chart_name, ".csv")
       }
     },
     content = function(file) { 

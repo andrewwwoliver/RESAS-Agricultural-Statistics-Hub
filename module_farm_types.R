@@ -114,7 +114,7 @@ farmTypesServer <- function(id) {
     
     handle_data_download(
       download_id = ns("downloadData"),
-      chart_type = "Farm Types",
+      chart_name = "Farm Types Breakdown",
       chart_data = chart_data,
       input = input,
       output = output,

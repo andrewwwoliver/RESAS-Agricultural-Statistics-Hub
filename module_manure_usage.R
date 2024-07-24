@@ -95,7 +95,7 @@ manureUsageServer <- function(id) {
     
     handle_data_download(
       download_id = ns("downloadData"),
-      chart_type = "Manure Usage",
+      chart_name = "Manure Usage",
       chart_data = chart_data,
       input = input,
       output = output,

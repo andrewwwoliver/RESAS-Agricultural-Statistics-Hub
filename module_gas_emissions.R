@@ -33,7 +33,11 @@ gasEmissionsUI <- function(id) {
                    fluidRow(
                      column(width = 12, div(class = "header-text", "Summary Analysis:"))
                    ),
-                   generate_summary_bottom_row("gas", "Gas Emissions")
+                   fluidRow(
+                     column(width = 4, valueBoxUI(ns("totalValue")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryPieChart"), "Category Breakdown"), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryBarChart"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
+                   )
           ),
           tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
           tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
@@ -47,6 +51,8 @@ gasEmissionsUI <- function(id) {
     )
   )
 }
+
+
 
 gasEmissionsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -116,7 +122,7 @@ gasEmissionsServer <- function(id) {
     
     handle_data_download(
       download_id = "downloadData",
-      chart_type = "Gas",
+      chart_name = "Agricultural Emissions Data - Gas Breakdown",
       chart_data = chart_data,
       input = input,
       output = output,
@@ -127,11 +133,12 @@ gasEmissionsServer <- function(id) {
     current_year <- reactive({ input$summary_current_year })
     comparison_year <- reactive({ input$summary_comparison_year })
     
-    valueBoxServer(ns("totalIndustry1"), chart_data, "Gas", get_industry(1, chart_data, current_year, "Gas"), current_year, comparison_year)
-    valueBoxServer(ns("totalIndustry2"), chart_data, "Gas", get_industry(2, chart_data, current_year, "Gas"), current_year, comparison_year)
-    valueBoxServer(ns("totalIndustry3"), chart_data, "Gas", get_industry(3, chart_data, current_year, "Gas"), current_year, comparison_year)
-    valueBoxServer(ns("totalValue"), chart_data, "Gas", reactive("Total"), current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry1"), reactive(agri_gas %>% filter(Gas == get_industry(1, chart_data, current_year, "Gas"))), "Gas", current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry2"), reactive(agri_gas %>% filter(Gas == get_industry(2, chart_data, current_year, "Gas"))), "Gas", current_year, comparison_year)
+    valueBoxServer(ns("totalIndustry3"), reactive(agri_gas %>% filter(Gas == get_industry(3, chart_data, current_year, "Gas"))), "Gas", current_year, comparison_year)
+    valueBoxServer(ns("totalValue"), reactive(agri_gas %>% filter(Gas == "Total")), "Total", current_year, comparison_year)
     
-    summaryBarChartServer(ns("industryBarChart"), chart_data, current_year, comparison_year, "Gas")
+    summaryPieChartServer(ns("industryPieChart"), reactive(agri_gas), current_year, "Gas")
+    summaryBarChartServer(ns("industryBarChart"), reactive(agri_gas), current_year, comparison_year, "Gas")
   })
 }

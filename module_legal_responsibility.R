@@ -93,7 +93,7 @@ legalResponsibilityServer <- function(id) {
     
     handle_data_download(
       download_id = ns("downloadData"),
-      chart_type = "Legal Responsibility",
+      chart_name = "Farm Type - Legal Responsibility",
       chart_data = chart_data,
       input = input,
       output = output,
