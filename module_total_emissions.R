@@ -102,7 +102,7 @@ totalEmissionsServer <- function(id) {
     
     lineChartServer(
       id = "line",
-      chart_data = agri_gas,
+      chart_data = chart_data,
       title = "National Greenhouse Gas Emissions by Source in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
