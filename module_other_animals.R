@@ -1,16 +1,5 @@
 # File: module_other_animals.R
 
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(geojsonio)
-library(DT)
-
-# Load the required module
-source("module_map.R")
-
-# Define UI for the other animals module
 otherAnimalsUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
@@ -33,7 +22,7 @@ otherAnimalsUI <- function(id) {
         )
       ),
       conditionalPanel(
-        condition = "input.tabsetPanel === 'Time Series'",
+        condition = "input.tabsetPanel === 'Time Series' || input.tabsetPanel === 'Area Chart'",
         ns = ns,
         checkboxGroupInput(
           ns("timeseries_variables"),
@@ -62,7 +51,7 @@ otherAnimalsUI <- function(id) {
         radioButtons(
           ns("table_data"),
           "Select Data to Display",
-          choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
+          choices = c("Map Data" = "map", "Chart Data" = "timeseries"),
           selected = "map"
         )
       )
@@ -72,19 +61,18 @@ otherAnimalsUI <- function(id) {
       tabsetPanel(
         id = ns("tabsetPanel"),
         tabPanel("Map", mapUI(ns("map"))),
-        tabPanel("Time Series", highchartOutput(ns("timeseries"))),
+        tabPanel("Time Series", lineChartUI(ns("line"))),
+        tabPanel("Area Chart", areaChartUI(ns("area"))),
         tabPanel("Data Table", DTOutput(ns("table")))
       )
     )
   )
 }
 
-# Define server logic for the other animals module
 otherAnimalsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Filter livestock_subregion dataset for the selected categories
     other_animals_data <- livestock_subregion %>%
       filter(`Livestock by category` %in% c(
         "Goats and kids",
@@ -99,42 +87,59 @@ otherAnimalsServer <- function(id) {
       pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
       mutate(value = safe_as_numeric(value))
     
-    
-    
     mapServer(
       id = "map",
       data = reactive({
         req(input$variable)
         other_animals_data %>% filter(`Livestock by category` == input$variable)
       }),
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Other Animals Distribution by Region"
     )
     
-    output$timeseries <- renderHighchart({
+    chart_data <- reactive({
       req(input$timeseries_variables)
       filtered_data <- number_of_other_livestock %>%
         mutate(across(-`Livestock by category`, as.numeric)) %>%
-        pivot_longer(cols = -`Livestock by category`, names_to = "year", values_to = "value")
-      
-      highchart() %>%
-        hc_add_series(data = filtered_data, hcaes(x = year, y = value, group = `Livestock by category`), type = "line") %>%
-        hc_title(text = "Other Animals Time Series Data") %>%
-        hc_xAxis(title = list(text = "Year")) %>%
-        hc_yAxis(title = list(text = "Number of Animals")) %>%
-        hc_chart(zoomType = "xy")
+        filter(`Livestock by category` %in% input$timeseries_variables) %>%
+        pivot_longer(cols = -`Livestock by category`, names_to = "year", values_to = "value") %>%
+        mutate(year = as.numeric(year))  # Ensure year is numeric
+      filtered_data
     })
+    
+    areaChartServer(
+      id = "area",
+      chart_data = chart_data,
+      title = "Other Animals Area Chart Data",
+      yAxisTitle = "Number of Animals",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "year",
+      y_col = "value"
+    )
+    
+    lineChartServer(
+      id = "line",
+      chart_data = chart_data,
+      title = "Other Animals Area Chart Data",
+      yAxisTitle = "Number of Animals",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "year",
+      y_col = "value"
+    )
     
     output$table <- renderDT({
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
-        datatable(other_animals_data)
+        req(input$variable)
+        other_animals_data %>%
+          filter(`Livestock by category` == input$variable) %>%
+          datatable()
       } else {
-        req(input$timeseries_variables)
         number_of_other_livestock %>%
-          filter(`Livestock by category` %in% input$timeseries_variables) %>%
-          mutate(across(-`Livestock by category`, as.numeric)) %>%
-          pivot_longer(cols = -`Livestock by category`, names_to = "year", values_to = "value") %>%
+          pivot_longer(cols = -`Cattle by category`, names_to = "year", values_to = "value") %>%
           datatable()
       }
     })

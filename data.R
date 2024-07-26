@@ -184,3 +184,136 @@ geojson_data <- ms_simplify(geojson_data, keep = 0.001)
 
 geojson_write(geojson_data, file = "subregions_simplified.geojson")
 
+
+
+#crops / fruit/veg
+# Print unique values 
+
+unique(agricultural_area_hectares$`Crop/Land use`)
+
+unique(vegetables_bulbs_fruit_area$`Vegetables and fruits for human consumption`)
+
+unique(crops_grass_area_subregion$`Land use by category`)
+
+# Subset for cereals data
+cereals_data <- agricultural_area_hectares %>%
+  filter(`Crop/Land use` %in% c("Wheat", "Triticale", "Winter barley", "Spring barley", "Barley Total", 
+                                "Winter oats", "Spring oats", "Oats Total", "Rye", "Mixed grain", 
+                                "Total cereals"))
+
+# Subset for oilseeds data
+oilseed_data <- agricultural_area_hectares %>%
+  filter(`Crop/Land use` %in% c("Winter oilseed rape", "Spring oilseed rape", "Linseed", "Total oilseeds"))
+
+# Subset for potatoes data
+potatoes_data <- agricultural_area_hectares %>%
+  filter(`Crop/Land use` %in% c("Seed potatoes", "Ware potatoes", "Total potatoes"))
+
+# Subset for beans data
+beans_data <- agricultural_area_hectares %>%
+  filter(`Crop/Land use` %in% c("Protein peas", "Field beans"))
+
+# Subset for animal feed data
+animal_feed_data <- agricultural_area_hectares %>%
+  filter(`Crop/Land use` %in% c("Turnips/swedes", "Kale/cabbage", "Maize", "Rape", "Fodder beet", 
+                                "Lupins", "Other crops for stockfeeding", "Total crops for stockfeeding"))
+
+# Subset for human vegetables data
+human_vegetables_data <- vegetables_bulbs_fruit_area %>%
+  filter(`Vegetables and fruits for human consumption` %in% c(
+    "Peas for canning, freezing or drying",
+    "Beans for canning, freezing or drying",
+    "Turnips/swedes",
+    "Calabrese",
+    "Cauliflower",
+    "Carrots",
+    "Other vegetables",
+    "Total vegetables"
+  ))
+
+# Subset for soft fruit data
+soft_fruit_data <- vegetables_bulbs_fruit_area %>%
+  filter(`Vegetables and fruits for human consumption` %in% c(
+    "Strawberries grown in the open",
+    "Raspberries grown in the open",
+    "Blueberries grown in the open",
+    "Blackcurrants and other fruit grown in the open",
+    "Total soft fruit grown in the open",
+    "Tomatoes grown under cover",
+    "Strawberries grown under cover",
+    "Raspberries grown under cover",
+    "Blueberries grown under cover",
+    "Other fruit grown under cover",
+    "Vegetables grown under cover",
+    "Strawberries grown in open/under cover",
+    "Raspberries grown in open/under cover",
+    "Blackcurrants grown in open/under cover",
+    "Blueberries grown in open/under cover",
+    "Tomatoes grown in open/under cover",
+    "Other fruit grown in open/under cover",
+    "Total soft fruit"
+  ))
+# Subset for cereals_subregion
+cereals_subregion <- crops_grass_area_subregion %>%
+  filter(`Land use by category` %in% c(
+    "Wheat",
+    "Winter Barley",
+    "Spring Barley",
+    "Barley Total",
+    "Oats, triticale and mixed grain"
+  ))
+
+# Subset for oilseed_subregion
+oilseed_subregion <- crops_grass_area_subregion %>%
+  filter(`Land use by category` %in% c(
+    "Rape for oilseed and linseed"
+  ))
+
+# Subset for potato_subregion
+potato_subregion <- crops_grass_area_subregion %>%
+  filter(`Land use by category` %in% c(
+    "Potatoes"
+  ))
+
+# Subset for beans_subregion
+beans_subregion <- crops_grass_area_subregion %>%
+  filter(`Land use by category` %in% c(
+    "Peas and beans for combining"
+  ))
+
+# Subset for stockfeeding_subregion
+stockfeeding_subregion <- crops_grass_area_subregion %>%
+  filter(`Land use by category` %in% c(
+    "Stockfeeding crops"
+  ))
+
+# Subset for human_veg_subregion
+human_veg_subregion <- crops_grass_area_subregion %>%
+  filter(`Land use by category` %in% c(
+    "Vegetables for human consumption"
+  ))
+
+# Subset for fruit_subregion
+fruit_subregion <- crops_grass_area_subregion %>%
+  filter(`Land use by category` %in% c(
+    "Orchard and soft fruit"
+  ))
+
+# Saving all the subsets to an RData file
+save(
+  cereals_data,
+  oilseed_data,
+  potatoes_data,
+  beans_data,
+  animal_feed_data,
+  human_vegetables_data,
+  soft_fruit_data,
+  cereals_subregion,
+  oilseed_subregion,
+  potato_subregion,
+  beans_subregion,
+  stockfeeding_subregion,
+  human_veg_subregion,
+  fruit_subregion,
+  file = "crops_data.RData"
+)

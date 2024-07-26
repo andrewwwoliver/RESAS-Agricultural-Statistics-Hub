@@ -178,6 +178,7 @@ occupiersServer <- function(id) {
       id = "map",
       data = regions_data,
       variable = reactive(input$variable),
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       title = "Occupiers by Region"
     )
     

@@ -1,7 +1,5 @@
 ## File: app.R 
- # app.R
-
-# Source other elements
+ # Source other elements
 source("module_line_chart.R")
 source("module_area_chart.R")
 source("module_data_table.R")
@@ -11,7 +9,10 @@ source("module_employees.R")
 source("module_legal_responsibility.R")
 source("module_manure_usage.R")
 source("module_farm_types.R")
-source("module_occupiers.R")  # Added new module
+source("module_occupiers.R")
+source("module_land_use_summary.R")
+source("module_owned_land.R")
+source("module_cattle.R")  # Added new module
 
 # Source the UI and server components
 source("ui.R")
@@ -64,9 +65,6 @@ library(readxl)
 library(dplyr)
 library(stringr)
 
-
-# Could do with being more automated
-# Manually removed first x rows of metadata from each table
 # Define file path
 file_path <- "June+Agricultural+Census+2023+Tables.xlsx"
 
@@ -112,6 +110,12 @@ clean_headers <- function(headers) {
   return(headers)
 }
 
+# Function to clean cell values by replacing multiple spaces with a single space
+clean_cells <- function(data) {
+  data <- data %>% mutate(across(where(is.character), ~str_replace_all(.x, "\\s+", " ")))
+  return(data)
+}
+
 # Read each table, clean it, and assign to a variable
 for (table in names(table_names)) {
   sheet_name <- table_names[table]
@@ -131,14 +135,16 @@ for (table in names(table_names)) {
   # Assign cleaned headers to the data
   names(data) <- cleaned_headers
   
-  # Remove '\r\n' from all character columns
+  # Remove '\r\n' from all character columns and clean multiple spaces
   data <- data %>% mutate(across(where(is.character), ~str_replace_all(.x, "\r\n", " ")))
+  data <- clean_cells(data)
   
   # Clean data
   cleaned_data <- clean_data(data)
   
   assign(table, cleaned_data)
 }
+
 
 # Save all tables to an RData file
 save(list = names(table_names), file = "census_data.RData")
@@ -150,6 +156,7 @@ library(sf)
 library(dplyr)
 library(highcharter)
 library(geojsonio)
+library(rmapshaper)
 
 # Load the shapefile
 local_authorities <- st_read("pub_las.shp")
@@ -197,7 +204,7 @@ st_write(sub_regions, "sub_regions.geojson", driver = "GeoJSON")
 # Load the GeoJSON file
 geojson_data <- geojson_read("sub_regions.geojson", what = "sp")
 
-geojson_data <- ms_simplify(geojson_data, keep = 0.01)
+geojson_data <- ms_simplify(geojson_data, keep = 0.001)
 
 geojson_write(geojson_data, file = "subregions_simplified.geojson")
 
@@ -1045,10 +1052,18 @@ assign_colors <- function(data, colors) {
   setNames(colors[1:length(variables)], variables)
 }
 
-## File: server.R 
- # File: server.R
+safe_as_numeric <- function(x) {
+  suppressWarnings({
+    result <- as.numeric(x)
+    if (is.na(result) && !is.na(x)) {
+      return(NA_real_)
+    }
+    return(result)
+  })
+}
 
-# Source the necessary modules for server logic
+## File: server.R 
+ # Source the necessary modules for server logic
 source("module_subsector_emissions.R")
 source("module_total_emissions.R")
 source("module_gas_emissions.R")
@@ -1056,11 +1071,15 @@ source("module_manure_usage.R")
 source("module_map.R")
 source("module_employees.R")
 source("module_legal_responsibility.R")
-source("module_land_use_summary.R")  # Added new module
-source("module_farm_types.R")  # Added new module
-source("module_occupiers.R")  # Added new module
-source("module_owned_land.R")  # Added new module
-
+source("module_land_use_summary.R")
+source("module_farm_types.R")
+source("module_occupiers.R")
+source("module_owned_land.R")
+source("module_cattle.R")
+source("module_sheep.R")
+source("module_pigs.R")
+source("module_poultry.R")
+source("module_other_animals.R")
 
 server <- function(input, output, session) {
   subsectorEmissionsServer("subsector")
@@ -1068,17 +1087,20 @@ server <- function(input, output, session) {
   gasEmissionsServer("gas")
   manureUsageServer("manure")
   employeesMapServer("employees")
-  landUseSummaryServer("land_use")  # Added new module server
-  legalResponsibilityServer("legal_responsibility")  # Added new module server
-  farmTypesServer("farm_types")  # Added new module server
-  occupiersServer("occupiers")  # Added new module server
+  landUseSummaryServer("land_use")
+  legalResponsibilityServer("legal_responsibility")
+  farmTypesServer("farm_types")
+  occupiersServer("occupiers")
   ownedLandServer("owned_land")
+  cattleServer("cattle_module")
+  sheepServer("sheep_module")
+  pigsServer("pigs_module")
+  poultryServer("poultry_module")
+  otherAnimalsServer("other_animals_module")
 }
 
 ## File: ui.R 
- # ui.R
-
-# Source UI modules
+ # Source UI modules
 source("options.R")
 source("module_line_chart.R")
 source("module_area_chart.R")
@@ -1095,9 +1117,14 @@ source("module_map.R")
 source("module_employees.R")
 source("module_legal_responsibility.R")
 source("module_farm_types.R")
-source("module_occupiers.R")  # Added new module
+source("module_occupiers.R")
 source("module_land_use_summary.R")
-source("module_owned_land.R")  # Added new module
+source("module_owned_land.R")
+source("module_cattle.R")
+source("module_sheep.R")
+source("module_pigs.R")
+source("module_poultry.R")
+source("module_other_animals.R")
 source("hc_theme.R")
 library(shinyjs)
 
@@ -1126,7 +1153,7 @@ ui <- fluidPage(
               tags$li(class = "nav-item", img(src = "RESAS Logo.png", class = "header-logo"))
             ),
             id = "navbar",
-            navbarMenu("Emissions",
+            navbarMenu("Agri-Environment",
                        tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
                        tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
                        tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
@@ -1140,6 +1167,13 @@ ui <- fluidPage(
                        tabPanel("Occupiers", value = "occupiers", occupiersUI("occupiers")),
                        tabPanel("Ownership Status", value = "owned_land", ownedLandUI("owned_land")),
                        tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility"))
+            ),
+            navbarMenu("Livestock",
+                       tabPanel("Cattle", value = "cattle_module", cattleUI("cattle_module")),
+                       tabPanel("Sheep", value = "sheep_module", sheepUI("sheep_module")),
+                       tabPanel("Pigs", value = "pigs_module", pigsUI("pigs_module")),
+                       tabPanel("Poultry", value = "poultry_module", poultryUI("poultry_module")),
+                       tabPanel("Other Animals", value = "other_animals_module", otherAnimalsUI("other_animals_module"))
             )
           ),
           create_footer()
@@ -1335,7 +1369,8 @@ h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, t
 }
 
 ## File: module_subsector_emissions.R 
- # File: module_subsector_emissions.R
+ ## File: module_subsector_emissions.R 
+# File: module_subsector_emissions.R
 
 subsectorEmissionsUI <- function(id) {
   ns <- NS(id)
@@ -1375,9 +1410,9 @@ subsectorEmissionsUI <- function(id) {
                    generate_summary_bottom_row("subsector", "Subsector Emissions")
           ),
           tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = ns("timelapse")),
+          tabPanel("Breakdown", highchartOutput(ns("breakdown")), value = ns("breakdown")),  # Added Breakdown tab
           tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
           tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
-         # tabPanel("Bar Chart", barChartUI(ns("normal_bar")), value = ns("bar")),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
                    downloadButton(ns("downloadData"), "Download Data"),
@@ -1448,17 +1483,51 @@ subsectorEmissionsServer <- function(id) {
       y_col = "Value"
     )
     
-   # barChartServer(
-    #  id = "normal_bar",
-     # chart_data = chart_data,
-      #title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
-      #yAxisTitle = "MtCO₂e",
-      #xAxisTitle = "Subsector",
-      #footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      #x_col = "Year",
-      #y_col = "Value",
-      #year = 2022
-    #)
+    # Breakdown chart server logic
+    output$breakdown <- renderHighchart({
+      data_long <- subsector_source %>%
+        pivot_longer(cols = -Source, names_to = "Subsector", values_to = "Value") %>%
+        arrange(match(Source, rev(unique(Source))))
+      
+      unique_sources <- unique(data_long$Source)
+      color_map <- setNames(rev(preset_colors)[1:length(unique_sources)], unique_sources)
+      
+      series_data <- lapply(unique_sources, function(source) {
+        list(
+          name = source,
+          data = data_long %>%
+            filter(Source == source) %>%
+            arrange(match(Subsector, unique(data_long$Subsector))) %>%
+            pull(Value),
+          color = color_map[[source]]
+        )
+      })
+      
+      highchart() %>%
+        hc_chart(type = "bar", zoomType = "xy") %>%
+        hc_xAxis(categories = unique(data_long$Subsector), 
+                 labels = list(style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial'))) %>%
+        hc_yAxis(title = list(text = "Emissions (MtCO₂e)", style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial')),
+                 labels = list(style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial')),
+                 tickInterval = 0.5) %>%
+        hc_plotOptions(bar = list(
+          stacking = "normal",
+          groupPadding = 0,
+          pointPadding = 0.1,
+          borderWidth = 0
+        )) %>%
+        hc_tooltip(
+          headerFormat = "<span style='font-size: 16px; font-family: Arial'>{point.key}</span><br/>",
+          pointFormat = "<span style='font-size: 16px; font-family: Arial'>{series.name}: <b>{point.y:.2f} MtCO₂e</b>", 
+          style = list(fontSize = "16px", fontFamily = "Arial")) %>%
+        hc_legend(
+          align = "right", 
+          verticalAlign = "middle", 
+          layout = "vertical",
+          itemStyle = list(fontSize = '16px', fontFamily = 'Arial', fontWeight = 'normal')
+        ) %>%
+        hc_add_series_list(series_data)
+    })
     
     render_data_table(
       table_id = "data_table",
@@ -1874,9 +1943,7 @@ manureUsageServer <- function(id) {
 }
 
 ## File: module_map.R 
- # File: module_map.R
-
-library(shiny)
+ library(shiny)
 library(highcharter)
 library(geojsonio)
 library(dplyr)
@@ -1890,9 +1957,25 @@ geojson_list <- geojson_list(geojson_data)
 mapUI <- function(id) {
   ns <- NS(id)
   tagList(
-    highchartOutput(ns("map"), height = "75vh")
+    mainPanel(
+      highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
+      div(
+        class = "note",
+        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+        HTML(
+          "<strong>Note:</strong><ul>
+            <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
+            <li>You can see data values for each variable by hovering your mouse over the region.</li>
+            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
+          </ul>"
+        )
+      )
+    )
   )
 }
+
+
+
 
 mapServer <- function(id, data, variable, title) {
   moduleServer(id, function(input, output, session) {
@@ -1902,8 +1985,10 @@ mapServer <- function(id, data, variable, title) {
       req(variable)  # Ensure that variable is not null or missing
       req(variable())  # Ensure that variable() is not null or missing
       req(data())      # Ensure that data() is not null or missing
-      data() %>%  # Make sure to call data() to evaluate the reactive expression
-        filter(`Occupiers and employees by category` == variable())
+      
+      first_col_name <- names(data())[1]  # Get the name of the first column dynamically
+      data() %>%
+        filter(!!sym(first_col_name) == variable())  # Use the first column name for filtering
     })
     
     output$map <- renderHighchart({
@@ -1982,7 +2067,7 @@ occupiers_employees_subregion <- occupiers_employees_subregion %>%
 regions_data <- occupiers_employees_subregion %>% 
   select(-Scotland) %>% 
   pivot_longer(cols = -`Occupiers and employees by category`, names_to = "sub_region", values_to = "value") %>%
-  mutate(value = ifelse(value == "c", NA, as.numeric(value))) # Convert 'c' to NA and the rest to numeric
+  mutate(value = ifelse(value == "c", NA, safe_as_numeric(value)))
 
 # Filter for the specific categories
 categories <- c("Regular full-time staff total", 
@@ -2032,7 +2117,7 @@ employeesMapServer <- function(id) {
     
     # Data Processing for Timeseries
     occupiers_employees <- occupiers_employees %>%
-      mutate(across(starts_with("20"), as.numeric))
+      mutate(across(starts_with("20"), safe_as_numeric))
     
     chart_data <- reactive({
       occupiers_employees %>%
@@ -2436,7 +2521,7 @@ occupiersServer <- function(id) {
     
     # Data Processing for Timeseries
     occupiers_employees <- occupiers_employees %>%
-      mutate(across(starts_with("20"), as.numeric))
+      mutate(across(starts_with("20"), safe_as_numeric))
     
     occupiers_timeseries_data <- reactive({
       occupiers_employees %>%
@@ -2776,3 +2861,785 @@ landUseSummaryServer <- function(id) {
     )
   })
 }
+
+## File: module_cattle.R 
+ library(shiny)
+library(highcharter)
+library(DT)
+library(dplyr)
+library(tidyr)
+library(geojsonio)
+
+# Load the required module
+source("module_map.R")
+
+# Define UI for the cattle module
+cattleUI <- function(id) {
+  ns <- NS(id)
+  tabsetPanel(
+    id = ns("tabs"),
+    tabPanel(
+      "Map",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          radioButtons(
+            ns("variable"), 
+            "Select Variable", 
+            choices = c(
+              "Total Female Dairy Cattle" = "Total Female Dairy Cattle",
+              "Total Female Beef Cattle" = "Total Female Beef Cattle",
+              "Total Male Cattle" = "Total Male Cattle",
+              "Total Calves" = "Total Calves",
+              "Total Cattle" = "Total Cattle"
+            )
+          )
+        ),
+        mainPanel(
+          width = 9,
+          mapUI(ns("map"))
+        )
+      )
+    ),
+    tabPanel(
+      "Timeseries",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          selectizeInput(
+            ns("timeseries_variable"),
+            "Select Variable",
+            choices = unique(number_of_cattle$`Cattle by category`),
+            selected = c(
+              "Total Female Dairy Cattle",
+              "Total Female Beef Cattle",
+              "Total Male Cattle",
+              "Total Calves",
+              "Total Cattle"
+            ),
+            multiple = TRUE
+          )
+        ),
+        mainPanel(
+          width = 9,
+          highchartOutput(ns("timeseries"), height = "75vh")
+        )
+      )
+    ),
+    tabPanel(
+      "Data Table",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          radioButtons(
+            ns("data_type"), 
+            "Select Data Type", 
+            choices = c("Map Data", "Timeseries Data")
+          )
+        ),
+        mainPanel(
+          width = 9,
+          DTOutput(ns("datatable"))
+        )
+      )
+    )
+  )
+}
+
+# Define server logic for the cattle module
+cattleServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Filter livestock_subregion dataset for the selected categories
+    cattle_data <- livestock_subregion %>%
+      filter(`Livestock by category` %in% c(
+        "Total Female Dairy Cattle",
+        "Total Female Beef Cattle",
+        "Total Male Cattle",
+        "Total Calves",
+        "Total Cattle"
+      )) %>%
+      select(-Scotland) %>%
+      mutate(across(everything(), as.character)) %>%
+      pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
+      mutate(value = safe_as_numeric(value))
+    
+    mapServer(
+      id = "map",
+      data = reactive({
+        req(input$variable)
+        cattle_data %>% filter(`Livestock by category` == input$variable)
+      }),
+      variable = reactive(input$variable),
+      title = "Cattle Distribution by Region"
+    )
+    
+    # Timeseries data processing
+    timeseries_data <- number_of_cattle %>%
+      pivot_longer(cols = -`Cattle by category`, names_to = "year", values_to = "value") %>%
+      mutate(year = as.numeric(year))
+    
+    output$timeseries <- renderHighchart({
+      req(input$timeseries_variable)
+      
+      filtered_timeseries <- timeseries_data %>%
+        filter(`Cattle by category` %in% input$timeseries_variable)
+      
+      highchart() %>%
+        hc_chart(zoomType = "xy") %>%
+        hc_title(text = "Cattle Time Series") %>%
+        hc_xAxis(categories = unique(filtered_timeseries$year)) %>%
+        hc_add_series_list(
+          lapply(input$timeseries_variable, function(variable) {
+            data_series <- filtered_timeseries %>% filter(`Cattle by category` == variable)
+            list(name = variable, data = data_series$value)
+          })
+        )
+    })
+    
+    output$datatable <- renderDT({
+      req(input$data_type)
+      
+      if (input$data_type == "Map Data") {
+        datatable(cattle_data)
+      } else if (input$data_type == "Timeseries Data") {
+        datatable(timeseries_data)
+      }
+    })
+  })
+}
+
+# Testing module
+cattle_demo <- function() {
+  ui <- fluidPage(cattleUI("cattle_test"))
+  server <- function(input, output, session) {
+    cattleServer("cattle_test")
+  }
+  shinyApp(ui, server)
+}
+
+cattle_demo()
+
+## File: module_sheep.R 
+ # File: module_sheep.R
+
+library(shiny)
+library(highcharter)
+library(dplyr)
+library(tidyr)
+library(geojsonio)
+library(DT)
+
+# Load the required module
+source("module_map.R")
+
+# Define UI for the sheep module
+sheepUI <- function(id) {
+  ns <- NS(id)
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Map'",
+        ns = ns,
+        radioButtons(
+          ns("variable"), 
+          "Select Variable", 
+          choices = c(
+            "Ewes for breeding" = "Ewes for breeding",
+            "Other sheep one year old and over for breeding" = "Other sheep one year old and over for breeding",
+            "Rams to be used for service" = "Rams for service",
+            "Lambs" = "Lambs",
+            "Total sheep" = "Total sheep"
+          )
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Time Series'",
+        ns = ns,
+        checkboxGroupInput(
+          ns("timeseries_variables"),
+          "Select Time Series Variables",
+          choices = c(
+            "Ewes used for breeding in previous season",
+            "Rams to be used for service",
+            "Sheep for breeding aged 1 year and over",
+            "Other",
+            "Total other sheep 1 year and over",
+            "Lambs",
+            "Total sheep"
+          ),
+          selected = c(
+            "Ewes used for breeding in previous season",
+            "Rams to be used for service",
+            "Sheep for breeding aged 1 year and over",
+            "Total other sheep 1 year and over",
+            "Lambs"
+          )
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Data Table'",
+        ns = ns,
+        radioButtons(
+          ns("table_data"),
+          "Select Data to Display",
+          choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
+          selected = "map"
+        )
+      )
+    ),
+    mainPanel(
+      width = 9,
+      tabsetPanel(
+        id = ns("tabsetPanel"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Time Series", highchartOutput(ns("timeseries"))),
+        tabPanel("Data Table", DTOutput(ns("table")))
+      )
+    )
+  )
+}
+
+# Define server logic for the sheep module
+sheepServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Filter livestock_subregion dataset for the selected categories
+    sheep_data <- livestock_subregion %>%
+      filter(`Livestock by category` %in% c(
+        "Ewes for breeding",
+        "Other sheep one year old and over for breeding",
+        "Rams for service",
+        "Lambs",
+        "Total sheep"
+      )) %>%
+      select(-Scotland) %>%
+      mutate(across(everything(), as.character)) %>%
+      pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
+      mutate(value = safe_as_numeric(value))
+    
+    mapServer(
+      id = "map",
+      data = reactive({
+        req(input$variable)
+        sheep_data %>% filter(`Livestock by category` == input$variable)
+      }),
+      variable = reactive(input$variable),
+      title = "Sheep Distribution by Region"
+    )
+    
+    output$timeseries <- renderHighchart({
+      req(input$timeseries_variables)
+      filtered_data <- number_of_sheep %>%
+        filter(`Sheep by category` %in% input$timeseries_variables) %>%
+        pivot_longer(cols = -`Sheep by category`, names_to = "year", values_to = "value")
+      
+      highchart() %>%
+        hc_add_series(data = filtered_data, hcaes(x = year, y = value, group = `Sheep by category`), type = "line") %>%
+        hc_title(text = "Sheep Time Series Data") %>%
+        hc_xAxis(title = list(text = "Year")) %>%
+        hc_yAxis(title = list(text = "Number of Sheep")) %>%
+        hc_chart(zoomType = "xy")
+    })
+    
+    output$table <- renderDT({
+      req(input$tabsetPanel == "Data Table")
+      if (input$table_data == "map") {
+        req(input$variable)
+        sheep_data %>%
+          filter(`Livestock by category` == input$variable) %>%
+          datatable()
+      } else {
+        req(input$timeseries_variables)
+        number_of_sheep %>%
+          filter(`Sheep by category` %in% input$timeseries_variables) %>%
+          pivot_longer(cols = -`Sheep by category`, names_to = "year", values_to = "value") %>%
+          datatable()
+      }
+    })
+  })
+}
+
+# Testing module
+sheep_demo <- function() {
+  ui <- fluidPage(sheepUI("sheep_test"))
+  server <- function(input, output, session) {
+    sheepServer("sheep_test")
+  }
+  shinyApp(ui, server)
+}
+
+sheep_demo()
+
+## File: module_pigs.R 
+ # File: module_pigs.R
+
+library(shiny)
+library(highcharter)
+library(dplyr)
+library(tidyr)
+library(geojsonio)
+library(DT)
+
+# Load the required module
+source("module_map.R")
+
+# Define UI for the pigs module
+pigsUI <- function(id) {
+  ns <- NS(id)
+  tabsetPanel(
+    id = ns("tabs"),
+    tabPanel(
+      "Map",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          radioButtons(
+            ns("variable"), 
+            "Select Variable", 
+            choices = c(
+              "Female pigs breeding herd" = "Female pigs breeding herd",
+              "All other non-breeding pigs" = "All other non-breeding pigs",
+              "Total pigs" = "Total pigs"
+            )
+          )
+        ),
+        mainPanel(
+          width = 9,
+          mapUI(ns("map"))
+        )
+      )
+    ),
+    tabPanel(
+      "Timeseries",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          selectizeInput(
+            ns("timeseries_variable"),
+            "Select Variable",
+            choices = unique(number_of_pigs$`Pigs by category`),
+            selected = c(
+              "Total breeding herd",
+              "80 kg liveweight and over",
+              "50 kg and under 80 kg liveweight",
+              "Under 50 kg liveweight"
+            ),
+            multiple = TRUE
+          )
+        ),
+        mainPanel(
+          width = 9,
+          highchartOutput(ns("timeseries"), height = "75vh")
+        )
+      )
+    ),
+    tabPanel(
+      "Data Table",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          radioButtons(
+            ns("data_type"), 
+            "Select Data Type", 
+            choices = c("Map Data", "Timeseries Data")
+          )
+        ),
+        mainPanel(
+          width = 9,
+          DTOutput(ns("datatable"))
+        )
+      )
+    )
+  )
+}
+
+# Define server logic for the pigs module
+pigsServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Filter livestock_subregion dataset for the selected categories
+    pigs_data <- livestock_subregion %>%
+      filter(`Livestock by category` %in% c(
+        "Female pigs breeding herd",
+        "All other non-breeding pigs",
+        "Total pigs"
+      )) %>%
+      select(-Scotland) %>%
+      mutate(across(everything(), as.character)) %>%
+      pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
+      mutate(value = as.numeric(value))
+    
+    mapServer(
+      id = "map",
+      data = reactive({
+        req(input$variable)
+        pigs_data %>% filter(`Livestock by category` == input$variable)
+      }),
+      variable = reactive(input$variable),
+      title = "Pigs Distribution by Region"
+    )
+    
+    # Timeseries data processing
+    timeseries_data <- number_of_pigs %>%
+      pivot_longer(cols = -`Pigs by category`, names_to = "year", values_to = "value") %>%
+      mutate(year = as.numeric(year))
+    
+    output$timeseries <- renderHighchart({
+      req(input$timeseries_variable)
+      
+      filtered_timeseries <- timeseries_data %>%
+        filter(`Pigs by category` %in% input$timeseries_variable)
+      
+      highchart() %>%
+        hc_chart(zoomType = "xy") %>%
+        hc_title(text = "Pigs Time Series") %>%
+        hc_xAxis(categories = unique(filtered_timeseries$year)) %>%
+        hc_add_series_list(
+          lapply(input$timeseries_variable, function(variable) {
+            data_series <- filtered_timeseries %>% filter(`Pigs by category` == variable)
+            list(name = variable, data = data_series$value)
+          })
+        )
+    })
+   
+ 
+    output$datatable <- renderDT({
+      req(input$data_type)
+      
+      if (input$data_type == "Map Data") {
+        datatable(pigs_data)
+      } else if (input$data_type == "Timeseries Data") {
+        datatable(timeseries_data)
+      }
+    })
+  })
+}
+
+# Testing module
+pigs_demo <- function() {
+  ui <- fluidPage(pigsUI("pigs_test"))
+  server <- function(input, output, session) {
+    pigsServer("pigs_test")
+  }
+  shinyApp(ui, server)
+}
+
+pigs_demo()
+
+## File: module_poultry.R 
+ # File: module_poultry.R
+
+library(shiny)
+library(highcharter)
+library(dplyr)
+library(tidyr)
+library(geojsonio)
+library(DT)
+
+# Load the required module
+source("module_map.R")
+
+# Define UI for the poultry module
+poultryUI <- function(id) {
+  ns <- NS(id)
+  tabsetPanel(
+    id = ns("tabs"),
+    tabPanel(
+      "Map",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          radioButtons(
+            ns("variable"), 
+            "Select Variable", 
+            choices = c(
+              "Fowls for producing eggs" = "Fowls for producing eggs",
+              "Fowls for breeding" = "Fowls for breeding",
+              "Broilers for other table fowls and other poultry" = "Broilers for other table fowls and other poultry",
+              "Total poultry" = "Total poultry"
+            )
+          )
+        ),
+        mainPanel(
+          width = 9,
+          mapUI(ns("map"))
+        )
+      )
+    ),
+    tabPanel(
+      "Timeseries",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          selectizeInput(
+            ns("timeseries_variable"),
+            "Select Variable",
+            choices = unique(number_of_poultry$`Poultry by category`),
+            selected = c(
+              "Total fowls for producing eggs",
+              "Total fowls for breeding",
+              "Broilers and other table birds",
+              "Total Poultry"
+            ),
+            multiple = TRUE
+          )
+        ),
+        mainPanel(
+          width = 9,
+          highchartOutput(ns("timeseries"), height = "75vh")
+        )
+      )
+    ),
+    tabPanel(
+      "Data Table",
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,
+          radioButtons(
+            ns("data_type"), 
+            "Select Data Type", 
+            choices = c("Map Data", "Timeseries Data")
+          )
+        ),
+        mainPanel(
+          width = 9,
+          DTOutput(ns("datatable"))
+        )
+      )
+    )
+  )
+}
+
+# Define server logic for the poultry module
+poultryServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Filter livestock_subregion dataset for the selected categories
+    poultry_data <- livestock_subregion %>%
+      filter(`Livestock by category` %in% c(
+        "Fowls for producing eggs",
+        "Fowls for breeding",
+        "Broilers for other table fowls and other poultry",
+        "Total poultry"
+      )) %>%
+      select(-Scotland) %>%
+      mutate(across(everything(), as.character)) %>%
+      pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
+      mutate(value = safe_as_numeric(value))
+    
+    mapServer(
+      id = "map",
+      data = reactive({
+        req(input$variable)
+        poultry_data %>% filter(`Livestock by category` == input$variable)
+      }),
+      variable = reactive(input$variable),
+      title = "Poultry Distribution by Region"
+    )
+    
+    # Timeseries data processing
+    timeseries_data <- number_of_poultry %>%
+      pivot_longer(cols = -`Poultry by category`, names_to = "year", values_to = "value") %>%
+      mutate(year = as.numeric(year))
+    
+    output$timeseries <- renderHighchart({
+      req(input$timeseries_variable)
+      
+      filtered_timeseries <- timeseries_data %>%
+        filter(`Poultry by category` %in% input$timeseries_variable)
+      
+      highchart() %>%
+        hc_chart(zoomType = "xy") %>%
+        hc_title(text = "Poultry Time Series") %>%
+        hc_xAxis(categories = unique(filtered_timeseries$year)) %>%
+        hc_add_series_list(
+          lapply(input$timeseries_variable, function(variable) {
+            data_series <- filtered_timeseries %>% filter(`Poultry by category` == variable)
+            list(name = variable, data = data_series$value)
+          })
+        )
+    })
+    
+    output$datatable <- renderDT({
+      req(input$data_type)
+      
+      if (input$data_type == "Map Data") {
+        datatable(poultry_data)
+      } else if (input$data_type == "Timeseries Data") {
+        datatable(timeseries_data)
+      }
+    })
+  })
+}
+
+# Testing module
+poultry_demo <- function() {
+  ui <- fluidPage(poultryUI("poultry_test"))
+  server <- function(input, output, session) {
+    poultryServer("poultry_test")
+  }
+  shinyApp(ui, server)
+}
+
+poultry_demo()
+
+## File: module_other_animals.R 
+ # File: module_other_animals.R
+
+library(shiny)
+library(highcharter)
+library(dplyr)
+library(tidyr)
+library(geojsonio)
+library(DT)
+
+# Load the required module
+source("module_map.R")
+
+# Define UI for the other animals module
+otherAnimalsUI <- function(id) {
+  ns <- NS(id)
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Map'",
+        ns = ns,
+        radioButtons(
+          ns("variable"), 
+          "Select Variable", 
+          choices = c(
+            "Goats and kids" = "Goats and kids",
+            "Deer" = "Deer",
+            "Horses" = "Horses",
+            "Donkeys" = "Donkeys",
+            "Camelids" = "Camelids",
+            "Beehives" = "Beehives"
+          )
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Time Series'",
+        ns = ns,
+        checkboxGroupInput(
+          ns("timeseries_variables"),
+          "Select Time Series Variables",
+          choices = c(
+            "Goats",
+            "Deer",
+            "Horses",
+            "Donkeys",
+            "Camelids",
+            "Beehives"
+          ),
+          selected = c(
+            "Goats",
+            "Deer",
+            "Horses",
+            "Donkeys",
+            "Camelids",
+            "Beehives"
+          )
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Data Table'",
+        ns = ns,
+        radioButtons(
+          ns("table_data"),
+          "Select Data to Display",
+          choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
+          selected = "map"
+        )
+      )
+    ),
+    mainPanel(
+      width = 9,
+      tabsetPanel(
+        id = ns("tabsetPanel"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Time Series", highchartOutput(ns("timeseries"))),
+        tabPanel("Data Table", DTOutput(ns("table")))
+      )
+    )
+  )
+}
+
+# Define server logic for the other animals module
+otherAnimalsServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Filter livestock_subregion dataset for the selected categories
+    other_animals_data <- livestock_subregion %>%
+      filter(`Livestock by category` %in% c(
+        "Goats and kids",
+        "Deer",
+        "Horses",
+        "Donkeys",
+        "Camelids",
+        "Beehives"
+      )) %>%
+      select(-Scotland) %>%
+      mutate(across(everything(), as.character)) %>%
+      pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
+      mutate(value = safe_as_numeric(value))
+    
+    
+    
+    mapServer(
+      id = "map",
+      data = reactive({
+        req(input$variable)
+        other_animals_data %>% filter(`Livestock by category` == input$variable)
+      }),
+      variable = reactive(input$variable),
+      title = "Other Animals Distribution by Region"
+    )
+    
+    output$timeseries <- renderHighchart({
+      req(input$timeseries_variables)
+      filtered_data <- number_of_other_livestock %>%
+        mutate(across(-`Livestock by category`, as.numeric)) %>%
+        pivot_longer(cols = -`Livestock by category`, names_to = "year", values_to = "value")
+      
+      highchart() %>%
+        hc_add_series(data = filtered_data, hcaes(x = year, y = value, group = `Livestock by category`), type = "line") %>%
+        hc_title(text = "Other Animals Time Series Data") %>%
+        hc_xAxis(title = list(text = "Year")) %>%
+        hc_yAxis(title = list(text = "Number of Animals")) %>%
+        hc_chart(zoomType = "xy")
+    })
+    
+    output$table <- renderDT({
+      req(input$tabsetPanel == "Data Table")
+      if (input$table_data == "map") {
+        datatable(other_animals_data)
+      } else {
+        req(input$timeseries_variables)
+        number_of_other_livestock %>%
+          filter(`Livestock by category` %in% input$timeseries_variables) %>%
+          mutate(across(-`Livestock by category`, as.numeric)) %>%
+          pivot_longer(cols = -`Livestock by category`, names_to = "year", values_to = "value") %>%
+          datatable()
+      }
+    })
+  })
+}
+
+# Testing module
+other_animals_demo <- function() {
+  ui <- fluidPage(otherAnimalsUI("other_animals_test"))
+  server <- function(input, output, session) {
+    otherAnimalsServer("other_animals_test")
+  }
+  shinyApp(ui, server)
+}
+
+other_animals_demo()

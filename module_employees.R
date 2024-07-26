@@ -136,6 +136,7 @@ employeesMapServer <- function(id) {
         filtered_regions_data %>%
           filter(`Occupiers and employees by category` == input$variable)
       }),
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Agricultural Employees by Region"
     )

@@ -1,3 +1,5 @@
+# File: module_area_chart.R
+
 areaChartUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -24,8 +26,8 @@ areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, foote
     reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
     
     output$title <- renderUI({
-      year_min <- min(chart_data()[[x_col]], na.rm = TRUE)
-      year_max <- max(chart_data()[[x_col]], na.rm = TRUE)
+      year_min <- min(as.numeric(chart_data()[[x_col]]), na.rm = TRUE)
+      year_max <- max(as.numeric(chart_data()[[x_col]]), na.rm = TRUE)
       HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, ", ", year_min, " to ", year_max, "</div>"))
     })
     
@@ -37,6 +39,9 @@ areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, foote
       data <- chart_data()
       colors <- reactive_colors()
       group_column <- setdiff(names(data), c(x_col, y_col))[1] # Assuming only one group column
+      
+
+      
       hc <- highchart() %>%
         hc_chart(type = "area", zoomType = "xy") %>%
         hc_yAxis(title = list(text = yAxisTitle)) %>%
@@ -48,8 +53,11 @@ areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, foote
       
       unique_groups <- unique(data[[group_column]])
       lapply(unique_groups, function(g) {
+        series_data <- data[data[[group_column]] == g, ]
         hc <<- hc %>%
-          hc_add_series(name = g, data = data[data[[group_column]] == g, ] %>% select(x = !!sym(x_col), y = !!sym(y_col)), color = colors[[g]])
+          hc_add_series(name = g, data = list_parse2(series_data %>% transmute(x = as.numeric(!!sym(x_col)), y = !!sym(y_col))), color = colors[[g]])
+        
+
       })
       
       hc

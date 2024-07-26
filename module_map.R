@@ -13,7 +13,9 @@ mapUI <- function(id) {
   ns <- NS(id)
   tagList(
     mainPanel(
+      htmlOutput(ns("title")),
       highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
+      htmlOutput(ns("footer")),
       div(
         class = "note",
         style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
@@ -32,9 +34,17 @@ mapUI <- function(id) {
 
 
 
-mapServer <- function(id, data, variable, title) {
+mapServer <- function(id, data, variable, title, footer) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
+    output$title <- renderUI({
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
+    })
+    
+    output$footer <- renderUI({
+      HTML(footer)
+    })
     
     filtered_data <- reactive({
       req(variable)  # Ensure that variable is not null or missing
@@ -88,7 +98,6 @@ mapServer <- function(id, data, variable, title) {
             format = "{value:,.0f}"  # Ensure the labels show the correct values
           )
         ) %>%
-        hc_title(text = title) %>%
         hc_chart(reflow = TRUE) %>% # Make chart responsive
         hc_legend(
           layout = "horizontal",

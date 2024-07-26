@@ -1,91 +1,69 @@
 # File: module_pigs.R
 
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(geojsonio)
-library(DT)
-
-# Load the required module
-source("module_map.R")
-
-# Define UI for the pigs module
 pigsUI <- function(id) {
   ns <- NS(id)
-  tabsetPanel(
-    id = ns("tabs"),
-    tabPanel(
-      "Map",
-      sidebarLayout(
-        sidebarPanel(
-          width = 3,
-          radioButtons(
-            ns("variable"), 
-            "Select Variable", 
-            choices = c(
-              "Female pigs breeding herd" = "Female pigs breeding herd",
-              "All other non-breeding pigs" = "All other non-breeding pigs",
-              "Total pigs" = "Total pigs"
-            )
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Map'",
+        ns = ns,
+        radioButtons(
+          ns("variable"), 
+          "Select Variable", 
+          choices = c(
+            "Total pigs" = "Total pigs",
+            "Female pigs breeding herd" = "Female pigs breeding herd",
+            "All other non-breeding pigs" = "All other non-breeding pigs"
+          ))
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Time Series' || input.tabsetPanel === 'Area Chart'",
+        ns = ns,
+        selectizeInput(
+          ns("timeseries_variables"),
+          "Click within the box to select variables",
+          choices = unique(number_of_pigs$`Pigs by category`),
+          selected = c(
+            "Total breeding herd",
+            "80 kg liveweight and over",
+            "50 kg and under 80 kg liveweight",
+            "Under 50 kg liveweight"
+          ),
+          multiple = TRUE,
+          options = list(
+            plugins = list('remove_button')
           )
-        ),
-        mainPanel(
-          width = 9,
-          mapUI(ns("map"))
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Data Table'",
+        ns = ns,
+        radioButtons(
+          ns("table_data"),
+          "Select Data to Display",
+          choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
+          selected = "map"
         )
       )
     ),
-    tabPanel(
-      "Timeseries",
-      sidebarLayout(
-        sidebarPanel(
-          width = 3,
-          selectizeInput(
-            ns("timeseries_variable"),
-            "Select Variable",
-            choices = unique(number_of_pigs$`Pigs by category`),
-            selected = c(
-              "Total breeding herd",
-              "80 kg liveweight and over",
-              "50 kg and under 80 kg liveweight",
-              "Under 50 kg liveweight"
-            ),
-            multiple = TRUE
-          )
-        ),
-        mainPanel(
-          width = 9,
-          highchartOutput(ns("timeseries"), height = "75vh")
-        )
-      )
-    ),
-    tabPanel(
-      "Data Table",
-      sidebarLayout(
-        sidebarPanel(
-          width = 3,
-          radioButtons(
-            ns("data_type"), 
-            "Select Data Type", 
-            choices = c("Map Data", "Timeseries Data")
-          )
-        ),
-        mainPanel(
-          width = 9,
-          DTOutput(ns("datatable"))
-        )
+    mainPanel(
+      width = 9,
+      tabsetPanel(
+        id = ns("tabsetPanel"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Time Series", lineChartUI(ns("line"))),
+        tabPanel("Area Chart", areaChartUI(ns("area"))),
+        tabPanel("Data Table", DTOutput(ns("table")))
       )
     )
   )
 }
 
-# Define server logic for the pigs module
 pigsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Filter livestock_subregion dataset for the selected categories
     pigs_data <- livestock_subregion %>%
       filter(`Livestock by category` %in% c(
         "Female pigs breeding herd",
@@ -95,7 +73,7 @@ pigsServer <- function(id) {
       select(-Scotland) %>%
       mutate(across(everything(), as.character)) %>%
       pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
-      mutate(value = as.numeric(value))
+      mutate(value = as.numeric(value))  # Ensure value is numeric
     
     mapServer(
       id = "map",
@@ -103,40 +81,54 @@ pigsServer <- function(id) {
         req(input$variable)
         pigs_data %>% filter(`Livestock by category` == input$variable)
       }),
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Pigs Distribution by Region"
     )
     
-    # Timeseries data processing
-    timeseries_data <- number_of_pigs %>%
-      pivot_longer(cols = -`Pigs by category`, names_to = "year", values_to = "value") %>%
-      mutate(year = as.numeric(year))
-    
-    output$timeseries <- renderHighchart({
-      req(input$timeseries_variable)
-      
-      filtered_timeseries <- timeseries_data %>%
-        filter(`Pigs by category` %in% input$timeseries_variable)
-      
-      highchart() %>%
-        hc_chart(zoomType = "xy") %>%
-        hc_title(text = "Pigs Time Series") %>%
-        hc_xAxis(categories = unique(filtered_timeseries$year)) %>%
-        hc_add_series_list(
-          lapply(input$timeseries_variable, function(variable) {
-            data_series <- filtered_timeseries %>% filter(`Pigs by category` == variable)
-            list(name = variable, data = data_series$value)
-          })
-        )
+    chart_data <- reactive({
+      req(input$timeseries_variables)
+      filtered_data <- number_of_pigs %>%
+        mutate(across(-`Pigs by category`, as.numeric)) %>%
+        filter(`Pigs by category` %in% input$timeseries_variables) %>%
+        pivot_longer(cols = -`Pigs by category`, names_to = "year", values_to = "value") %>%
+        mutate(value = as.numeric(value))  # Ensure value is numeric
+      filtered_data
     })
     
-    output$datatable <- renderDT({
-      req(input$data_type)
-      
-      if (input$data_type == "Map Data") {
-        datatable(pigs_data)
-      } else if (input$data_type == "Timeseries Data") {
-        datatable(timeseries_data)
+    areaChartServer(
+      id = "area",
+      chart_data = chart_data,
+      title = "Pigs Area Chart Data",
+      yAxisTitle = "Number of Pigs",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "year",
+      y_col = "value"
+    )
+    
+    lineChartServer(
+      id = "line",
+      chart_data = chart_data,
+      title = "Pigs Area Chart Data",
+      yAxisTitle = "Number of Pigs",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "year",
+      y_col = "value"
+    )
+    
+    output$table <- renderDT({
+      req(input$tabsetPanel == "Data Table")
+      if (input$table_data == "map") {
+        req(input$variable)
+        pigs_data %>%
+          filter(`Livestock by category` == input$variable) %>%
+          datatable()
+      } else {
+        number_of_pigs %>%
+          pivot_longer(cols = -`Pigs by category`, names_to = "year", values_to = "value") %>%
+          datatable()
       }
     })
   })
