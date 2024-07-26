@@ -132,6 +132,7 @@ library(sf)
 library(dplyr)
 library(highcharter)
 library(geojsonio)
+library(rmapshaper)
 
 # Load the shapefile
 local_authorities <- st_read("pub_las.shp")
@@ -179,7 +180,7 @@ st_write(sub_regions, "sub_regions.geojson", driver = "GeoJSON")
 # Load the GeoJSON file
 geojson_data <- geojson_read("sub_regions.geojson", what = "sp")
 
-geojson_data <- ms_simplify(geojson_data, keep = 0.01)
+geojson_data <- ms_simplify(geojson_data, keep = 0.001)
 
 geojson_write(geojson_data, file = "subregions_simplified.geojson")
 
