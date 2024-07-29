@@ -1,6 +1,6 @@
-# File: module_poultry.R
+# File: module_beans.R
 
-poultryUI <- function(id) {
+beansUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
     sidebarPanel(
@@ -11,30 +11,20 @@ poultryUI <- function(id) {
         radioButtons(
           ns("variable"), 
           "Select Variable", 
-          choices = c(           
-            "Total poultry" = "Total poultry",
-            "Fowls for producing eggs" = "Fowls for producing eggs",
-            "Fowls for breeding" = "Fowls for breeding",
-            "Broilers for other table fowls and other poultry" = "Broilers for other table fowls and other poultry"
-          )
+          choices = unique(beans_subregion$`Land use by category`),
+          
         )
-      ),
+      ),     
       conditionalPanel(
         condition = "input.tabsetPanel === 'Time Series' || input.tabsetPanel === 'Area Chart'",
         ns = ns,
-        selectizeInput(
+        checkboxGroupInput(
           ns("timeseries_variables"),
-          "Click within the box to select variables",
-          choices = unique(number_of_poultry$`Poultry by category`),
+          "Select Time Series Variables",
+          choices = unique(beans_data$`Crop/Land use`),
           selected = c(
-            "Total fowls for producing eggs",
-            "Total fowls for breeding",
-            "Broilers and other table birds",
-            "Total Poultry"
-          ),
-          multiple = TRUE,
-          options = list(
-            plugins = list('remove_button')
+            "Protein peas",
+            "Field beans"
           )
         )
       ),
@@ -62,46 +52,41 @@ poultryUI <- function(id) {
   )
 }
 
-poultryServer <- function(id) {
+beansServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    poultry_data <- livestock_subregion %>%
-      filter(`Livestock by category` %in% c(
-        "Fowls for producing eggs",
-        "Fowls for breeding",
-        "Broilers for other table fowls and other poultry",
-        "Total poultry"
-      )) %>%
+    beans_map <- beans_subregion %>%
       select(-Scotland) %>%
       mutate(across(everything(), as.character)) %>%
-      pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
+      pivot_longer(cols = -`Land use by category`, names_to = "sub_region", values_to = "value") %>%
       mutate(value = safe_as_numeric(value))
     
     mapServer(
       id = "map",
       data = reactive({
         req(input$variable)
-        poultry_data %>% filter(`Livestock by category` == input$variable)
+        beans_map %>% filter(`Land use by category` == input$variable)
       }),
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Poultry Distribution by Region"
+      title = "Beans Area Distribution by Region (hectares)"
     )
     
     chart_data <- reactive({
       req(input$timeseries_variables)
-      filtered_data <- number_of_poultry %>%
-        filter(`Poultry by category` %in% input$timeseries_variables) %>%
-        pivot_longer(cols = -`Poultry by category`, names_to = "year", values_to = "value") %>%
-        mutate(value = safe_as_numeric(value))
+      filtered_data <- beans_data %>%
+        filter(`Crop/Land use` %in% input$timeseries_variables) %>%
+        pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+        mutate(year = as.numeric(year))  # Ensure year is numeric
+      filtered_data
     })
     
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Poultry Area Chart Data",
-      yAxisTitle = "Number of Poultry (1,000)",
+      title = "Beans Area Chart Data",
+      yAxisTitle = "Area of Beans (1,000 hectares)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
@@ -111,8 +96,8 @@ poultryServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Poultry Area Chart Data",
-      yAxisTitle = "Number of Poultry (1,000)",
+      title = "Beans Area Chart Data",
+      yAxisTitle = "Area of Beans (1,000 hectares)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
@@ -123,25 +108,23 @@ poultryServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        poultry_data %>%
-          filter(`Livestock by category` == input$variable) %>%
+        beans_subregion %>%
           datatable()
       } else {
-        number_of_poultry %>%
-          pivot_longer(cols = -`Poultry by category`, names_to = "year", values_to = "value") %>%
+        beans_data  %>%
           datatable()
       }
     })
   })
 }
 
-# Testing module
-poultry_demo <- function() {
-  ui <- fluidPage(poultryUI("poultry_test"))
+
+beans_demo <- function() {
+  ui <- fluidPage(beansUI("beans_test"))
   server <- function(input, output, session) {
-    poultryServer("poultry_test")
+    beansServer("beans_test")
   }
   shinyApp(ui, server)
 }
 
-poultry_demo()
+beans_demo()

@@ -32,4 +32,11 @@ server <- function(input, output, session) {
   pigsServer("pigs_module")
   poultryServer("poultry_module")
   otherAnimalsServer("other_animals_module")
+  cerealsServer("cereals_module")
+  oilseedServer("oilseed_module")
+  potatoesServer("potatoes_module")
+  beansServer("beans_module")
+  stockfeedingServer("stockfeeding_module")
+  humanVegetablesServer("human_vegetables_module")
+  fruitServer("fruit_module")
 }

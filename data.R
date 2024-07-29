@@ -111,8 +111,11 @@ for (table in names(table_names)) {
   # Assign cleaned headers to the data
   names(data) <- cleaned_headers
   
-  # Remove '\r\n' from all character columns and clean multiple spaces
-  data <- data %>% mutate(across(where(is.character), ~str_replace_all(.x, "\r\n", " ")))
+  # Convert all columns except the first to numeric, setting non-numeric values to NA
+  data <- data %>% mutate(across(-1, ~ as.numeric(as.character(.))))
+  
+  # Remove '\r\n' from all character columns and clean multiple spaces in the first column
+  data[[1]] <- str_replace_all(data[[1]], "\r\n", " ")
   data <- clean_cells(data)
   
   # Clean data
@@ -195,6 +198,30 @@ unique(vegetables_bulbs_fruit_area$`Vegetables and fruits for human consumption`
 
 unique(crops_grass_area_subregion$`Land use by category`)
 
+
+names(agricultural_area_hectares) <- names(agricultural_area_hectares) %>%
+  str_replace_all("Area", "") %>%
+  str_trim
+
+names(vegetables_bulbs_fruit_area) <- names(vegetables_bulbs_fruit_area) %>%
+  str_replace_all("Area", "") %>%
+  str_trim
+
+#summary crops data
+crops_summary_data <- agricultural_area_hectares %>%
+  filter(`Crop/Land use` %in% c("Total combine harvested crops", "Total crops for stockfeeding",
+                                "Vegetables for human consumption", "Soft fruit"))
+
+land_use_data <- agricultural_area_hectares %>% 
+  filter(`Crop/Land use` %in% c("Total crops, fallow, and set-aside", "Total grass", 
+                                "Rough grazing", "Total sole right agricultural area", "Common grazings"))
+
+
+land_use_subregion <- crops_grass_area_subregion %>%
+  filter(`Land use by category` %in% c("Total agricultural area", "Total grass and rough grazing", 
+                                "Sole right grazing", "Total crops and fallow", "Common grazing", "Woodland"))
+
+
 # Subset for cereals data
 cereals_data <- agricultural_area_hectares %>%
   filter(`Crop/Land use` %in% c("Wheat", "Triticale", "Winter barley", "Spring barley", "Barley Total", 
@@ -214,7 +241,7 @@ beans_data <- agricultural_area_hectares %>%
   filter(`Crop/Land use` %in% c("Protein peas", "Field beans"))
 
 # Subset for animal feed data
-animal_feed_data <- agricultural_area_hectares %>%
+stockfeeding_data <- agricultural_area_hectares %>%
   filter(`Crop/Land use` %in% c("Turnips/swedes", "Kale/cabbage", "Maize", "Rape", "Fodder beet", 
                                 "Lupins", "Other crops for stockfeeding", "Total crops for stockfeeding"))
 
@@ -232,7 +259,7 @@ human_vegetables_data <- vegetables_bulbs_fruit_area %>%
   ))
 
 # Subset for soft fruit data
-soft_fruit_data <- vegetables_bulbs_fruit_area %>%
+fruit_data <- vegetables_bulbs_fruit_area %>%
   filter(`Vegetables and fruits for human consumption` %in% c(
     "Strawberries grown in the open",
     "Raspberries grown in the open",
@@ -270,7 +297,7 @@ oilseed_subregion <- crops_grass_area_subregion %>%
   ))
 
 # Subset for potato_subregion
-potato_subregion <- crops_grass_area_subregion %>%
+potatoes_subregion <- crops_grass_area_subregion %>%
   filter(`Land use by category` %in% c(
     "Potatoes"
   ))
@@ -288,7 +315,7 @@ stockfeeding_subregion <- crops_grass_area_subregion %>%
   ))
 
 # Subset for human_veg_subregion
-human_veg_subregion <- crops_grass_area_subregion %>%
+human_vegetables_subregion <- crops_grass_area_subregion %>%
   filter(`Land use by category` %in% c(
     "Vegetables for human consumption"
   ))
@@ -301,19 +328,22 @@ fruit_subregion <- crops_grass_area_subregion %>%
 
 # Saving all the subsets to an RData file
 save(
+  crops_summary_data,
+  land_use_data,
+  land_use_subregion,
   cereals_data,
   oilseed_data,
   potatoes_data,
   beans_data,
-  animal_feed_data,
+  stockfeeding_data,
   human_vegetables_data,
-  soft_fruit_data,
+  fruit_data,
   cereals_subregion,
   oilseed_subregion,
-  potato_subregion,
+  potatoes_subregion,
   beans_subregion,
   stockfeeding_subregion,
-  human_veg_subregion,
+  human_vegetables_subregion,
   fruit_subregion,
   file = "crops_data.RData"
 )

@@ -41,7 +41,6 @@ employeesMapUI <- function(id) {
       tabsetPanel(
         id = ns("tabs"),
         tabPanel("Map", mapUI(ns("map")), value = "map"),
-        tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"), value = "data_table"),
         tabPanel("Timeseries", 
                  highchartOutput(ns("line_chart")), 
                  div(
@@ -56,7 +55,8 @@ employeesMapUI <- function(id) {
                      </ul>"
                    )
                  ),
-                 value = "timeseries")
+                 value = "timeseries"),
+        tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"), value = "data_table")
       )
     )
   )

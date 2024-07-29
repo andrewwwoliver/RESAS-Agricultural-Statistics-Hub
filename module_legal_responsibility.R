@@ -11,6 +11,10 @@ legalResponsibilityUI <- function(id) {
       mainPanel(
         id = ns("mainpanel"),
         width = 9,
+        div(
+          style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
+          "template"
+        ),
         tabsetPanel(
           id = ns("tabs"),
           tabPanel("Bar Chart", barChartUI(ns("bar_chart")), value = ns("bar")),
@@ -52,9 +56,9 @@ legalResponsibilityServer <- function(id) {
     
     yAxisTitle <- reactive({
       if (input$data_type == "holdings") {
-        "Number of Holdings"
+        "Number of Holdings (1,000)"
       } else {
-        "Area of Holdings (hectares)"
+        "Area of Holdings (1,000 hectares)"
       }
     })
     
