@@ -39,14 +39,13 @@ server <- function(input, output, session) {
     query <- parseQueryString(session$clientData$url_search)
     page <- query$page
     if (is.null(page) || input$navbar != page) {
-      # Update URL only if the selected tab is not "home"
       if (input$navbar != "home") {
         updateQueryString(paste0("?page=", input$navbar), mode = "push")
-      } else {
-        updateQueryString("", mode = "push")
       }
     }
   })
+  
+  
   
   subsectorEmissionsServer("subsector")
   totalEmissionsServer("total")

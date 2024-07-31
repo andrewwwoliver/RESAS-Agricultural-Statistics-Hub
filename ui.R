@@ -1,4 +1,3 @@
-# ui.R
 source("options.R")
 source("module_summary.R")
 source("module_line_chart.R")
@@ -51,7 +50,12 @@ ui <- fluidPage(
   theme = shinytheme("flatly"),
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
-    includeHTML("google-analytics.html")
+    includeHTML("google-analytics.html"),
+    tags$script(HTML("
+      $(document).on('click', 'a[data-value=\"home\"]', function() {
+        history.pushState(null, '', '/');
+      });
+    "))
   ),
   div(class = "container-fluid full-height",
       div(class = "content",
