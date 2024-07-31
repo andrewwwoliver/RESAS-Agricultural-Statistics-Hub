@@ -1,57 +1,71 @@
-## File: module_subsector_emissions.R 
-# File: module_subsector_emissions.R
+source("module_summary.R")
 
+# Data setup for Subsector Emissions
+full_data_subsector <- reactive({ subsector_total })
+units_subsector <- "MtCO₂e"
+
+# UI for Subsector Emissions Module
 subsectorEmissionsUI <- function(id) {
   ns <- NS(id)
   tagList(
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        uiOutput(ns("variable_select")),
-        actionButton(ns("select_all_button"), "Select All"),
-        actionButton(ns("deselect_all_button"), "Deselect All"),
-        sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
+        conditionalPanel(
+          condition = "input.tabs != 'Summary_Page'",
+          ns = ns,
+          uiOutput(ns("variable_select")),
+          actionButton(ns("select_all_button"), "Select All"),
+          actionButton(ns("deselect_all_button"), "Deselect All"),
+          sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
+        ),
+        conditionalPanel(
+          condition = "input.tabs == 'Summary_Page'",
+          ns = ns,
+          sliderInput(ns("summary_current_year_subsector"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
+          sliderInput(ns("summary_comparison_year_subsector"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1, sep = "")
+        )
       ),
+      
       mainPanel(
         id = ns("mainpanel"),
         width = 9,
         tabsetPanel(
           id = ns("tabs"),
-  #        tabPanel("Summary Page",
-   #                value = ns("summary"),
-    #               fluidRow(
-     #                column(width = 4, sliderInput(ns("summary_current_year"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1)),
-      #               column(width = 4, sliderInput(ns("summary_comparison_year"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1)),
-       #              column(width = 4,
-        #                    div(
-         #                     style = "margin-top: 25px; text-align: center; border: 4px solid #e3e3e3",
-          #                    h5("Adjust the sliders to compare data from different years.", style = "padding: 0px; font-weight: bold;")
-          #                  )
-          #           )
-          #         ),
-          #         fluidRow(
-          #           column(width = 12, div(class = "header-text", "Top 3 Categories:"))
-          #         ),
-          #         generate_top_industries("subsector"),
-          #         fluidRow(
-          #           column(width = 12, div(class = "header-text", "Summary Analysis:"))
-          #         ),
-          #         generate_summary_bottom_row("subsector", "Subsector Emissions")
-          #),
-          tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = ns("timelapse")),
-          tabPanel("Breakdown", highchartOutput(ns("breakdown")), value = ns("breakdown")),  # Added Breakdown tab
-          tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
-          tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
+          tabPanel("Summary Page",
+                   value = "Summary_Page",
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Top 3 Categories:"))
+                   ),
+                   fluidRow(
+                     column(width = 4, valueBoxUI(ns("totalIndustry1_subsector")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, valueBoxUI(ns("totalIndustry2_subsector")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, valueBoxUI(ns("totalIndustry3_subsector")), style = "padding-right: 0; padding-left: 0;")
+                   ),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
+                   ),
+                   fluidRow(
+                     column(width = 4, valueBoxUI(ns("totalValue_subsector")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryPieChart_subsector"), "Industry Emissions Over Time"), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryBarChart_subsector"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
+                   )
+          ),
+          tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = "Timelapse"),
+          tabPanel("Breakdown", highchartOutput(ns("breakdown")), value = "Breakdown"),
+          tabPanel("Line Chart", lineChartUI(ns("line")), value = "Line_Chart"),
+          tabPanel("Area Chart", areaChartUI(ns("area")), value = "Area_Chart"),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
                    downloadButton(ns("downloadData"), "Download Data"),
-                   value = ns("data"))
+                   value = "Data_Table")
         )
       )
     )
   )
 }
 
+# Server for Subsector Emissions Module
 subsectorEmissionsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -173,15 +187,27 @@ subsectorEmissionsServer <- function(id) {
       year_input = "year"
     )
     
- #   # Summary Module
- #   current_year <- reactive({ input$summary_current_year })
- #   comparison_year <- reactive({ input$summary_comparison_year })
-  #  
-   # valueBoxServer(ns("totalIndustry1"), chart_data, "Subsector", get_industry(1, chart_data, current_year, "Subsector"), current_year, comparison_year)
-   # valueBoxServer(ns("totalIndustry2"), chart_data, "Subsector", get_industry(2, chart_data, current_year, "Subsector"), current_year, comparison_year)
-   # valueBoxServer(ns("totalIndustry3"), chart_data, "Subsector", get_industry(3, chart_data, current_year, "Subsector"), current_year, comparison_year)
-   # valueBoxServer(ns("totalValue"), chart_data, "Subsector", reactive("Total"), current_year, comparison_year)
-  #  
-  #  summaryBarChartServer(ns("industryBarChart"), chart_data, current_year, comparison_year, "Subsector")
+    current_year <- reactive({ input$summary_current_year_subsector })
+    comparison_year <- reactive({ input$summary_comparison_year_subsector })
+    
+    first_col_name <- "Subsector"
+    
+    valueBoxServer("totalIndustry1_subsector", full_data_subsector, first_col_name, get_industry(1, full_data_subsector, current_year, first_col_name), current_year, comparison_year, units_subsector)
+    valueBoxServer("totalIndustry2_subsector", full_data_subsector, first_col_name, get_industry(2, full_data_subsector, current_year, first_col_name), current_year, comparison_year, units_subsector)
+    valueBoxServer("totalIndustry3_subsector", full_data_subsector, first_col_name, get_industry(3, full_data_subsector, current_year, first_col_name), current_year, comparison_year, units_subsector)
+    valueBoxServer("totalValue_subsector", full_data_subsector, first_col_name, reactive("Total"), current_year, comparison_year, units_subsector)
+    summaryPieChartServer("industryPieChart_subsector", full_data_subsector, current_year, first_col_name, units_subsector)
+    summaryBarChartServer("industryBarChart_subsector", full_data_subsector, current_year, comparison_year, first_col_name, units_subsector)
   })
 }
+
+# Demo function to test the module
+subsector_demo <- function() {
+  ui <- fluidPage(subsectorEmissionsUI("subsector_test"))
+  server <- function(input, output, session) {
+    subsectorEmissionsServer("subsector_test")
+  }
+  shinyApp(ui, server)
+}
+
+subsector_demo()
