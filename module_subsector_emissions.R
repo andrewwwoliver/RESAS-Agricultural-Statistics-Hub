@@ -35,7 +35,7 @@ subsectorEmissionsUI <- function(id) {
           tabPanel("Summary Page",
                    value = "Summary_Page",
                    fluidRow(
-                     column(width = 12, div(class = "header-text", "Top 3 Categories:"))
+                     column(width = 12, div(class = "header-text", "Top 3 Emitting Subsectors:"))
                    ),
                    fluidRow(
                      column(width = 4, valueBoxUI(ns("totalIndustry1_subsector")), style = "padding-right: 0; padding-left: 0;"),
@@ -47,13 +47,13 @@ subsectorEmissionsUI <- function(id) {
                    ),
                    fluidRow(
                      column(width = 4, valueBoxUI(ns("totalValue_subsector")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryPieChart_subsector"), "Industry Emissions Over Time"), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryPieChart_subsector"), "Subsector Breakdown"), style = "padding-right: 0; padding-left: 0;"),
                      column(width = 4, chartUI(ns("industryBarChart_subsector"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
                    )
           ),
           tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = "Timelapse"),
           tabPanel("Breakdown", highchartOutput(ns("breakdown")), value = "Breakdown"),
-          tabPanel("Line Chart", lineChartUI(ns("line")), value = "Line_Chart"),
+          tabPanel("Time Series", lineChartUI(ns("line")), value = "Line_Chart"),
           tabPanel("Area Chart", areaChartUI(ns("area")), value = "Area_Chart"),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),

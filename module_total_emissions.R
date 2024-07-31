@@ -1,56 +1,79 @@
+full_data_total <- reactive({ national_total })
+
+
+# UI for Total Emissions Module
 totalEmissionsUI <- function(id) {
   ns <- NS(id)
   tagList(
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        uiOutput(ns("variable_select")),
-        actionButton(ns("select_all_button"), "Select All"),
-        actionButton(ns("deselect_all_button"), "Deselect All"),
-        sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
+        conditionalPanel(
+          condition = "input.tabs != 'Summary_Page'",
+          ns = ns,
+          uiOutput(ns("variable_select")),
+          actionButton(ns("select_all_button"), "Select All"),
+          actionButton(ns("deselect_all_button"), "Deselect All"),
+          sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
+        ),
+        conditionalPanel(
+          condition = "input.tabs == 'Summary_Page'",
+          ns = ns,
+          sliderInput(ns("summary_current_year_total"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
+          sliderInput(ns("summary_comparison_year_total"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1, sep = "")
+        )
       ),
       mainPanel(
         id = ns("mainpanel"),
         width = 9,
         tabsetPanel(
           id = ns("tabs"),
-  #        tabPanel("Summary Page",
-  #                 value = ns("summary"),
-  #                 fluidRow(
-  #                   column(width = 4, sliderInput(ns("summary_current_year"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1)),
- #                    column(width = 4, sliderInput(ns("summary_comparison_year"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1)),
-#                     column(width = 4,
-  #                          div(
-   #                           style = "margin-top: 25px; text-align: center; border: 4px solid #e3e3e3",
-    #                          h5("Adjust the sliders to compare data from different years.", style = "padding: 0px; font-weight: bold;")
-    #                        )
-     #                )
-      #             ),
-      #             fluidRow(
-      #               column(width = 12, div(class = "header-text", "Top 3 Categories:"))
-      #             ),
-       #            generate_top_industries("total"),
-      #             fluidRow(
-      #               column(width = 12, div(class = "header-text", "Summary Analysis:"))
-      #             ),
-      #             generate_summary_bottom_row("total", "Total Emissions")
-      #    ),
-          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = ns("bar")),
-          tabPanel("Line Chart", lineChartUI(ns("line")), value = ns("line")),
-          tabPanel("Area Chart", areaChartUI(ns("area")), value = ns("area")),
+          tabPanel("Summary Page",
+                   value = "Summary_Page",
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Top 3 Emitting Industries:"))
+                   ),
+                   fluidRow(
+                     column(width = 4, valueBoxUI(ns("totalIndustry1_total")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, valueBoxUI(ns("totalIndustry2_total")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, valueBoxUI(ns("totalIndustry3_total")), style = "padding-right: 0; padding-left: 0;")
+                   ),
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
+                   ),
+                   fluidRow(
+                     column(width = 4, valueBoxUI(ns("totalValue_total")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryLineChart_total"), "Industry Emissions Over Time"), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryBarChart_total"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
+                   )
+          ),
+          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = "Timelapse"),
+          tabPanel("Time Series", lineChartUI(ns("line")), value = "Line_Chart"),
+          tabPanel("Area Chart", areaChartUI(ns("area")), value = "Area_Chart"),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
                    downloadButton(ns("downloadData"), "Download Data"),
-                   value = ns("data"))
+                   value = "Data_Table")
         )
       )
     )
   )
 }
 
+# Server for Total Emissions Module
 totalEmissionsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
+    # Reactive data for line chart
+    line_chart_data <- reactive({
+      data <- national_total
+      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
+      data <- data %>% filter(Industry %in% c("Agriculture", "Total"))
+      data
+    })
+    
+    # Reactive data for other charts
     chart_data <- reactive({
       data <- national_total
       data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
@@ -124,14 +147,27 @@ totalEmissionsServer <- function(id) {
     )
     
     # Summary Module
- #   current_year <- reactive({ input$summary_current_year })
- #   comparison_year <- reactive({ input$summary_comparison_year })
-#    
-#    valueBoxServer(ns("totalIndustry1"), chart_data, "Industry", get_industry(1, chart_data, current_year, "Industry"), current_year, comparison_year)
-#    valueBoxServer(ns("totalIndustry2"), chart_data, "Industry", get_industry(2, chart_data, current_year, "Industry"), current_year, comparison_year)
-#    valueBoxServer(ns("totalIndustry3"), chart_data, "Industry", get_industry(3, chart_data, current_year, "Industry"), current_year, comparison_year)
-#    valueBoxServer(ns("totalValue"), chart_data, "Industry", reactive("Total"), current_year, comparison_year)
-#    
-#    summaryBarChartServer(ns("industryBarChart"), chart_data, current_year, comparison_year, "Industry")
+    current_year <- reactive({ input$summary_current_year_total })
+    comparison_year <- reactive({ input$summary_comparison_year_total })
+    
+    first_col_name <- "Industry"
+    
+    valueBoxServer("totalIndustry1_total", full_data_total, first_col_name, get_industry(1, full_data_total, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
+    valueBoxServer("totalIndustry2_total", full_data_total, first_col_name, get_industry(2, full_data_total, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
+    valueBoxServer("totalIndustry3_total", full_data_total, first_col_name, get_industry(3, full_data_total, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
+    valueBoxServer("totalValue_total", full_data_total, first_col_name, reactive("Total"), current_year, comparison_year, "MtCO₂e")
+    summaryLineChartServer("industryLineChart_total", line_chart_data,  "MtCO₂e")
+    summaryBarChartServer("industryBarChart_total", full_data_total, current_year, comparison_year, first_col_name, "MtCO₂e")
   })
 }
+
+# Demo function to test the module
+total_demo <- function() {
+  ui <- fluidPage(totalEmissionsUI("total_test"))
+  server <- function(input, output, session) {
+    totalEmissionsServer("total_test")
+  }
+  shinyApp(ui, server)
+}
+
+total_demo()

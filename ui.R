@@ -1,4 +1,5 @@
 source("options.R")
+source("module_summary.R")
 source("module_line_chart.R")
 source("module_area_chart.R")
 source("module_bar_chart.R")
