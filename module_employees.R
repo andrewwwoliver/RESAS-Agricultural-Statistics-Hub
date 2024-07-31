@@ -1,14 +1,11 @@
-## File: module_employees.R
-
 library(shiny)
 library(highcharter)
 library(dplyr)
 library(tidyr)
 
-# Load the module_map.R
+# Load the required modules
 source("module_map.R")
-# Load the existing module_data_table.R
-source("module_data_table.R")
+source("module_line_chart.R")
 
 # Coerce all relevant columns to character before pivoting
 occupiers_employees_subregion <- occupiers_employees_subregion %>%
@@ -41,8 +38,8 @@ employeesMapUI <- function(id) {
       tabsetPanel(
         id = ns("tabs"),
         tabPanel("Map", mapUI(ns("map")), value = "map"),
-        tabPanel("Timeseries", 
-                 highchartOutput(ns("line_chart")), 
+        tabPanel("Time Series", 
+                 lineChartUI(ns("line_chart")), 
                  div(
                    class = "note",
                    style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
@@ -117,17 +114,16 @@ employeesMapServer <- function(id) {
         )
     })
     
-    output$line_chart <- renderHighchart({
-      data <- filtered_chart_data()
-      if (nrow(data) == 0) return(NULL)
-      highchart() %>%
-        hc_chart(type = "line") %>%
-        hc_title(text = "Agricultural Employees Timeseries") %>%
-        hc_xAxis(title = list(text = "Year")) %>%
-        hc_yAxis(title = list(text = "Employees (1,000)")) %>%
-        hc_add_series(data = data, hcaes(x = Year, y = Value, group = `Occupiers and employees by category`), type = "line") %>%
-        hc_tooltip(shared = FALSE)
-    })
+    lineChartServer(
+      id = "line_chart",
+      chart_data = filtered_chart_data,
+      title = "Agricultural Employees Time Series",
+      yAxisTitle = "Employees (1,000)",
+      xAxisTitle = "Year",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "Year",
+      y_col = "Value"
+    )
     
     mapServer(
       id = "map",

@@ -64,6 +64,10 @@ landUseSummaryUI <- function(id) {
           "Select Data to Display",
           choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
           selected = "map"
+        ),
+        tags$div(
+          style = "width: 100%;",
+          downloadButton(ns("download_data"), "Download Data")
         )
       )
     ),
@@ -94,16 +98,15 @@ landUseSummaryUI <- function(id) {
                    )
                  )
         ),
-        tabPanel("Bar Chart",
-                 barChartUI(ns("bar_chart"))
-        ),
-        tabPanel("Time Series", lineChartUI(ns("line"))),
         tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Bar Chart", barChartUI(ns("bar_chart"))),
+        tabPanel("Time Series", lineChartUI(ns("line"))),
         tabPanel("Data Table", DTOutput(ns("table")))
       )
     )
   )
 }
+
 
 landUseSummaryServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -169,13 +172,19 @@ landUseSummaryServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        land_use_subregion %>%
-          datatable()
+        datatable(land_use_subregion)
       } else {
-        land_use_data  %>%
-          datatable()
+        datatable(land_use_data)
       }
     })
+    
+    output$download_data <- createDownloadHandler(
+      input = input,
+      file_map_name = "Land_Use_Subregion_Data.xlsx",
+      file_timeseries_name = "Land_Use_Timeseries_Data.xlsx",
+      map_data = land_use_subregion,
+      timeseries_data = land_use_data
+    )
   })
 }
 

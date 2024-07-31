@@ -8,8 +8,6 @@ farmTypesUI <- function(id) {
         width = 3,
         radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area", "Total from Standard Outputs" = "total", "Average standard outputs per holding" = "average"), selected = "holdings"),
         uiOutput(ns("variable_select")),  # Added variable select UI
-        actionButton(ns("select_all_button"), "Select All"),
-        actionButton(ns("deselect_all_button"), "Deselect All")
       ),
       mainPanel(
         id = ns("mainpanel"),
@@ -52,15 +50,16 @@ farmTypesServer <- function(id) {
     output$variable_select <- renderUI({
       choices <- unique(farm_type$`Main farm type`)
       selected <- setdiff(choices, "All")
-      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
-    })
-    
-    observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = setdiff(unique(farm_type$`Main farm type`), "All"))
-    })
-    
-    observeEvent(input$deselect_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
+      selectizeInput(
+        ns("variables"), 
+        "Click within the box to select variables", 
+        choices = choices, 
+        selected = selected,
+        multiple = TRUE,
+        options = list(
+          plugins = list('remove_button')
+        )
+      )
     })
     
     y_col <- reactive({

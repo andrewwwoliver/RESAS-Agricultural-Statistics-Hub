@@ -11,10 +11,9 @@ potatoesUI <- function(id) {
         radioButtons(
           ns("variable"), 
           "Select Variable", 
-          choices = unique(potatoes_subregion$`Land use by category`),
-          
+          choices = unique(potatoes_subregion$`Land use by category`)
         )
-      ),     
+      ),
       conditionalPanel(
         condition = "input.tabsetPanel === 'Time Series' || input.tabsetPanel === 'Area Chart'",
         ns = ns,
@@ -36,6 +35,10 @@ potatoesUI <- function(id) {
           "Select Data to Display",
           choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
           selected = "map"
+        ),
+        tags$div(
+          style = "width: 100%;",
+          downloadButton(ns("download_data"), "Download Data")
         )
       )
     ),
@@ -51,6 +54,9 @@ potatoesUI <- function(id) {
     )
   )
 }
+# File: module_potatoes.R
+
+source("utils.R")
 
 potatoesServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -108,16 +114,21 @@ potatoesServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        potatoes_subregion %>%
-          datatable()
+        datatable(potatoes_subregion)
       } else {
-        potatoes_data  %>%
-          datatable()
+        datatable(potatoes_data)
       }
     })
+    
+    output$download_data <- createDownloadHandler(
+      input = input,
+      file_map_name = "Potato_Subregion_Data.xlsx",
+      file_timeseries_name = "Potato_Timeseries_Data.xlsx",
+      map_data = potatoes_subregion,
+      timeseries_data = potatoes_data
+    )
   })
 }
-
 
 potatoes_demo <- function() {
   ui <- fluidPage(potatoesUI("potatoes_test"))
@@ -128,3 +139,4 @@ potatoes_demo <- function() {
 }
 
 potatoes_demo()
+

@@ -11,10 +11,10 @@ legalResponsibilityUI <- function(id) {
       mainPanel(
         id = ns("mainpanel"),
         width = 9,
-        div(
-          style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
-          "template"
-        ),
+     #   div(
+  #        style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
+   #       "template"
+    #    ),
         tabsetPanel(
           id = ns("tabs"),
           tabPanel("Bar Chart", barChartUI(ns("bar_chart")), value = ns("bar")),

@@ -16,7 +16,19 @@ source("module_pigs.R")
 source("module_poultry.R")
 source("module_other_animals.R")
 
+
 server <- function(input, output, session) {
+  observe({
+    query <- parseQueryString(session$clientData$url_search)
+    if (!is.null(query$page)) {
+      updateTabsetPanel(session, "navbar", selected = query$page)
+    }
+  })
+  
+  observeEvent(input$navbar, {
+    updateQueryString(paste0("?page=", input$navbar), mode = "push")
+  })
+  
   subsectorEmissionsServer("subsector")
   totalEmissionsServer("total")
   gasEmissionsServer("gas")
@@ -39,4 +51,5 @@ server <- function(input, output, session) {
   stockfeedingServer("stockfeeding_module")
   humanVegetablesServer("human_vegetables_module")
   fruitServer("fruit_module")
+  homeServer("home")
 }

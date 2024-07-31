@@ -24,7 +24,7 @@ occupiersUI <- function(id) {
         id = ns("tabs"),
         tabPanel("Map", mapUI(ns("map")), value = "map"),
         tabPanel("Bar Chart", highchartOutput(ns("pyramid_chart"), height = "500px"), value = "bar_chart"),
-        tabPanel("Timeseries", lineChartUI(ns("line_chart")), value = "timeseries"),
+        tabPanel("Time Series", lineChartUI(ns("line_chart")), value = "timeseries"),
         tabPanel("Data Table", 
                  DTOutput(ns("data_table")),
                  downloadButton(ns("downloadData"), "Download Data"),
@@ -165,7 +165,7 @@ occupiersServer <- function(id) {
     lineChartServer(
       id = "line_chart",
       chart_data = filtered_timeseries_data,
-      title = "Agricultural Occupiers Timeseries",
+      title = "Agricultural Occupiers Time Series",
       yAxisTitle = "Occupiers (1,000)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',

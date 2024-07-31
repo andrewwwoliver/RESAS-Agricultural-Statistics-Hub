@@ -1,4 +1,3 @@
-# Source UI modules
 source("options.R")
 source("module_line_chart.R")
 source("module_area_chart.R")
@@ -30,8 +29,12 @@ source("module_beans.R")
 source("module_stockfeeding.R")
 source("module_human_vegetables.R")
 source("module_fruit.R")
+source("home.R")
+source("module_economy_summary.R")
 source("hc_theme.R")
+source("utils.R")
 library(shinyjs)
+
 
 create_footer <- function() {
   div(
@@ -41,7 +44,7 @@ create_footer <- function() {
   )
 }
 
-# Generate the UI
+# Integrate the home module into the main UI
 ui <- fluidPage(
   useShinyjs(),  # Initialize shinyjs
   theme = shinytheme("flatly"),
@@ -53,11 +56,11 @@ ui <- fluidPage(
       div(class = "content",
           navbarPage(
             title = div(
-              div("Home", style = "display: inline-block; margin-right: 20px;"),
-              actionLink("toggleSidebar", icon("bars"), class = "nav-link", style = "display: inline-block; vertical-align: middle;"),
               tags$li(class = "nav-item", img(src = "RESAS Logo.png", class = "header-logo"))
             ),
             id = "navbar",
+            windowTitle = "RESAS Agricultural Statistics Hub",  # Set the name for the browser tab
+            tabPanel("Home", value = "home", homeUI("home")),  # Set this tabPanel as the default page
             navbarMenu("Structure",
                        tabPanel("Land Use", value = "land_use", landUseSummaryUI("land_use")),
                        tabPanel("Farm Types", value = "farm_types", farmTypesUI("farm_types")),
@@ -88,9 +91,14 @@ ui <- fluidPage(
                        tabPanel("Stockfeeding", value = "stockfeeding_module", stockfeedingUI("stockfeeding_module")),
                        tabPanel("Vegetables", value = "human_vegetables_module", humanVegetablesUI("human_vegetables_module")),
                        tabPanel("Fruit", value = "fruit_module", fruitUI("fruit_module"))
-                       )
+            
           ),
-          create_footer()
-      )
+          navbarMenu("Economy",  
+                     tabPanel("Summary", value = "economy", economySummaryUI("economy"))  
+          )
+      ),
+      create_footer()
   )
 )
+)
+
