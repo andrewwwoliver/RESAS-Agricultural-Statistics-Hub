@@ -1,3 +1,4 @@
+# server.R
 # Source the necessary modules for server logic
 source("module_subsector_emissions.R")
 source("module_total_emissions.R")
@@ -15,18 +16,36 @@ source("module_sheep.R")
 source("module_pigs.R")
 source("module_poultry.R")
 source("module_other_animals.R")
-
+source("module_cereals.R")
+source("module_oilseed.R")
+source("module_potatoes.R")
+source("module_beans.R")
+source("module_stockfeeding.R")
+source("module_human_vegetables.R")
+source("module_fruit.R")
+source("home.R")
 
 server <- function(input, output, session) {
+  # Maintain selected tab state based on URL query parameters
   observe({
     query <- parseQueryString(session$clientData$url_search)
-    if (!is.null(query$page)) {
-      updateTabsetPanel(session, "navbar", selected = query$page)
+    page <- query$page
+    if (!is.null(page)) {
+      updateTabsetPanel(session, "navbar", selected = page)
     }
   })
   
   observeEvent(input$navbar, {
-    updateQueryString(paste0("?page=", input$navbar), mode = "push")
+    query <- parseQueryString(session$clientData$url_search)
+    page <- query$page
+    if (is.null(page) || input$navbar != page) {
+      # Update URL only if the selected tab is not "home"
+      if (input$navbar != "home") {
+        updateQueryString(paste0("?page=", input$navbar), mode = "push")
+      } else {
+        updateQueryString("", mode = "push")
+      }
+    }
   })
   
   subsectorEmissionsServer("subsector")

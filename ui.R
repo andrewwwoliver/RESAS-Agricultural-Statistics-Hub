@@ -1,3 +1,4 @@
+# ui.R
 source("options.R")
 source("module_summary.R")
 source("module_line_chart.R")
@@ -8,7 +9,6 @@ source("module_data_table.R")
 source("module_total_emissions.R")
 source("module_subsector_emissions.R")
 source("module_gas_emissions.R")
-source("module_summary.R")
 source("module_information.R")
 source("module_manure_usage.R")
 source("module_map.R")
@@ -35,7 +35,7 @@ source("module_economy_summary.R")
 source("hc_theme.R")
 source("utils.R")
 library(shinyjs)
-
+library(shinythemes)
 
 create_footer <- function() {
   div(
@@ -92,14 +92,12 @@ ui <- fluidPage(
                        tabPanel("Stockfeeding", value = "stockfeeding_module", stockfeedingUI("stockfeeding_module")),
                        tabPanel("Vegetables", value = "human_vegetables_module", humanVegetablesUI("human_vegetables_module")),
                        tabPanel("Fruit", value = "fruit_module", fruitUI("fruit_module"))
-            
+            ),
+            navbarMenu("Economy",
+                       tabPanel("Summary", value = "economy", economySummaryUI("economy"))
+            )
           ),
-          navbarMenu("Economy",  
-                     tabPanel("Summary", value = "economy", economySummaryUI("economy"))  
-          )
-      ),
-      create_footer()
+          create_footer()
+      )
   )
 )
-)
-

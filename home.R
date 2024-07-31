@@ -1,3 +1,4 @@
+# home.R
 # Define UI for the home module
 homeUI <- function(id) {
   ns <- NS(id)
@@ -130,8 +131,6 @@ homeUI <- function(id) {
   )
 }
 
-
-
 homeServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -162,6 +161,11 @@ homeServer <- function(id) {
       fruit_module = "fruit_module"
     )
     
-    createNavObserver(input, session, pages)
+    lapply(names(pages), function(page) {
+      observeEvent(input[[paste0("nav_", page)]], {
+        updateTabsetPanel(session, "navbar", selected = pages[[page]])
+        updateQueryString(paste0("?page=", pages[[page]]), mode = "push")
+      })
+    })
   })
 }
