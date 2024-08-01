@@ -38,6 +38,7 @@ homeUI <- function(id) {
           "Livestock"
         ),
         tags$ul(
+          tags$li(actionLink(ns("nav_animals_summary_module"), "Summary")),
           tags$li(actionLink(ns("nav_cattle_module"), "Cattle")),
           tags$li(actionLink(ns("nav_sheep_module"), "Sheep")),
           tags$li(actionLink(ns("nav_pigs_module"), "Pigs")),
@@ -70,7 +71,7 @@ homeUI <- function(id) {
         ),
         tags$div(
           style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "Data Sources"
+          "Data sources"
         ),
         tags$p(
           style = "font-size: 16px;",
@@ -103,7 +104,7 @@ homeUI <- function(id) {
         ),
         tags$div(
           style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "How to Use the Site"
+          "How to use the site"
         ),
         tags$p(
           style = "font-size: 16px;",
@@ -120,11 +121,11 @@ homeUI <- function(id) {
         ),
         tags$div(
           style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "Feedback Survey"
+          "Feedback survey"
         ),
         tags$p(
           style = "font-size: 16px;",
-          HTML("This content is still in development. We would be grateful if you could fill in our <a href='https://forms.office.com/e/Y9Eixgf4c1' target='_blank'>feedback survey</a>. You can also email us at <a href='mailto:agricsurveys@gov.scot'>agricsurveys@gov.scot</a>.")
+          HTML("This content is still in development. We would be grateful if you could fill in our <a href='https://forms.office.com/e/Y9Eixgf4c1' target='_blank'>feedback survey</a>. You can also email us at <a href='mailto:agric.stats@gov.scot'>agric.stats@gov.scot</a>.")
         )
       )
     )
@@ -147,6 +148,7 @@ homeServer <- function(id) {
       gas = "gas",
       manure = "manure",
       info = "info",
+      animals_summary_module = "animals_summary_module",  # Added the summary animals module
       cattle_module = "cattle_module",
       sheep_module = "sheep_module",
       pigs_module = "pigs_module",

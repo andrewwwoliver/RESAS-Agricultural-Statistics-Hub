@@ -31,6 +31,7 @@ source("module_human_vegetables.R")
 source("module_fruit.R")
 source("home.R")
 source("module_economy_summary.R")
+source("module_animals_summary.R")
 source("hc_theme.R")
 source("utils.R")
 library(shinyjs)
@@ -82,6 +83,7 @@ ui <- fluidPage(
                        tabPanel("Further Information", value = "info", informationUI("info"))
             ),
             navbarMenu("Livestock",
+                       tabPanel("Summary", value= "animals_summary_module", animalsSummaryUI("animals_summary_module")),
                        tabPanel("Cattle", value = "cattle_module", cattleUI("cattle_module")),
                        tabPanel("Sheep", value = "sheep_module", sheepUI("sheep_module")),
                        tabPanel("Pigs", value = "pigs_module", pigsUI("pigs_module")),

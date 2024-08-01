@@ -25,6 +25,15 @@ create_yoy_arrow <- function(change) {
   }
 }
 
+# Helper function to format numbers with commas and appropriate decimal places
+format_number <- function(number) {
+  if (number %% 1 == 0) {
+    format(number, big.mark = ",", scientific = FALSE)
+  } else {
+    format(round(number, 2), big.mark = ",", scientific = FALSE, nsmall = 2)
+  }
+}
+
 # UI Module for Value Box
 valueBoxUI <- function(id) {
   ns <- NS(id)
@@ -55,13 +64,13 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
             h5(class = "value-box-title", industry()),
             div(
               style = "display: flex; align-items: baseline; margin-bottom: 5px;", # Adjusted margin-bottom
-              h3(sprintf("%.2f", current_value), style = "margin: 0;"), # Removed margin
+              h3(format_number(current_value), style = "margin: 0;"), # Removed margin
               span(units, class = "value-box-units")
             ),
             div(
               style = "display: flex; align-items: center; margin-bottom: -10px;", # Negative margin to move closer
               create_yoy_arrow(yoy_change),
-              span(class = "value-box-yoy", ifelse(is.na(yoy_change), "NA", sprintf("%.2f%%", yoy_change)), style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
+              span(class = "value-box-yoy", ifelse(is.na(yoy_change), "NA", sprintf("%+.2f%% %d vs. %d", yoy_change, current_year(), comparison_year())), style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
             )
           ),
           div(
@@ -146,7 +155,6 @@ summaryPieChartServer <- function(id, data, current_year, category, units) {
     })
   })
 }
-
 
 # Server Module for Bar Chart
 summaryBarChartServer <- function(id, data, current_year, comparison_year, category, units) {

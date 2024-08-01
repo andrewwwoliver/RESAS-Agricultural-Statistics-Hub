@@ -70,4 +70,5 @@ server <- function(input, output, session) {
   humanVegetablesServer("human_vegetables_module")
   fruitServer("fruit_module")
   homeServer("home")
+  animalsSummaryServer("animals_summary_module")
 }

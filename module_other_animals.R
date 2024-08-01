@@ -22,7 +22,7 @@ otherAnimalsUI <- function(id) {
         )
       ),
       conditionalPanel(
-        condition = "input.tabsetPanel === 'Time Series' || input.tabsetPanel === 'Area Chart'",
+        condition = "input.tabsetPanel === 'Time Series'",
         ns = ns,
         checkboxGroupInput(
           ns("timeseries_variables"),
@@ -62,7 +62,6 @@ otherAnimalsUI <- function(id) {
         id = ns("tabsetPanel"),
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
-        tabPanel("Area Chart", areaChartUI(ns("area"))),
         tabPanel("Data Table", DTOutput(ns("table")))
       )
     )
@@ -107,17 +106,7 @@ otherAnimalsServer <- function(id) {
         mutate(year = as.numeric(year))  # Ensure year is numeric
       filtered_data
     })
-    
-    areaChartServer(
-      id = "area",
-      chart_data = chart_data,
-      title = "Other Animals Area Chart Data",
-      yAxisTitle = "Number of Animals (1,000)",
-      xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
-      x_col = "year",
-      y_col = "value"
-    )
+  
     
     lineChartServer(
       id = "line",

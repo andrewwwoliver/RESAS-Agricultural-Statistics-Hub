@@ -27,6 +27,7 @@ thm <- source("hc_theme.R")$value
 load("ghg_data.RData")
 load("census_data.RData")
 load("crops_data.RData")
+load("total_animals.RData")
 
 
 # Preset list of colors

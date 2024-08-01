@@ -347,3 +347,39 @@ save(
   fruit_subregion,
   file = "crops_data.RData"
 )
+
+
+
+
+# Convert the wide format data into long format using pivot_longer
+number_of_pigs_long <- number_of_pigs %>%
+  pivot_longer(cols = -`Pigs by category`, names_to = "Year", values_to = "Total") %>%
+  filter(`Pigs by category` == "Total pigs") %>%
+  select(Year, `Total pigs` = Total)
+
+number_of_poultry_long <- number_of_poultry %>%
+  pivot_longer(cols = -`Poultry by category`, names_to = "Year", values_to = "Total") %>%
+  filter(`Poultry by category` == "Total poultry") %>%
+  select(Year, `Total poultry` = Total)
+
+number_of_sheep_long <- number_of_sheep %>%
+  pivot_longer(cols = -`Sheep by category`, names_to = "Year", values_to = "Total") %>%
+  filter(`Sheep by category` == "Total sheep") %>%
+  select(Year, `Total sheep` = Total)
+
+number_of_cattle_long <- number_of_cattle %>%
+  pivot_longer(cols = -`Cattle by category`, names_to = "Year", values_to = "Total") %>%
+  filter(`Cattle by category` == "Total Cattle") %>%
+  select(Year, `Total cattle` = Total)
+
+# Merge the dataframes on the 'Year' column
+total_animals <- number_of_pigs_long %>%
+  inner_join(number_of_poultry_long, by = "Year") %>%
+  inner_join(number_of_sheep_long, by = "Year") %>%
+  inner_join(number_of_cattle_long, by = "Year")
+
+# Convert Year column to numeric
+total_animals$Year <- as.numeric(total_animals$Year)
+
+# save total animals 
+save(total_animals, file = "total_animals.RData")

@@ -1,0 +1,74 @@
+# module_summary_animals.R
+
+# Reactive data setup for Animals
+full_data_animals <- reactive({
+  total_animals %>%
+    pivot_longer(
+      cols = starts_with("Total"),
+      names_to = "Animal_Type",
+      values_to = "Value"
+    )
+})
+units_animals <- "animals"
+
+# UI for Summary Animals Module
+animalsSummaryUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    sidebarLayout(
+      sidebarPanel(
+        width = 3,
+        sliderInput(ns("summary_current_year_animals"), "Current Year", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        sliderInput(ns("summary_comparison_year_animals"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
+      ),
+      mainPanel(
+        id = ns("mainpanel"),
+        width = 9,
+        tabsetPanel(
+          id = ns("tabs"),
+          tabPanel("Summary Page",
+                   value = "Summary_Page",
+                   HTML("<h3>Work in progress</h3>"),  # Added work in progress message
+                   fluidRow(
+                     column(width = 6, valueBoxUI(ns("totalCattle")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 6, valueBoxUI(ns("totalSheep")), style = "padding-right: 0; padding-left: 0;")
+                     
+                   ),
+                   fluidRow(
+                     column(width = 6, valueBoxUI(ns("totalPigs")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 6, valueBoxUI(ns("totalPoultry")), style = "padding-right: 0; padding-left: 0;")
+                     
+                   )
+          )
+        )
+      )
+    )
+  )
+}
+
+# Server for Summary Animals Module
+animalsSummaryServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    current_year <- reactive({ input$summary_current_year_animals })
+    comparison_year <- reactive({ input$summary_comparison_year_animals })
+    valueBoxServer("totalCattle", full_data_animals, "Animal_Type", reactive("Total cattle"), current_year, comparison_year, "cattle")
+    valueBoxServer("totalSheep", full_data_animals, "Animal_Type", reactive("Total sheep"), current_year, comparison_year, "sheep")
+    valueBoxServer("totalPigs", full_data_animals, "Animal_Type", reactive("Total pigs"), current_year, comparison_year, "pigs")
+    valueBoxServer("totalPoultry", full_data_animals, "Animal_Type", reactive("Total poultry"), current_year, comparison_year, "poultry")
+    
+    
+  })
+}
+
+# Testing module
+content_demo <- function() {
+  ui <- fluidPage(animalsSummaryUI("summary_animals_test"))
+  server <- function(input, output, session) {
+    animalsSummaryServer("summary_animals_test")
+  }
+  shinyApp(ui, server)
+}
+
+content_demo()
