@@ -64,8 +64,18 @@ thm <- hc_theme(
       color = "black"
     ),
     headerFormat = "<b>{point.key}</b><br/>",  
-    pointFormat = "{series.name}: {point.y:.2f}"
+    pointFormatter = JS("function() {
+    var value = this.y;
+    var formattedValue;
+    if (value >= 1000) {
+      formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    } else {
+      formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+    }
+    return this.series.name + ': ' + formattedValue;
+  }")
   ),
+  
   legend = list(
     itemStyle = list(
       fontFamily = "Arial, sans-serif",

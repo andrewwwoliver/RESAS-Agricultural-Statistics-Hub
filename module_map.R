@@ -84,10 +84,18 @@ mapServer <- function(id, data, variable, title, footer) {
             useHTML = TRUE,
             headerFormat = "<b>{point.key}</b><br/>",
             pointFormatter = JS(sprintf("function() {
-              return '<b>' + this.sub_region + '</b><br/>' +
-                     '%s: ' + this.value;
-            }", variable_name))
+    var value = this.value;
+    var formattedValue;
+    if (value >= 1000) {
+      formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    } else {
+      formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+    }
+    return '<b>' + this.sub_region + '</b><br/>' +
+           '%s: ' + formattedValue;
+  }", variable_name))
           ),
+          
           nullColor = '#E0E0E0'  # Color for regions with no data
         ) %>%
         hc_mapNavigation(enabled = TRUE) %>%
