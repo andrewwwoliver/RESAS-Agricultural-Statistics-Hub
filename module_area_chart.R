@@ -20,7 +20,7 @@ areaChartUI <- function(id) {
   )
 }
 
-areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
+areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, unit = "", footer, x_col, y_col) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
@@ -40,8 +40,6 @@ areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, foote
       colors <- reactive_colors()
       group_column <- setdiff(names(data), c(x_col, y_col))[1] # Assuming only one group column
       
-
-      
       hc <- highchart() %>%
         hc_chart(type = "area", zoomType = "xy") %>%
         hc_yAxis(title = list(text = yAxisTitle)) %>%
@@ -56,11 +54,23 @@ areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, foote
         series_data <- data[data[[group_column]] == g, ]
         hc <<- hc %>%
           hc_add_series(name = g, data = list_parse2(series_data %>% transmute(x = as.numeric(!!sym(x_col)), y = !!sym(y_col))), color = colors[[g]])
-        
-
       })
       
-      hc
+      hc %>%
+        hc_tooltip(
+          useHTML = TRUE,
+          headerFormat = "<b>{point.key}</b><br/>",
+          pointFormatter = JS(sprintf("function() {
+            var value = this.y;
+            var formattedValue;
+            if (value >= 1000) {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            } else {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+            }
+            return this.series.name + ': ' + formattedValue + ' %s';
+          }", unit))
+        )
     })
   })
 }

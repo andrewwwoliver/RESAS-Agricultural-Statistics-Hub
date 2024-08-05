@@ -76,6 +76,7 @@ cerealsServer <- function(id) {
         req(input$variable)
         cereals_map %>% filter(`Land use by category` == input$variable)
       }),
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Cereals Distribution by Region (hectares)"
@@ -93,9 +94,10 @@ cerealsServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Cereals Area Chart Data",
+      title = "Cereals Area Planted",
       yAxisTitle = "Area of Cereals (1,000 hectares)",
       xAxisTitle = "Year",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
@@ -104,9 +106,10 @@ cerealsServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Cereals Area Chart Data",
+      title = "Cereals Area Planted",
       yAxisTitle = "Area of Cereals (1,000 hectares)",
       xAxisTitle = "Year",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"

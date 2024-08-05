@@ -20,7 +20,7 @@ barChartUI <- function(id) {
 
 # File: module_bar_chart.R
 
-barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, tooltip_format, maintain_order = FALSE) {
+barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, unit = "", tooltip_format = "", maintain_order = FALSE) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
@@ -69,13 +69,18 @@ barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer
           showInLegend = FALSE
         ) %>%
         hc_tooltip(
-          style = list(
-            fontFamily = "Arial, sans-serif",
-            fontSize = "16px",
-            color = "black"
-          ),
-          headerFormat = "<b>{point.key}</b><br/>",  
-          pointFormat = if (is.reactive(tooltip_format)) tooltip_format() else tooltip_format
+          useHTML = TRUE,
+          headerFormat = "<b>{point.key}</b><br/>",
+          pointFormatter = JS(sprintf("function() {
+            var value = this.y;
+            var formattedValue;
+            if (value >= 1000) {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            } else {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+            }
+            return this.series.name + ': ' + formattedValue + ' %s';
+          }", unit))
         ) %>%
         hc_add_theme(thm)
     })

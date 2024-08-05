@@ -12,7 +12,6 @@ humanVegetablesUI <- function(id) {
           ns("variable"), 
           "Select Variable", 
           choices = unique(human_vegetables_subregion$`Land use by category`)
-          
         )
       ),     
       conditionalPanel(
@@ -72,6 +71,7 @@ humanVegetablesServer <- function(id) {
         req(input$variable)
         human_vegetables_map %>% filter(`Land use by category` == input$variable)
       }),
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Vegetables for Human Consumption Distribution by Region (hectares)"
@@ -89,9 +89,10 @@ humanVegetablesServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Vegetables for Human Consumption Area Chart Data",
+      title = "Vegetables for Human Consumption Area Planted",
       yAxisTitle = "Area of Vegetables (1,000 hectares)",
       xAxisTitle = "Year",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
@@ -100,9 +101,10 @@ humanVegetablesServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Human Vegetables Area Chart Data",
+      title = "Human Vegetables Area Planted",
       yAxisTitle = "Area of Vegetables (1,000 hectares)",
       xAxisTitle = "Year",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
@@ -122,7 +124,6 @@ humanVegetablesServer <- function(id) {
   })
 }
 
-
 human_vegetables_demo <- function() {
   ui <- fluidPage(humanVegetablesUI("human_vegetables_test"))
   server <- function(input, output, session) {
@@ -130,5 +131,3 @@ human_vegetables_demo <- function() {
   }
   shinyApp(ui, server)
 }
-
-human_vegetables_demo()

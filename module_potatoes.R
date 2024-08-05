@@ -74,6 +74,7 @@ potatoesServer <- function(id) {
         req(input$variable)
         potatoes_map %>% filter(`Land use by category` == input$variable)
       }),
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Potatoes Distribution by Region (hectares)"
@@ -91,9 +92,10 @@ potatoesServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Potatoes Area Chart Data",
+      title = "Potatoes Area Planted",
       yAxisTitle = "Area of Potatoes (1,000 hectares)",
       xAxisTitle = "Year",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
@@ -102,9 +104,10 @@ potatoesServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Potatoes Area Chart Data",
+      title = "Potatoes Area Planted",
       yAxisTitle = "Area of Potatoes (1,000 hectares)",
       xAxisTitle = "Year",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"

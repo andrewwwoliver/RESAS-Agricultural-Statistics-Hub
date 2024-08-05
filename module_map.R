@@ -1,3 +1,5 @@
+# File: module_map.R
+
 library(shiny)
 library(highcharter)
 library(geojsonio)
@@ -31,10 +33,7 @@ mapUI <- function(id) {
   )
 }
 
-
-
-
-mapServer <- function(id, data, variable, title, footer) {
+mapServer <- function(id, data, variable, unit = "", title, footer) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -84,18 +83,17 @@ mapServer <- function(id, data, variable, title, footer) {
             useHTML = TRUE,
             headerFormat = "<b>{point.key}</b><br/>",
             pointFormatter = JS(sprintf("function() {
-    var value = this.value;
-    var formattedValue;
-    if (value >= 1000) {
-      formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-    } else {
-      formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
-    }
-    return '<b>' + this.sub_region + '</b><br/>' +
-           '%s: ' + formattedValue;
-  }", variable_name))
+              var value = this.value;
+              var formattedValue;
+              if (value >= 1000) {
+                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+              } else {
+                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+              }
+              return '<b>' + this.sub_region + '</b><br/>' +
+                     '%s: ' + formattedValue + ' %s';
+            }", variable_name, unit))
           ),
-          
           nullColor = '#E0E0E0'  # Color for regions with no data
         ) %>%
         hc_mapNavigation(enabled = TRUE) %>%

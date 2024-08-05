@@ -41,7 +41,7 @@ valueBoxUI <- function(id) {
 }
 
 # Server Module for Value Box
-valueBoxServer <- function(id, data, category, industry, current_year, comparison_year, units) {
+valueBoxServer <- function(id, data, category, industry, current_year, comparison_year, unit) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     reactive_data <- reactive({ data() %>% filter(!!sym(category) == !!industry(), Year %in% c(current_year(), comparison_year())) })
@@ -65,7 +65,7 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
             div(
               style = "display: flex; align-items: baseline; margin-bottom: 5px;", # Adjusted margin-bottom
               h3(format_number(current_value), style = "margin: 0;"), # Removed margin
-              span(units, class = "value-box-units")
+              span(unit, class = "value-box-unit")
             ),
             div(
               style = "display: flex; align-items: center; margin-bottom: -10px;", # Negative margin to move closer
@@ -99,7 +99,7 @@ chartUI <- function(id, title) {
 }
 
 # Server Module for Line Chart on Summary Page
-summaryLineChartServer <- function(id, data, units) {
+summaryLineChartServer <- function(id, data, unit = "") {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -118,9 +118,23 @@ summaryLineChartServer <- function(id, data, units) {
       highchart() %>%
         hc_chart(type = "line", zoomType = "xy") %>%
         hc_xAxis(categories = unique(summary_line_data$Year)) %>%
-        hc_yAxis(title = list(text = units)) %>%
+        hc_yAxis(title = list(text = unit)) %>%
         hc_legend(align = "left", alignColumns = FALSE, layout = "horizontal") %>%
         hc_plotOptions(line = list(marker = list(enabled = FALSE))) %>%  # Disable markers
+        hc_tooltip(
+          useHTML = TRUE,
+          headerFormat = "<b>{point.key}</b><br/>",
+          pointFormatter = JS(sprintf("function() {
+            var value = this.y;
+            var formattedValue;
+            if (value >= 1000) {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            } else {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+            }
+            return this.series.name + ': ' + formattedValue + ' %s';
+          }", unit))
+        ) %>%
         hc_add_theme(thm) %>%
         hc_add_series_list(series_list)
     })
@@ -128,7 +142,7 @@ summaryLineChartServer <- function(id, data, units) {
 }
 
 # Server Module for Pie Chart
-summaryPieChartServer <- function(id, data, current_year, category, units) {
+summaryPieChartServer <- function(id, data, current_year, category, unit = "") {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     output$chartOutput <- renderHighchart({
@@ -146,18 +160,34 @@ summaryPieChartServer <- function(id, data, current_year, category, units) {
       
       highchart() %>%
         hc_chart(type = "pie") %>%
-        hc_series(list(data = list_parse(series_data))) %>%
+        hc_series(
+          list(
+            name = "Gas",
+            data = list_parse(series_data),
+            showInLegend = TRUE,
+            dataLabels = list(enabled = FALSE)
+          )
+        ) %>%
+        hc_colors(colors) %>%
+        hc_tooltip(
+          useHTML = TRUE,
+          headerFormat = "<b>{point.key}</b><br/>",
+          pointFormat = sprintf("{point.name}: {point.y:,.2f} %s ({point.percentage:.2f}%%)", unit)
+        ) %>%
         hc_plotOptions(pie = list(
-          dataLabels = list(enabled = FALSE),
-          tooltip = list(pointFormat = sprintf('{point.y:.2f} %s ({point.percentage:.2f}%%)', units))
-        )) %>%
-        hc_colors(colors)  # Set the color palette
+          allowPointSelect = TRUE,
+          cursor = "pointer",
+          showInLegend = TRUE,
+          dataLabels = list(enabled = TRUE, format = '<b>{point.name}</b>: {point.percentage:.1f} %')
+        ))
     })
   })
 }
 
+
+
 # Server Module for Bar Chart
-summaryBarChartServer <- function(id, data, current_year, comparison_year, category, units) {
+summaryBarChartServer <- function(id, data, current_year, comparison_year, category, unit = "") {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     output$chartOutput <- renderHighchart({
@@ -169,7 +199,7 @@ summaryBarChartServer <- function(id, data, current_year, comparison_year, categ
       highchart() %>%
         hc_chart(type = "bar") %>%
         hc_xAxis(categories = bar_data[[category]]) %>%
-        hc_yAxis(title = list(text = units)) %>%
+        hc_yAxis(title = list(text = unit)) %>%
         hc_add_series(
           name = as.character(current_year()), 
           data = bar_data$Value, 
@@ -185,11 +215,25 @@ summaryBarChartServer <- function(id, data, current_year, comparison_year, categ
           marker = list(enabled = TRUE, symbol = "circle", lineWidth = 2, radius = 3)
         ) %>%
         hc_plotOptions(series = list(groupPadding = 0, pointPadding = 0.1, borderWidth = 0)) %>%
-        hc_tooltip(shared = TRUE, pointFormat = sprintf('{series.name}: {point.y:.2f} %s<br/>', units)) %>%
+        hc_tooltip(
+          useHTML = TRUE,
+          shared = TRUE,
+          pointFormatter = JS(sprintf("function() {
+            var value = this.y;
+            var formattedValue;
+            if (value >= 1000) {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            } else {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+            }
+            return this.series.name + ': ' + formattedValue + ' %s';
+          }", unit))
+        ) %>%
         hc_add_theme(thm)
     })
   })
 }
+
 
 # Function to get top industries
 get_industry <- function(index, data, current_year, first_col_name) {

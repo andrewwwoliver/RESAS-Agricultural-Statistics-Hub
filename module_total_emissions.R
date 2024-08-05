@@ -104,6 +104,7 @@ totalEmissionsServer <- function(id) {
       title = "National Greenhouse Gas Emissions by Source in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
       x_col = "Year",
       y_col = "Value"
@@ -115,6 +116,7 @@ totalEmissionsServer <- function(id) {
       title = "National Greenhouse Gas Emissions Timelapse",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
       x_col = "Year",
       y_col = "Value"
@@ -126,6 +128,7 @@ totalEmissionsServer <- function(id) {
       title = "National Greenhouse Gas Emissions by Source in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
       x_col = "Year",
       y_col = "Value"
@@ -152,13 +155,58 @@ totalEmissionsServer <- function(id) {
     
     first_col_name <- "Industry"
     
-    valueBoxServer("totalIndustry1_total", full_data_total, first_col_name, get_industry(1, full_data_total, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
-    valueBoxServer("totalIndustry2_total", full_data_total, first_col_name, get_industry(2, full_data_total, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
-    valueBoxServer("totalIndustry3_total", full_data_total, first_col_name, get_industry(3, full_data_total, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
-    valueBoxServer("totalValue_total", full_data_total, first_col_name, reactive("Total"), current_year, comparison_year, "MtCO₂e")
-    summaryLineChartServer("industryLineChart_total", line_chart_data,  "MtCO₂e")
-    summaryBarChartServer("industryBarChart_total", full_data_total, current_year, comparison_year, first_col_name, "MtCO₂e")
-  })
+    
+    valueBoxServer(
+      id = "totalIndustry1_total",
+      data = full_data_total,
+      category = first_col_name,
+      industry = get_industry(1, full_data_total, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalIndustry2_total",
+      data = full_data_total,
+      category = first_col_name,
+      industry = get_industry(2, full_data_total, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalIndustry3_total",
+      data = full_data_total,
+      category = first_col_name,
+      industry = get_industry(3, full_data_total, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalValue_total",
+      data = full_data_total,
+      category = first_col_name,
+      industry = reactive("Total"),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    summaryLineChartServer(
+      id = "industryLineChart_total",
+      data = line_chart_data,
+      unit = "MtCO₂e")
+
+    summaryBarChartServer(
+      id = "industryBarChart_total",
+      data = full_data_total,
+      current_year = current_year,
+      comparison_year = comparison_year,
+      category = first_col_name,
+      unit = "MtCO₂e"
+    )
+    
+    })
 }
 
 # Demo function to test the module

@@ -6,15 +6,12 @@ legalResponsibilityUI <- function(id) {
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area"), selected = "holdings")
+        radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area"), selected = "holdings"),
+        checkboxGroupInput(ns("selected_variables"), "Select Variables", choices = NULL, selected = NULL)
       ),
       mainPanel(
         id = ns("mainpanel"),
         width = 9,
-     #   div(
-  #        style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
-   #       "template"
-    #    ),
         tabsetPanel(
           id = ns("tabs"),
           tabPanel("Bar Chart", barChartUI(ns("bar_chart")), value = ns("bar")),
@@ -27,6 +24,8 @@ legalResponsibilityUI <- function(id) {
     )
   )
 }
+
+# File: module_legal_responsibility.R
 
 legalResponsibilityServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -44,6 +43,13 @@ legalResponsibilityServer <- function(id) {
       data <- chart_data() %>%
         arrange(desc(Holdings))
       data$`Legal responsibility`
+    })
+    
+    # Update checkboxGroupInput choices
+    observe({
+      choices <- unique(chart_data()$`Legal responsibility`)
+      selected <- choices  # Select all choices, including 'Unknown'
+      updateCheckboxGroupInput(session, "selected_variables", choices = choices, selected = selected)
     })
     
     y_col <- reactive({
@@ -73,8 +79,8 @@ legalResponsibilityServer <- function(id) {
     barChartServer(
       id = "bar_chart",
       chart_data = reactive({
-        data <- chart_data()
-        data <- data %>%
+        data <- chart_data() %>%
+          filter(`Legal responsibility` %in% input$selected_variables) %>%
           mutate(`Legal responsibility` = factor(`Legal responsibility`, levels = initial_order())) %>%
           arrange(`Legal responsibility`)
         data
@@ -82,6 +88,7 @@ legalResponsibilityServer <- function(id) {
       title = "Legal Responsibility of Holdings in Scotland",
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Legal Responsibility",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "Legal responsibility",
       y_col = y_col,

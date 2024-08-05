@@ -1,4 +1,4 @@
-#module_timelapse_bar_chart.R
+# File: module_timelapse_bar_chart.R
 
 timelapseBarChartUI <- function(id) {
   ns <- NS(id)
@@ -49,7 +49,7 @@ timelapseBarChartUI <- function(id) {
   )
 }
 
-timelapseBarChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col) {
+timelapseBarChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, unit = "") {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -73,7 +73,7 @@ timelapseBarChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitl
     getSubtitle <- function(year, data) {
       if (nrow(data) == 0) return("")
       total_value <- sum(data[[y_col]], na.rm = TRUE)
-      paste0("<span style='font-size: 80px'>", year, "</span><br><span style='font-size: 22px'>Total: <b>", round(total_value, 2), "</b> MtCO₂e</span>")
+      paste0("<span style='font-size: 80px'>", year, "</span><br><span style='font-size: 22px'>Total: <b>", round(total_value, 2), "</b> ", unit, "</span>")
     }
     
     getDataList <- function(data, colors) {
@@ -159,6 +159,20 @@ timelapseBarChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitl
           name = as.character(current_year()),
           data = current_data_list()
         )) %>%
+        hc_tooltip(
+          useHTML = TRUE,
+          headerFormat = "<b>{point.key}</b><br/>",
+          pointFormatter = JS(sprintf("function() {
+            var value = this.y;
+            var formattedValue;
+            if (value >= 1000) {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            } else {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+            }
+            return this.series.name + ': ' + formattedValue + ' %s';
+          }", unit))
+        ) %>%
         hc_legend(enabled = FALSE) %>%
         hc_responsive(rules = list(
           list(

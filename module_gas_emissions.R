@@ -1,6 +1,5 @@
 full_data_gas <- reactive({ agri_gas })
 
-
 gasEmissionsUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -11,8 +10,6 @@ gasEmissionsUI <- function(id) {
           condition = "input.tabs != 'Summary_Page'",
           ns = ns,
           uiOutput(ns("variable_select")),
-          actionButton(ns("select_all_button"), "Select All"),
-          actionButton(ns("deselect_all_button"), "Deselect All"),
           sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
         ),
         conditionalPanel(
@@ -78,13 +75,6 @@ gasEmissionsServer <- function(id) {
       checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
     })
     
-    observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = setdiff(unique(agri_gas$Gas), "Total"))
-    })
-    
-    observeEvent(input$deselect_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
-    })
     
     areaChartServer(
       id = "area",
@@ -92,6 +82,7 @@ gasEmissionsServer <- function(id) {
       title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
       x_col = "Year",
       y_col = "Value"
@@ -103,6 +94,7 @@ gasEmissionsServer <- function(id) {
       title = "Agricultural Greenhouse Gas Emissions Breakdown Timelapse",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
       x_col = "Year",
       y_col = "Value"
@@ -114,6 +106,7 @@ gasEmissionsServer <- function(id) {
       title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
       x_col = "Year",
       y_col = "Value"
@@ -140,12 +133,57 @@ gasEmissionsServer <- function(id) {
     
     first_col_name <- "Gas"
     
-    valueBoxServer("totalIndustry1_gas", full_data_gas, first_col_name, get_industry(1, full_data_gas, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
-    valueBoxServer("totalIndustry2_gas", full_data_gas, first_col_name, get_industry(2, full_data_gas, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
-    valueBoxServer("totalIndustry3_gas", full_data_gas, first_col_name, get_industry(3, full_data_gas, current_year, first_col_name), current_year, comparison_year, "MtCO₂e")
-    valueBoxServer("totalValue_gas", full_data_gas, first_col_name, reactive("Total"), current_year, comparison_year, "MtCO₂e")
-    summaryPieChartServer("industryPieChart_gas", full_data_gas, current_year, first_col_name, "MtCO₂e")
-    summaryBarChartServer("industryBarChart_gas", full_data_gas, current_year, comparison_year, first_col_name, "MtCO₂e")
+    valueBoxServer(
+      id = "totalIndustry1_gas",
+      data = full_data_gas,
+      category = first_col_name,
+      industry = get_industry(1, full_data_gas, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalIndustry2_gas",
+      data = full_data_gas,
+      category = first_col_name,
+      industry = get_industry(2, full_data_gas, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalIndustry3_gas",
+      data = full_data_gas,
+      category = first_col_name,
+      industry = get_industry(3, full_data_gas, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalValue_gas",
+      data = full_data_gas,
+      category = first_col_name,
+      industry = reactive("Total"),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    summaryPieChartServer(
+      id = "industryPieChart_gas",
+      data = full_data_gas,
+      current_year = current_year,
+      category = first_col_name,
+      unit = "MtCO₂e"
+    )
+    summaryBarChartServer(
+      id = "industryBarChart_gas",
+      data = full_data_gas,
+      current_year = current_year,
+      comparison_year = comparison_year,
+      category = first_col_name,
+      unit = "MtCO₂e"
+    )
   })
 }
 

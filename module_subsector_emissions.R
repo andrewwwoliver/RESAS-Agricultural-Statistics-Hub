@@ -64,6 +64,7 @@ subsectorEmissionsUI <- function(id) {
     )
   )
 }
+# File: module_subsector_emissions.R
 
 # Server for Subsector Emissions Module
 subsectorEmissionsServer <- function(id) {
@@ -99,6 +100,7 @@ subsectorEmissionsServer <- function(id) {
       title = "Agricultural Emissions by Subsector in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
       x_col = "Year",
       y_col = "Value"
@@ -110,6 +112,7 @@ subsectorEmissionsServer <- function(id) {
       title = "Agricultural Greenhouse Gas Emissions Timelapse",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
       x_col = "Year",
       y_col = "Value"
@@ -121,6 +124,7 @@ subsectorEmissionsServer <- function(id) {
       title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
+      unit = "MtCO₂e",
       footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
       x_col = "Year",
       y_col = "Value"
@@ -160,9 +164,20 @@ subsectorEmissionsServer <- function(id) {
           borderWidth = 0
         )) %>%
         hc_tooltip(
-          headerFormat = "<span style='font-size: 16px; font-family: Arial'>{point.key}</span><br/>",
-          pointFormat = "<span style='font-size: 16px; font-family: Arial'>{series.name}: <b>{point.y:.2f} MtCO₂e</b>", 
-          style = list(fontSize = "16px", fontFamily = "Arial")) %>%
+          useHTML = TRUE,
+          headerFormat = "<span style='font-size: 16px; font-family: Arial'><b>{point.key}</b></span><br/>",
+          pointFormatter = JS("function() {
+            var value = this.y;
+            var formattedValue;
+            if (value >= 1000) {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            } else {
+              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+            }
+            return this.series.name + ': ' + formattedValue + ' MtCO₂e';
+          }"),
+          style = list(fontSize = "16px", fontFamily = "Arial")
+        ) %>%
         hc_legend(
           align = "right", 
           verticalAlign = "middle", 
@@ -192,12 +207,58 @@ subsectorEmissionsServer <- function(id) {
     
     first_col_name <- "Subsector"
     
-    valueBoxServer("totalIndustry1_subsector", full_data_subsector, first_col_name, get_industry(1, full_data_subsector, current_year, first_col_name), current_year, comparison_year, units_subsector)
-    valueBoxServer("totalIndustry2_subsector", full_data_subsector, first_col_name, get_industry(2, full_data_subsector, current_year, first_col_name), current_year, comparison_year, units_subsector)
-    valueBoxServer("totalIndustry3_subsector", full_data_subsector, first_col_name, get_industry(3, full_data_subsector, current_year, first_col_name), current_year, comparison_year, units_subsector)
-    valueBoxServer("totalValue_subsector", full_data_subsector, first_col_name, reactive("Total"), current_year, comparison_year, units_subsector)
-    summaryPieChartServer("industryPieChart_subsector", full_data_subsector, current_year, first_col_name, units_subsector)
-    summaryBarChartServer("industryBarChart_subsector", full_data_subsector, current_year, comparison_year, first_col_name, units_subsector)
+    valueBoxServer(
+      id = "totalIndustry1_subsector",
+      data = full_data_subsector,
+      category = first_col_name,
+      industry = get_industry(1, full_data_subsector, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalIndustry2_subsector",
+      data = full_data_subsector,
+      category = first_col_name,
+      industry = get_industry(2, full_data_subsector, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalIndustry3_subsector",
+      data = full_data_subsector,
+      category = first_col_name,
+      industry = get_industry(3, full_data_subsector, current_year, first_col_name),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    valueBoxServer(
+      id = "totalValue_subsector",
+      data = full_data_subsector,
+      category = first_col_name,
+      industry = reactive("Total"),
+      current_year = current_year,
+      comparison_year = comparison_year,
+      unit = "MtCO₂e"
+    )
+    summaryPieChartServer(
+      id = "industryPieChart_subsector",
+      data = full_data_subsector,
+      current_year = current_year,
+      category = first_col_name,
+      unit = "MtCO₂e"
+    )
+    summaryBarChartServer(
+      id = "industryBarChart_subsector",
+      data = full_data_subsector,
+      current_year = current_year,
+      comparison_year = comparison_year,
+      category = first_col_name,
+      unit = "MtCO₂e"
+    )
+    
   })
 }
 

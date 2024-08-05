@@ -23,7 +23,7 @@ occupiersUI <- function(id) {
       tabsetPanel(
         id = ns("tabs"),
         tabPanel("Map", mapUI(ns("map")), value = "map"),
-        tabPanel("Bar Chart", highchartOutput(ns("pyramid_chart"), height = "500px"), value = "bar_chart"),
+        tabPanel("Population Pyramid", highchartOutput(ns("pyramid_chart"), height = "500px"), value = "bar_chart"),
         tabPanel("Time Series", lineChartUI(ns("line_chart")), value = "timeseries"),
         tabPanel("Data Table", 
                  DTOutput(ns("data_table")),
@@ -33,7 +33,6 @@ occupiersUI <- function(id) {
     )
   )
 }
-
 occupiersServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -83,30 +82,14 @@ occupiersServer <- function(id) {
       } else if (input$tabs == "data_table") {
         radioButtons(ns("data_source"), "Choose data to show:", choices = c("Chart Data", "Map Data", "Timeseries Data"))
       } else if (input$tabs == "timeseries") {
-        tagList(
-          checkboxGroupInput(
-            ns("variables"), 
-            "Choose variables to add to chart", 
-            choices = unique(occupiers_timeseries_data()$`Occupiers and employees by category`), 
-            selected = c('Occupiers - full time', 'Total working occupiers', 'Occupiers not working on the holding')
-          ),
-          sliderInput(
-            ns("year_range"),
-            "Select Year Range",
-            min = 2012,
-            max = 2023,
-            value = c(2012, 2023),
-            step = 1,
-            sep = "",
-            ticks = TRUE
-          )
+        checkboxGroupInput(
+          ns("variables"), 
+          "Choose variables to add to chart", 
+          choices = unique(occupiers_timeseries_data()$`Occupiers and employees by category`), 
+          selected = c('Occupiers - full time', 'Total working occupiers', 'Occupiers not working on the holding')
         )
       } else {
-        tagList(
-          checkboxGroupInput(ns("variables_bar"), "Choose age groups to display", choices = unique(chart_data()$Age), selected = unique(chart_data()$Age)),
-          actionButton(ns("select_all_button"), "Select All"),
-          actionButton(ns("deselect_all_button"), "Deselect All")
-        )
+        checkboxGroupInput(ns("variables_bar"), "Choose age groups to display", choices = unique(chart_data()$Age), selected = unique(chart_data()$Age))
       }
     })
     
@@ -133,33 +116,31 @@ occupiersServer <- function(id) {
           min = -max_count,
           max = max_count,
           title = list(text = "Number of working occupiers"), 
-          labels = list(formatter = JS("function () {
-            return Math.abs(this.value);
-          }"))
+          labels = list(
+            formatter = JS("function () {
+          return Math.abs(this.value).toLocaleString();
+        }")
+          )
         ) %>%
         hc_plotOptions(bar = list(stacking = "normal")) %>%
-        hc_add_series(name = "Female", data = as.list(female_data), color = "#002d54", tooltip = list(pointFormatter = JS("function() { return 'Female: ' + Math.abs(this.y); }"))) %>%
-        hc_add_series(name = "Male", data = as.list(male_data), color = "#2b9c93", tooltip = list(pointFormatter = JS("function() { return 'Male: ' + this.y; }"))) %>%
+        hc_add_series(name = "Female", data = as.list(female_data), color = "#002d54", tooltip = list(pointFormatter = JS("function() { return 'Female: ' + Math.abs(this.y).toLocaleString() + ' occupiers'; }"))) %>%
+        hc_add_series(name = "Male", data = as.list(male_data), color = "#2b9c93", tooltip = list(pointFormatter = JS("function() { return 'Male: ' + this.y.toLocaleString() + ' occupiers'; }"))) %>%
         hc_tooltip(shared = FALSE) %>%
-        hc_title(text = "Labour Interactive Plots") %>%
-        hc_subtitle(text = "Population pyramid") %>%
+        hc_title(text = "Breakdown of Occupiers by Age and Gender", align = "left", style = list(fontSize = "20px", fontWeight = "bold")) %>%
         hc_legend(align = "center") %>%
         hc_xAxis(title = list(text = "Age group")) %>%
         hc_yAxis(title = list(text = "Number of working occupiers"),
                  labels = list(formatter = JS("function () {
-                   return Math.abs(this.value);
-                 }")))
+               return Math.abs(this.value).toLocaleString();
+             }")))
     })
+    
     
     # Timeseries Chart - Using the modular line chart
     filtered_timeseries_data <- reactive({
-      req(input$variables, input$year_range)
+      req(input$variables)
       data <- occupiers_timeseries_data()
-      data %>% 
-        filter(
-          `Occupiers and employees by category` %in% input$variables,
-          Year >= input$year_range[1] & Year <= input$year_range[2]
-        )
+      data %>% filter(`Occupiers and employees by category` %in% input$variables)
     })
     
     lineChartServer(
@@ -209,15 +190,6 @@ occupiersServer <- function(id) {
         }
       }
     )
-    
-    # Select/Deselect all for bar chart
-    observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, ns("variables_bar"), selected = unique(chart_data()$Age))
-    })
-    
-    observeEvent(input$deselect_all_button, {
-      updateCheckboxGroupInput(session, ns("variables_bar"), selected = character(0))
-    })
   })
 }
 

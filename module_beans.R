@@ -68,6 +68,7 @@ beansServer <- function(id) {
         req(input$variable)
         beans_map %>% filter(`Land use by category` == input$variable)
       }),
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Beans Area Distribution by Region (hectares)"
@@ -85,9 +86,10 @@ beansServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Beans Area Chart Data",
+      title = "Beans Area Planted",
       yAxisTitle = "Area of Beans (1,000 hectares)",
       xAxisTitle = "Year",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
@@ -96,9 +98,10 @@ beansServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Beans Area Chart Data",
+      title = "Beans Area Planted",
       yAxisTitle = "Area of Beans (1,000 hectares)",
       xAxisTitle = "Year",
+      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
