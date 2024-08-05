@@ -58,23 +58,23 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
         width = 12,
         solidHeader = TRUE,
         div(
-          style = "display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 5px;", # Adjusted padding
+          style = "display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 5px;",
           div(
-            style = "flex: 1; margin-bottom: 5px;", # Reduced margin-bottom
+            style = "flex: 1; margin-bottom: 5px;",
             h5(class = "value-box-title", industry()),
             div(
-              style = "display: flex; align-items: baseline; margin-bottom: 5px;", # Adjusted margin-bottom
-              h3(format_number(current_value), style = "margin: 0;"), # Removed margin
+              style = "display: flex; align-items: baseline; margin-bottom: 5px;",
+              h3(format_number(current_value), style = "margin: 0;"),
               span(unit, class = "value-box-unit")
             ),
             div(
-              style = "display: flex; align-items: center; margin-bottom: -10px;", # Negative margin to move closer
+              style = "display: flex; align-items: center; margin-bottom: 5px;",
               create_yoy_arrow(yoy_change),
               span(class = "value-box-yoy", ifelse(is.na(yoy_change), "NA", sprintf("%+.2f%% %d vs. %d", yoy_change, current_year(), comparison_year())), style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
             )
           ),
           div(
-            style = "margin-top: -30px;", # Apply the margin here to move the sparkline up
+            style = "margin-top: 10px;",  # Ensure sparkline is below the text
             plotOutput(ns("sparkline"), height = "30px", width = "100%")
           )
         )
@@ -87,6 +87,8 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
   })
 }
 
+
+
 # UI Module for Chart
 chartUI <- function(id, title) {
   ns <- NS(id)
@@ -97,6 +99,7 @@ chartUI <- function(id, title) {
     div(class = "box-content", highchartOutput(ns("chartOutput"), height = "300px"))
   )
 }
+
 
 # Server Module for Line Chart on Summary Page
 summaryLineChartServer <- function(id, data, unit = "") {
@@ -142,44 +145,25 @@ summaryLineChartServer <- function(id, data, unit = "") {
 }
 
 # Server Module for Pie Chart
-summaryPieChartServer <- function(id, data, current_year, category, unit = "") {
+summaryPieChartServer <- function(id, data, current_year, category, unit) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
     output$chartOutput <- renderHighchart({
       pie_data <- data() %>% filter(Year == current_year() & !!sym(category) != "Total") %>% 
         group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
       
-      # Define the colors for each category
-      unique_categories <- unique(pie_data[[category]])
-      colors <- c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
-      color_map <- setNames(colors[1:length(unique_categories)], unique_categories)
-      
-      # Apply the colors to the series data
-      series_data <- pie_data %>%
-        transmute(name = !!sym(category), y = Value, color = color_map[!!sym(category)])
-      
       highchart() %>%
         hc_chart(type = "pie") %>%
-        hc_series(
-          list(
-            name = "Gas",
-            data = list_parse(series_data),
-            showInLegend = TRUE,
-            dataLabels = list(enabled = FALSE)
-          )
-        ) %>%
-        hc_colors(colors) %>%
+        hc_series(list(data = list_parse(pie_data %>% transmute(name = !!sym(category), y = Value)))) %>%
+        hc_plotOptions(pie = list(
+          dataLabels = list(enabled = FALSE),
+          showInLegend = TRUE
+        )) %>%
         hc_tooltip(
           useHTML = TRUE,
-          headerFormat = "<b>{point.key}</b><br/>",
-          pointFormat = sprintf("{point.name}: {point.y:,.2f} %s ({point.percentage:.2f}%%)", unit)
-        ) %>%
-        hc_plotOptions(pie = list(
-          allowPointSelect = TRUE,
-          cursor = "pointer",
-          showInLegend = TRUE,
-          dataLabels = list(enabled = TRUE, format = '<b>{point.name}</b>: {point.percentage:.1f} %')
-        ))
+          pointFormat = sprintf(' {point.y:.2f} %s ({point.percentage:.2f}%%)', unit)
+        )
     })
   })
 }
