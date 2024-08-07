@@ -383,3 +383,84 @@ total_animals$Year <- as.numeric(total_animals$Year)
 
 # save total animals 
 save(total_animals, file = "total_animals.RData")
+
+# module 2023 data
+# Load necessary libraries
+library(readxl)
+library(stringr)
+library(dplyr)
+
+# Define the file path
+file_path <- "June+Agricultural+Census+2023+-+Module+Report+-+Production+methods+and+nutrient+application+-+Tables.xlsx"
+
+# Define the sheet names to read
+sheets_to_read <- c("Table_4", "Table_5", "Table_7", "Table_8", "Table_9", "Table_12")
+
+# Define shortened names for the dataframes
+short_names <- c("soil_nutrient_mgmt", "grass_crop_nutrient_mgmt", "nitrogen_250", 
+                 "nitrogen_400", "manure_qty", "fertiliser_use")
+
+# Function to clean header names by removing text within brackets, any '\r\n', extra spaces, and specific region names
+clean_headers <- function(headers) {
+  headers <- str_replace_all(headers, "\\s*\\([^\\)]+\\)", "")  # Remove text within brackets
+  headers <- str_replace_all(headers, "\r\n", " ")  # Remove \r\n
+  headers <- str_replace_all(headers, "\\s+", " ")  # Replace multiple spaces with a single space
+  headers <- str_replace_all(headers, "\\b(North West|North East|South East|South West)\\b", "")  # Remove specific region names
+  headers <- str_trim(headers)  # Trim again to remove any resulting leading or trailing spaces
+  return(headers)
+}
+
+# Function to read and process each sheet
+read_and_process_sheet <- function(sheet) {
+  df <- read_excel(file_path, sheet = sheet, skip = 5)  # Skip the first 5 rows
+  colnames(df) <- clean_headers(colnames(df))  # Clean the headers
+  return(df)
+}
+
+# Function to round all numeric columns to 2 decimal places
+round_df <- function(df) {
+  df[] <- lapply(df, function(x) if(is.numeric(x)) round(x, 2) else x)
+  return(df)
+}
+
+# Read and process the specified sheets into a list of dataframes
+data_frames <- lapply(sheets_to_read, read_and_process_sheet)
+
+# Name the list elements with shortened names
+names(data_frames) <- short_names
+
+# Remove the 'Area' column from 'grass_crop_nutrient_mgmt' if it exists
+if("Area" %in% colnames(data_frames$grass_crop_nutrient_mgmt)) {
+  data_frames$grass_crop_nutrient_mgmt <- select(data_frames$grass_crop_nutrient_mgmt, -Area)
+}
+
+# Ensure 'Percentage of holdings' and 'Average holding area' are numeric in both dataframes
+data_frames$soil_nutrient_mgmt$`Percentage of holdings` <- as.numeric(as.character(data_frames$soil_nutrient_mgmt$`Percentage of holdings`))
+data_frames$grass_crop_nutrient_mgmt$`Percentage of holdings` <- as.numeric(as.character(data_frames$grass_crop_nutrient_mgmt$`Percentage of holdings`))
+
+data_frames$soil_nutrient_mgmt$`Average holding area` <- as.numeric(as.character(data_frames$soil_nutrient_mgmt$`Average holding area`))
+data_frames$grass_crop_nutrient_mgmt$`Average holding area` <- as.numeric(as.character(data_frames$grass_crop_nutrient_mgmt$`Average holding area`))
+
+# Round all numeric columns to 2 decimal places in each dataframe
+data_frames <- lapply(data_frames, round_df)
+
+# Join 'soil_nutrient_mgmt' and 'grass_crop_nutrient_mgmt' data frames
+combined_nutrient_mgmt <- bind_rows(data_frames$soil_nutrient_mgmt, data_frames$grass_crop_nutrient_mgmt)
+
+# Remove specified rows from the 'Soil nutrient management' column in the combined data frame
+remove_entries <- c("Holdings with grassland", "Cropland holdings", "Holdings with grass or crops", 
+                    "Soil testing resulted in change of crop nutrient application (those that performed soil testing)", 
+                    "Uses protected urea")
+
+combined_nutrient_mgmt <- combined_nutrient_mgmt %>% 
+  filter(!`Soil nutrient management` %in% remove_entries)
+
+# Assign the combined data frame back to the list
+data_frames$combined_nutrient_mgmt <- combined_nutrient_mgmt
+
+# Remove the original separate data frames
+data_frames$soil_nutrient_mgmt <- NULL
+data_frames$grass_crop_nutrient_mgmt <- NULL
+
+# Save the data frames as a .RData file
+save(list = names(data_frames), file = "module_2023.RData", envir = list2env(data_frames))

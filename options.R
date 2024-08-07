@@ -28,6 +28,7 @@ load("ghg_data.RData")
 load("census_data.RData")
 load("crops_data.RData")
 load("total_animals.RData")
+load("module_2023.RData")
 
 
 # Preset list of colors

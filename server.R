@@ -24,6 +24,7 @@ source("module_stockfeeding.R")
 source("module_human_vegetables.R")
 source("module_fruit.R")
 source("home.R")
+source("module_soil_testing.R")
 
 server <- function(input, output, session) {
   # Maintain selected tab state based on URL query parameters
@@ -71,4 +72,5 @@ server <- function(input, output, session) {
   fruitServer("fruit_module")
   homeServer("home")
   animalsSummaryServer("animals_summary_module")
+  soilTestingServer("soil")
 }

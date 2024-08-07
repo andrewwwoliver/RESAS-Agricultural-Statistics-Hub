@@ -34,6 +34,8 @@ source("module_economy_summary.R")
 source("module_animals_summary.R")
 source("hc_theme.R")
 source("utils.R")
+source("module_soil_testing.R")
+
 library(shinyjs)
 library(shinythemes)
 
@@ -80,6 +82,7 @@ ui <- fluidPage(
                        tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
                        tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
                        tabPanel("Fertiliser Usage", value = "fertiliser", fertiliserUsageUI("fertiliser")),
+                       tabPanel("Soil Testing", value = "soil", soilTestingUI("soil")),
                        tabPanel("Further Information", value = "info", informationUI("info"))
             ),
             navbarMenu("Livestock",
