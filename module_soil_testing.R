@@ -1,26 +1,39 @@
-#module_soil_testing.R
 
 library(shiny)
 library(highcharter)
 library(dplyr)
 source("module_gauge_chart.R")
 
+load("module_2023.RData")
 
+# Custom CSS to remove gaps
+custom_css <- "
+.gauge-title {
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+}
+.gauge-footer {
+  margin-top: 0px;
+  padding-top: 0px;
+}
+"
 
 # UI for Soil Testing Module
 soilTestingUI <- function(id) {
   ns <- NS(id)
   tagList(
+    tags$style(HTML(custom_css)),  # Include custom CSS
     fluidRow(
-      column(4, gaugeChartUI(ns("soilTestingGaugeGrassland"))),
-      column(4, gaugeChartUI(ns("soilTestingGaugeCropland"))),
-      column(4, gaugeChartUI(ns("soilTestingGaugeEither")))
+      column(6, gaugeChartUI(ns("soilTestingGaugeEither"))),
+      column(6, gaugeChartUI(ns("soilTestingGaugeChange")))
     ),
     fluidRow(
-      column(4, gaugeChartUI(ns("soilTestingGaugePhGrassland"))),
-      column(4, gaugeChartUI(ns("soilTestingGaugePhCropland"))),
-      column(4, gaugeChartUI(ns("soilTestingGaugeChange")))
-      
+      column(6, gaugeChartUI(ns("soilTestingGaugeGrassland"))),
+      column(6, gaugeChartUI(ns("soilTestingGaugeCropland"))),
+    ),
+    fluidRow(
+      column(6, gaugeChartUI(ns("soilTestingGaugePhGrassland"))),
+      column(6, gaugeChartUI(ns("soilTestingGaugePhCropland"))),
     )
   )
 }
@@ -74,12 +87,11 @@ soilTestingServer <- function(id, data) {
         pull(`Percentage of holdings`)
     })
     
-    
     gaugeChartServer(
       id = "soilTestingGaugeGrassland",
       chart_data = chart_data_grassland,
       title = "Soil Testing on Grassland in Last Five Years",
-      color = "#002d54",
+      color = "#6a2063",
       footer = "Source: Combined Nutrient Management Data"
     )
     
@@ -87,7 +99,7 @@ soilTestingServer <- function(id, data) {
       id = "soilTestingGaugeCropland",
       chart_data = chart_data_cropland,
       title = "Soil Testing on Cropland in Last Five Years",
-      color = "#2b9c93",
+      color = "#e5682a",
       footer = "Source: Combined Nutrient Management Data"
     )
     
@@ -95,7 +107,7 @@ soilTestingServer <- function(id, data) {
       id = "soilTestingGaugeEither",
       chart_data = chart_data_either,
       title = "Soil Testing on Either Grass or Crops in Last Five Years",
-      color = "#6a2063",
+      color = "#002d54",
       footer = "Source: Combined Nutrient Management Data"
     )
     
@@ -103,7 +115,7 @@ soilTestingServer <- function(id, data) {
       id = "soilTestingGaugeChange",
       chart_data = chart_data_change,
       title = "Soil Testing Resulted in Change of Crop Nutrient Application",
-      color = "#e5682a",
+      color = "#2b9c93",
       footer = "Source: Combined Nutrient Management Data"
     )
     
