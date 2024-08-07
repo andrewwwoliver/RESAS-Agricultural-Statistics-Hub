@@ -30,7 +30,7 @@ homeUI <- function(id) {
           tags$li(actionLink(ns("nav_subsector"), "Agriculture Emissions")),
           tags$li(actionLink(ns("nav_total"), "Industry Emissions")),
           tags$li(actionLink(ns("nav_gas"), "Gas Emissions")),
-          tags$li(actionLink(ns("nav_manure"), "Manure Usage")),
+          tags$li(actionLink(ns("nav_fertiliser"), "Fertiliser Usage")),
           tags$li(actionLink(ns("nav_info"), "Further Information"))
         ),
         tags$div(
@@ -146,7 +146,7 @@ homeServer <- function(id) {
       subsector = "subsector",
       total = "total",
       gas = "gas",
-      manure = "manure",
+      fertiliser = "fertiliser",
       info = "info",
       animals_summary_module = "animals_summary_module",  # Added the summary animals module
       cattle_module = "cattle_module",

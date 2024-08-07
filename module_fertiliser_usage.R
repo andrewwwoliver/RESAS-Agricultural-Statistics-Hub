@@ -1,6 +1,6 @@
-# File: module_manure_usage.R
+# File: module_fertiliser_usage.R
 
-manureUsageUI <- function(id) {
+fertiliserUsageUI <- function(id) {
   ns <- NS(id)
   tagList(
     sidebarLayout(
@@ -24,7 +24,7 @@ manureUsageUI <- function(id) {
   )
 }
 
-manureUsageServer <- function(id) {
+fertiliserUsageServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -78,10 +78,10 @@ manureUsageServer <- function(id) {
     barChartServer(
       id = "bar_chart",
       chart_data = chart_data,
-      title = "Manure Usage by Type in Scotland",
+      title = "Fertiliser Usage by Type in Scotland",
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Fertiliser Type",
-      unit = "hectares",
+      unit = "holdings",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "Fertiliser by type",
       y_col = y_col,
@@ -96,7 +96,7 @@ manureUsageServer <- function(id) {
     
     handle_data_download(
       download_id = ns("downloadData"),
-      chart_type = "Manure Usage",
+      chart_type = "Fertiliser Usage",
       chart_data = chart_data,
       input = input,
       output = output,

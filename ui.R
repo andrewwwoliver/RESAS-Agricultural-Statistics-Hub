@@ -9,7 +9,7 @@ source("module_total_emissions.R")
 source("module_subsector_emissions.R")
 source("module_gas_emissions.R")
 source("module_information.R")
-source("module_manure_usage.R")
+source("module_fertiliser_usage.R")
 source("module_map.R")
 source("module_employees.R")
 source("module_legal_responsibility.R")
@@ -79,7 +79,7 @@ ui <- fluidPage(
                        tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
                        tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
                        tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
-                       tabPanel("Manure Usage", value = "manure", manureUsageUI("manure")),
+                       tabPanel("Fertiliser Usage", value = "fertiliser", fertiliserUsageUI("fertiliser")),
                        tabPanel("Further Information", value = "info", informationUI("info"))
             ),
             navbarMenu("Livestock",

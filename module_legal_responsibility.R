@@ -68,11 +68,19 @@ legalResponsibilityServer <- function(id) {
       }
     })
     
+    unit <- reactive({
+      if (input$data_type == "holdings") {
+        "holdings"
+      } else {
+        "hectares"
+      }
+    })
+    
     tooltip_format <- reactive({
       if (input$data_type == "holdings") {
-        "Holdings: {point.y:.0f}"
+        "Holdings: {point.y:.0f} holdings"
       } else {
-        "Area (hectares): {point.y:.2f}"
+        "Area: {point.y:.2f} hectares"
       }
     })
     
@@ -88,7 +96,6 @@ legalResponsibilityServer <- function(id) {
       title = "Legal Responsibility of Holdings in Scotland",
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Legal Responsibility",
-      unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "Legal responsibility",
       y_col = y_col,
