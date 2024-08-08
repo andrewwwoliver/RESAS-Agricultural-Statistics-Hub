@@ -131,6 +131,10 @@ save(list = names(table_names), file = "census_data.RData")
 load("census_data.RData")
 
 
+
+
+# map data
+
 library(sf)
 library(dplyr)
 library(highcharter)
@@ -138,7 +142,7 @@ library(geojsonio)
 library(rmapshaper)
 
 # Load the shapefile
-local_authorities <- st_read("pub_las.shp")
+local_authorities <- st_read("Local_Authority_Boundaries_-_Scotland/pub_las.shp")
 
 mapping_data <- data.frame(
   region = c("North West", "North West", "North West", "North West", 
@@ -187,6 +191,20 @@ geojson_data <- ms_simplify(geojson_data, keep = 0.001)
 
 geojson_write(geojson_data, file = "subregions_simplified.geojson")
 
+
+regions <- local_authorities %>%
+  group_by(region) %>%
+  summarise(geometry = st_union(geometry))
+
+st_write(regions, "regions.geojson", driver = "GeoJSON")
+
+Sys.setenv(OGR_GEOJSON_MAX_OBJ_SIZE = "0")
+
+regions_geojson <- geojson_read("regions.geojson", what = "sp")
+
+regions_geojson <- ms_simplify(regions_geojson, keep = 0.001)
+
+geojson_write(regions_geojson, file = "regions_simplified.geojson")
 
 
 #crops / fruit/veg

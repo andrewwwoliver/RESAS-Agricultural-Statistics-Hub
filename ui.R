@@ -5,6 +5,7 @@ source("module_area_chart.R")
 source("module_bar_chart.R")
 source("module_timelapse_bar_chart.R")
 source("module_data_table.R")
+source("module_regions_map.R")
 source("module_total_emissions.R")
 source("module_subsector_emissions.R")
 source("module_gas_emissions.R")
@@ -35,6 +36,7 @@ source("module_animals_summary.R")
 source("hc_theme.R")
 source("utils.R")
 source("module_soil_testing.R")
+source("module_manure.R")
 
 library(shinyjs)
 library(shinythemes)
@@ -82,6 +84,7 @@ ui <- fluidPage(
                        tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
                        tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
                        tabPanel("Fertiliser Usage", value = "fertiliser", fertiliserUsageUI("fertiliser")),
+                       tabPanel("Manure Usage", value = "manure", manureUI("manure")),
                        tabPanel("Soil Testing", value = "soil", soilTestingUI("soil")),
                        tabPanel("Further Information", value = "info", informationUI("info"))
             ),
