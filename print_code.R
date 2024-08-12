@@ -17,7 +17,7 @@ code_files <- c(
   "module_subsector_emissions.R",
   "module_total_emissions.R",
   "module_gas_emissions.R",
-  "module_manure_usage.R",
+  "module_fertiliser_usage.R",
   "module_map.R",
   "module_employees.R",
   "module_legal_responsibility.R",
@@ -29,7 +29,10 @@ code_files <- c(
   "module_sheep.R",
   "module_pigs.R",
   "module_poultry.R",
-  "module_other_animals.R"
+  "module_other_animals.R",
+  "module_land_use_summary.R",
+  "module_animals_summary.R"
+  
   
 )
 

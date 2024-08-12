@@ -1,5 +1,3 @@
-# File: module_cereals.R
-
 cerealsUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
@@ -11,8 +9,7 @@ cerealsUI <- function(id) {
         radioButtons(
           ns("variable"), 
           "Select Variable", 
-          choices = unique(cereals_subregion$`Land use by category`),
-          
+          choices = unique(cereals_subregion$`Land use by category`)
         )
       ),
       conditionalPanel(
@@ -45,6 +42,12 @@ cerealsUI <- function(id) {
           choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
           selected = "map"
         )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Cereals Summary'",
+        ns = ns,
+        sliderInput(ns("summary_current_year_cereals"), "Current Year", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        sliderInput(ns("summary_comparison_year_cereals"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
       )
     ),
     mainPanel(
@@ -54,11 +57,23 @@ cerealsUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
         tabPanel("Area Chart", areaChartUI(ns("area"))),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", DTOutput(ns("table"))),
+        # New section
+        tabPanel("Cereals Summary",
+                 fluidRow(
+                   column(width = 6, h3("Cereals Summary Section")),
+                   column(width = 3, selectInput(ns("summary_variable"), "Select Variable", choices = unique(cereals_data$`Crop/Land use`), selected = "Total cereals"))
+                 ),
+                 fluidRow(
+                   column(width = 6, p("This content is under development")),
+                   column(width = 6, valueBoxUI(ns("summaryValueBox")), style = "padding-right: 0; padding-left: 0; padding-bottom: 10px;")
+                 )
+        )
       )
     )
   )
 }
+
 
 cerealsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -126,8 +141,23 @@ cerealsServer <- function(id) {
           datatable()
       }
     })
+    
+    # Reactive expression for the selected variable and years
+    summary_data <- reactive({
+      cereals_data %>%
+        filter(`Crop/Land use` == input$summary_variable) %>%
+        pivot_longer(cols = -`Crop/Land use`, names_to = "Year", values_to = "Value") %>%
+        mutate(Year = as.numeric(Year))
+    })
+    
+    current_year <- reactive({ input$summary_current_year_cereals })
+    comparison_year <- reactive({ input$summary_comparison_year_cereals })
+    
+    # Value box for the selected variable
+    valueBoxServer("summaryValueBox", summary_data, "Crop/Land use", reactive(input$summary_variable), current_year, comparison_year, "ha")
   })
 }
+
 
 
 cereals_demo <- function() {

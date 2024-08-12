@@ -25,14 +25,7 @@ create_yoy_arrow <- function(change) {
   }
 }
 
-# Helper function to format numbers with commas and appropriate decimal places
-format_number <- function(number) {
-  if (number %% 1 == 0) {
-    format(number, big.mark = ",", scientific = FALSE)
-  } else {
-    format(round(number, 2), big.mark = ",", scientific = FALSE, nsmall = 2)
-  }
-}
+
 
 # UI Module for Value Box
 valueBoxUI <- function(id) {
@@ -44,7 +37,11 @@ valueBoxUI <- function(id) {
 valueBoxServer <- function(id, data, category, industry, current_year, comparison_year, unit) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    reactive_data <- reactive({ data() %>% filter(!!sym(category) == !!industry(), Year %in% c(current_year(), comparison_year())) })
+    
+    # Ensure the data is filtered and processed correctly
+    reactive_data <- reactive({ 
+      data() %>% filter(!!sym(category) == !!industry(), Year %in% c(current_year(), comparison_year())) 
+    })
     
     output$valueBox <- renderUI({
       data_filtered <- reactive_data()
@@ -52,6 +49,9 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
       comparison_value <- data_filtered %>% filter(Year == comparison_year()) %>% summarise(Value = sum(Value, na.rm = TRUE)) %>% pull(Value)
       yoy_change <- if (comparison_value == 0 || is.na(comparison_value)) NA else ((current_value - comparison_value) / comparison_value) * 100
       
+      formatted_value <- format_number(current_value)  # Use format_number to format the value
+      
+      # Use HTML to inject the formatted value directly
       box(
         class = "value-box",
         title = NULL,
@@ -64,17 +64,19 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
             h5(class = "value-box-title", industry()),
             div(
               style = "display: flex; align-items: baseline; margin-bottom: 5px;",
-              h3(format_number(current_value), style = "margin: 0;"),
-              span(unit, class = "value-box-unit")
+              h3(HTML(formatted_value), style = "margin: 0;"),  # Injecting HTML directly to force correct rendering
+              span(class = "value-box-units", unit)
             ),
             div(
               style = "display: flex; align-items: center; margin-bottom: 5px;",
               create_yoy_arrow(yoy_change),
-              span(class = "value-box-yoy", ifelse(is.na(yoy_change), "NA", sprintf("%+.2f%% %d vs. %d", yoy_change, current_year(), comparison_year())), style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
+              span(class = "value-box-yoy", 
+                   ifelse(is.na(yoy_change), "NA", sprintf("%+.2f%% %d vs. %d", yoy_change, current_year(), comparison_year())), 
+                   style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
             )
           ),
           div(
-            style = "margin-top: 10px;",  # Ensure sparkline is below the text
+            style = "margin-top: 10px;",  
             plotOutput(ns("sparkline"), height = "30px", width = "100%")
           )
         )
@@ -86,6 +88,12 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
     })
   })
 }
+
+
+
+
+
+
 
 
 

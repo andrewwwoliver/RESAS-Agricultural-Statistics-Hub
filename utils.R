@@ -32,3 +32,27 @@ createNavObserver <- function(input, session, pages) {
     })
   })
 }
+
+# Helper function to format numbers with commas and appropriate decimal places
+format_number <- function(number) {
+  # Check if the number is an integer
+  if (number %% 1 == 0) {
+    return(format(number, big.mark = ",", scientific = FALSE))
+  }
+  
+  # Calculate the number of significant figures
+  sig_digits <- nchar(gsub("0+$", "", gsub("\\.", "", as.character(number))))
+  
+  if (sig_digits > 3) {
+    # Round to nearest integer if more than 3 significant figures
+    rounded_number <- round(number)
+    return(format(rounded_number, big.mark = ",", scientific = FALSE))
+  } else {
+    # Otherwise, round to 2 decimal places
+    rounded_number <- round(number, 2)
+    return(format(rounded_number, big.mark = ",", scientific = FALSE, nsmall = 2))
+  }
+}
+
+
+

@@ -38,11 +38,20 @@
 }
 
 .box {
-  border: 1px solid #e3e3e3;
+    border: 1px solid #e3e3e3;
   background-color: white;
   margin: 0;
   padding: 10px;
 }
+
+/* Target the box element within valueBoxManureUI */
+#valueBoxManureUI .box {
+    border: 1px solid white !important;  /* Or transparent */
+    background-color: transparent !important;  /* Optional: make the background transparent */
+    box-shadow: none !important;  /* Remove any shadow if needed */
+}
+
+
 .value-box {
   min-height: 160px !important;  /* Set a minimum height */
   text-align: left;
@@ -70,9 +79,11 @@
 
 .value-box-units {
   font-size: 18px;
-  margin-left: 5px;
+  margin-left: 5px; /* Ensure there is space between the value and unit */
   display: inline-block;
+  vertical-align: baseline; /* Align unit with the value */
 }
+
 
 .value-box-title {
   font-size: 20px;

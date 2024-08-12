@@ -1,129 +1,171 @@
-# File: module_manure.R
-
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(DT)
-library(shinydashboard)
-
-# Load the data
-load("module_2023.RData")
-
-# Convert relevant columns to character before pivoting
-manure_qty <- manure_qty %>%
-  mutate(across(everything(), as.character))
-
-# Transform the data, filtering out "All respondents"
-manure_data_long <- manure_qty %>%
-  pivot_longer(cols = -Region, names_to = "variable", values_to = "value") %>%
-  mutate(value = as.numeric(value)) %>%
-  rename(region = Region)
-
-# Extract the data for "All respondents"
-national_data <- manure_qty %>%
-  filter(Region == "All respondents") %>%
-  select(-Region) %>%
-  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
-
-# List of variables for radio buttons
-variables <- colnames(manure_qty)[-1]
-
-source("module_regions_map.R")
-
-# UI for the value boxes
-valueBoxUI <- function(id, title, value, unit) {
-  box(
-    title = title,
-    width = 12,
-    status = "primary",
-    solidHeader = TRUE,
-    valueBox(
-      value = value,
-      subtitle = unit,
-      icon = icon("info-circle"),
-      width = 12
-    )
-  )
-}
-
-manureUI <- function(id) {
+cerealsUI <- function(id) {
   ns <- NS(id)
-  fluidRow(
-    column(width = 3,
-           uiOutput(ns("sidebar_ui"))
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Map'",
+        ns = ns,
+        radioButtons(
+          ns("variable"), 
+          "Select Variable", 
+          choices = unique(cereals_subregion$`Land use by category`)
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Time Series' || input.tabsetPanel === 'Area Chart'",
+        ns = ns,
+        selectizeInput(
+          ns("timeseries_variables"),
+          "Click within the box to select variables",
+          choices = unique(cereals_data$`Crop/Land use`),
+          selected = c(
+            "Wheat",
+            "Triticale",
+            "Barley Total",
+            "Oats Total",
+            "Rye",
+            "Mixed grain"
+          ),
+          multiple = TRUE,
+          options = list(
+            plugins = list('remove_button')
+          )
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Data Table'",
+        ns = ns,
+        radioButtons(
+          ns("table_data"),
+          "Select Data to Display",
+          choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
+          selected = "map"
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Cereals Summary'",
+        ns = ns,
+        sliderInput(ns("summary_current_year_cereals"), "Current Year", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        sliderInput(ns("summary_comparison_year_cereals"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
+      )
     ),
-    column(width = 3,
-           fluidRow(
-             valueBoxUI(ns("total_manure"), "Total Manure Area", national_data$value[national_data$variable == "Manure"], "tons"),
-             valueBoxUI(ns("total_holdings"), "Total Holdings", national_data$value[national_data$variable == "Holdings"], "units"),
-             valueBoxUI(ns("total_application_rate"), "Total Application Rate", national_data$value[national_data$variable == "Application rate"], "units"),
-             valueBoxUI(ns("average_mixed_sward"), "Average Mixed Sward per Holding", national_data$value[national_data$variable == "Average mixed sward area per holding"], "ha"),
-             valueBoxUI(ns("average_grassland"), "Average Grassland Area per Holding", national_data$value[national_data$variable == "Average grassland area per holding"], "ha")
-           )
-    ),
-    column(width = 6,
-           tabsetPanel(
-             id = ns("tabs"),
-             tabPanel("Map", mapRegionsUI(ns("map")), value = "map"),
-             tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"), value = "data_table")
-           )
+    mainPanel(
+      width = 9,
+      tabsetPanel(
+        id = ns("tabsetPanel"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Time Series", lineChartUI(ns("line"))),
+        tabPanel("Area Chart", areaChartUI(ns("area"))),
+        tabPanel("Data Table", DTOutput(ns("table"))),
+        # New section
+        tabPanel("Cereals Summary",
+                 fluidRow(
+                   column(width = 6, h3("Cereals Summary Section")),
+                   column(width = 3, selectInput(ns("summary_variable"), "Select Variable", choices = unique(cereals_data$`Crop/Land use`), selected = "Total cereals"))
+                 ),
+                 fluidRow(
+                   column(width = 6, p("This content is under development")),
+                   column(width = 6, valueBoxUI(ns("summaryValueBox")), style = "padding-right: 0; padding-left: 0; padding-bottom: 10px;")
+                 )
+        )
+      )
     )
   )
 }
 
-manureServer <- function(id) {
+
+cerealsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    output$sidebar_ui <- renderUI({
-      req(input$tabs)
-      if (input$tabs == "map") {
-        radioButtons(ns("variable"), "Select Variable", choices = variables)
-      } else if (input$tabs == "data_table") {
-        radioButtons(ns("data_source"), "Choose data to show:", choices = c("Map Data"))
-      }
-    })
+    cereals_map <- cereals_subregion %>%
+      select(-Scotland) %>%
+      mutate(across(everything(), as.character)) %>%
+      pivot_longer(cols = -`Land use by category`, names_to = "sub_region", values_to = "value") %>%
+      mutate(value = safe_as_numeric(value))
     
-    mapRegionsServer(
+    mapServer(
       id = "map",
       data = reactive({
         req(input$variable)
-        manure_data_long %>%
-          filter(variable == input$variable)
+        cereals_map %>% filter(`Land use by category` == input$variable)
       }),
-      unit = "quantity",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="#">Source: Agricultural Data</a></div>',
+      unit = "hectares",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Manure Quantity by Region"
+      title = "Cereals Distribution by Region (hectares)"
     )
     
-    output$data_table <- renderDT({
-      req(input$data_source)
-      if (input$data_source == "Map Data") {
-        datatable(manure_qty)
+    chart_data <- reactive({
+      req(input$timeseries_variables)
+      filtered_data <- cereals_data %>%
+        filter(`Crop/Land use` %in% input$timeseries_variables) %>%
+        pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+        mutate(year = as.numeric(year))  # Ensure year is numeric
+      filtered_data
+    })
+    
+    areaChartServer(
+      id = "area",
+      chart_data = chart_data,
+      title = "Cereals Area Planted",
+      yAxisTitle = "Area of Cereals (1,000 hectares)",
+      xAxisTitle = "Year",
+      unit = "hectares",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "year",
+      y_col = "value"
+    )
+    
+    lineChartServer(
+      id = "line",
+      chart_data = chart_data,
+      title = "Cereals Area Planted",
+      yAxisTitle = "Area of Cereals (1,000 hectares)",
+      xAxisTitle = "Year",
+      unit = "hectares",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "year",
+      y_col = "value"
+    )
+    
+    output$table <- renderDT({
+      req(input$tabsetPanel == "Data Table")
+      if (input$table_data == "map") {
+        req(input$variable)
+        cereals_subregion %>%
+          datatable()
+      } else {
+        cereals_data  %>%
+          datatable()
       }
     })
     
-    output$downloadData <- downloadHandler(
-      filename = function() {
-        paste("map_data", Sys.Date(), ".csv", sep = "")
-      },
-      content = function(file) {
-        write.csv(manure_qty, file, row.names = FALSE)
-      }
-    )
+    # Reactive expression for the selected variable and years
+    summary_data <- reactive({
+      cereals_data %>%
+        filter(`Crop/Land use` == input$summary_variable) %>%
+        pivot_longer(cols = -`Crop/Land use`, names_to = "Year", values_to = "Value") %>%
+        mutate(Year = as.numeric(Year))
+    })
+    
+    current_year <- reactive({ input$summary_current_year_cereals })
+    comparison_year <- reactive({ input$summary_comparison_year_cereals })
+    
+    # Value box for the selected variable
+    valueBoxServer("summaryValueBox", summary_data, "Crop/Land use", reactive(input$summary_variable), current_year, comparison_year, "ha")
   })
 }
 
-# Test the module
-content_demo <- function() {
-  ui <- fluidPage(manureUI("manure_map_test"))
+
+
+cereals_demo <- function() {
+  ui <- fluidPage(cerealsUI("cereals_test"))
   server <- function(input, output, session) {
-    manureServer("manure_map_test")
+    cerealsServer("cereals_test")
   }
   shinyApp(ui, server)
 }
 
-# Uncomment the line below to run the test
-content_demo()
+cereals_demo()

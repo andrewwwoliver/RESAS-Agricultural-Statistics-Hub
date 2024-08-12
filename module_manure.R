@@ -5,7 +5,9 @@ library(highcharter)
 library(dplyr)
 library(tidyr)
 library(DT)
+library(shinydashboard)
 
+# Load the data
 load("module_2023.RData")
 
 # Convert relevant columns to character before pivoting
@@ -19,10 +21,47 @@ manure_data_long <- manure_qty %>%
   mutate(value = as.numeric(value)) %>%
   rename(region = Region)
 
+# Extract the data for "All respondents"
+national_data <- manure_qty %>%
+  filter(Region == "All respondents") %>%
+  select(-Region) %>%
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "value") %>%
+  mutate(value = as.numeric(value)) # Ensure numeric values
+
 # List of variables for radio buttons
-variables <- colnames(manure_qty)[-1]
+variables_manure <- colnames(manure_qty)[-1]
 
 source("module_regions_map.R")
+
+# Helper function to format numbers with commas and appropriate decimal places
+format_number <- function(number) {
+  if (is.na(number)) {
+    return("N/A")
+  } else if (number %% 1 == 0) {
+    format(number, big.mark = ",", scientific = FALSE)
+  } else {
+    format(round(number, 2), big.mark = ",", scientific = FALSE, nsmall = 2)
+  }
+}
+
+# Apply the format_number function to value boxes
+valueBoxManureUI <- function(id, title, value, unit) {
+  numeric_value <- as.numeric(value) # Ensure the value is numeric
+  formatted_value <- format_number(numeric_value)
+  
+  box(
+    title = NULL,
+    width = 12,
+    status = "primary",
+    solidHeader = TRUE,
+    div(
+      style = "text-align: center; padding: 10px;",
+      p(style = "font-size: 16px; font-weight: bold;", title),
+      p(style = "font-size: 24px;", formatted_value, span(style = "font-weight: normal;", unit))
+    ),
+    style = "border: 1px solid white; background-color: transparent; box-shadow: none;"
+  )
+}
 
 manureUI <- function(id) {
   ns <- NS(id)
@@ -35,7 +74,30 @@ manureUI <- function(id) {
       width = 9,
       tabsetPanel(
         id = ns("tabs"),
-        tabPanel("Map", mapRegionsUI(ns("map")), value = "map"),
+        tabPanel("Summary",
+                 fluidRow(
+                   column(width = 4,
+                          valueBoxManureUI(ns("total_manure"), "Total Manure Applied", 
+                                           national_data$value[national_data$variable == "Manure"], "tons"),
+                          p(style = "color: white;", "/"),
+                          valueBoxManureUI(ns("total_holdings"), "Total Holdings", 
+                                           national_data$value[national_data$variable == "Holdings"], "units"),
+                          p(style = "color: white;", "/"),
+                          valueBoxManureUI(ns("total_application_rate"), "Total Application Rate", 
+                                           national_data$value[national_data$variable == "Application rate"], "units"),
+                          p(style = "color: white;", "/"),
+                          valueBoxManureUI(ns("average_mixed_sward"), "Average Mixed Sward per Holding", 
+                                           national_data$value[national_data$variable == "Average mixed sward area per holding"], "ha"),
+                          p(style = "color: white;", "/"),
+                          valueBoxManureUI(ns("average_grassland"), "Average Grassland Area per Holding", 
+                                           national_data$value[national_data$variable == "Average grassland area per holding"], "ha")
+                   ),
+                   column(width = 8,
+                          mapRegionsUI(ns("map"))
+                   )
+                 ),
+                 value = "map"
+        ),
         tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"), value = "data_table")
       )
     )
@@ -49,7 +111,7 @@ manureServer <- function(id) {
     output$sidebar_ui <- renderUI({
       req(input$tabs)
       if (input$tabs == "map") {
-        radioButtons(ns("variable"), "Select Variable", choices = variables)
+        radioButtons(ns("variable"), "Select Variable", choices = variables_manure)
       } else if (input$tabs == "data_table") {
         radioButtons(ns("data_source"), "Choose data to show:", choices = c("Map Data"))
       }
@@ -96,4 +158,4 @@ content_demo <- function() {
 }
 
 # Uncomment the line below to run the test
-content_demo()
+# content_demo()

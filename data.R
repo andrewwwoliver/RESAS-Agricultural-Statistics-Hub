@@ -206,8 +206,10 @@ regions_geojson <- ms_simplify(regions_geojson, keep = 0.001)
 
 geojson_write(regions_geojson, file = "regions_simplified.geojson")
 
+##############----------------------###################
 
 #crops / fruit/veg
+
 # Print unique values 
 
 unique(agricultural_area_hectares$`Crop/Land use`)
@@ -225,10 +227,23 @@ names(vegetables_bulbs_fruit_area) <- names(vegetables_bulbs_fruit_area) %>%
   str_replace_all("Area", "") %>%
   str_trim
 
-#summary crops data
+# Preprocess and round the summary crops data
 crops_summary_data <- agricultural_area_hectares %>%
   filter(`Crop/Land use` %in% c("Total combine harvested crops", "Total crops for stockfeeding",
-                                "Vegetables for human consumption", "Soft fruit"))
+                                "Vegetables for human consumption", "Soft fruit")) %>%
+  pivot_longer(
+    cols = -`Crop/Land use`,
+    names_to = "Year",
+    values_to = "Value"
+  ) %>%
+  mutate(
+    Year = as.numeric(Year),  # Ensure Year is numeric
+    Value = if_else(
+      abs(as.numeric(Value)) >= 1000,  # Round up for numbers with more than 3 significant figures
+      round(as.numeric(Value)),
+      round(as.numeric(Value), digits = 2)
+    )
+  )
 
 land_use_data <- agricultural_area_hectares %>% 
   filter(`Crop/Land use` %in% c("Total crops, fallow, and set-aside", "Total grass", 
@@ -401,6 +416,9 @@ total_animals$Year <- as.numeric(total_animals$Year)
 
 # save total animals 
 save(total_animals, file = "total_animals.RData")
+
+
+
 
 # module 2023 data
 # Load necessary libraries

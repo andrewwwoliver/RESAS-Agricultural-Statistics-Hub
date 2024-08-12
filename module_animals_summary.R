@@ -9,7 +9,6 @@ full_data_animals <- reactive({
       values_to = "Value"
     )
 })
-units_animals <- "animals"
 
 # UI for Summary Animals Module
 animalsSummaryUI <- function(id) {
@@ -28,10 +27,9 @@ animalsSummaryUI <- function(id) {
           id = ns("tabs"),
           tabPanel("Summary Page",
                    value = "Summary_Page",
-                   HTML("<h3>Work in progress</h3>"),  # Added work in progress message
                    fluidRow(
-                     column(width = 6, valueBoxUI(ns("totalCattle")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 6, valueBoxUI(ns("totalSheep")), style = "padding-right: 0; padding-left: 0;")
+                     column(width = 6, valueBoxUI(ns("totalCattle")), style = "padding-right: 0; padding-left: 0; padding-bottom: 10px;"),
+                     column(width = 6, valueBoxUI(ns("totalSheep")), style = "padding-right: 0; padding-left: 0; padding-bottom: 10px;")
                      
                    ),
                    fluidRow(

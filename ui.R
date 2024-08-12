@@ -1,4 +1,5 @@
 source("options.R")
+source("utils.R")
 source("module_summary.R")
 source("module_line_chart.R")
 source("module_area_chart.R")
@@ -34,9 +35,10 @@ source("home.R")
 source("module_economy_summary.R")
 source("module_animals_summary.R")
 source("hc_theme.R")
-source("utils.R")
 source("module_soil_testing.R")
 source("module_manure.R")
+source("module_nitrogen_usage.R")
+source("module_crops_summary.R")
 
 library(shinyjs)
 library(shinythemes)
@@ -84,6 +86,7 @@ ui <- fluidPage(
                        tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
                        tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
                        tabPanel("Fertiliser Usage", value = "fertiliser", fertiliserUsageUI("fertiliser")),
+                       tabPanel("Nitrogen Usage", value = "nitrogen", nitrogenUI("nitrogen")),
                        tabPanel("Manure Usage", value = "manure", manureUI("manure")),
                        tabPanel("Soil Testing", value = "soil", soilTestingUI("soil")),
                        tabPanel("Further Information", value = "info", informationUI("info"))
@@ -97,6 +100,7 @@ ui <- fluidPage(
                        tabPanel("Other Animals", value = "other_animals_module", otherAnimalsUI("other_animals_module"))
             ),
             navbarMenu("Crops",
+                       tabPanel("Summary", value = "crops_summary_module", cropsSummaryUI("crops_summary_module")),
                        tabPanel("Cereals", value = "cereals_module", cerealsUI("cereals_module")),
                        tabPanel("Oilseed", value = "oilseed_module", oilseedUI("oilseed_module")),
                        tabPanel("Potatoes", value = "potatoes_module", potatoesUI("potatoes_module")),
