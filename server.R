@@ -1,8 +1,6 @@
 # server.R
 # Source the necessary modules for server logic
 source("module_subsector_emissions.R")
-source("module_total_emissions.R")
-source("module_gas_emissions.R")
 source("module_fertiliser_usage.R")
 source("module_map.R")
 source("module_employees.R")
@@ -53,8 +51,6 @@ server <- function(input, output, session) {
   
   
   subsectorEmissionsServer("subsector")
-  totalEmissionsServer("total")
-  gasEmissionsServer("gas")
   fertiliserUsageServer("fertiliser")
   employeesMapServer("employees")
   landUseSummaryServer("land_use")

@@ -7,9 +7,7 @@ source("module_bar_chart.R")
 source("module_timelapse_bar_chart.R")
 source("module_data_table.R")
 source("module_regions_map.R")
-source("module_total_emissions.R")
 source("module_subsector_emissions.R")
-source("module_gas_emissions.R")
 source("module_information.R")
 source("module_fertiliser_usage.R")
 source("module_map.R")
@@ -83,8 +81,6 @@ ui <- fluidPage(
             ),
             navbarMenu("Agri-Environment",
                        tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
-                       tabPanel("Industry Emissions", value = "total", totalEmissionsUI("total")),
-                       tabPanel("Gas Emissions", value = "gas", gasEmissionsUI("gas")),
                        tabPanel("Fertiliser Usage", value = "fertiliser", fertiliserUsageUI("fertiliser")),
                        tabPanel("Nitrogen Usage", value = "nitrogen", nitrogenUI("nitrogen")),
                        tabPanel("Manure Usage", value = "manure", manureUI("manure")),

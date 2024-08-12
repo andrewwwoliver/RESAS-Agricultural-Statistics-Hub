@@ -1,10 +1,3 @@
-source("module_summary.R")
-
-# Data setup for Subsector Emissions
-full_data_subsector <- reactive({ subsector_total })
-units_subsector <- "MtCO₂e"
-
-# UI for Subsector Emissions Module
 subsectorEmissionsUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -49,6 +42,15 @@ subsectorEmissionsUI <- function(id) {
                      column(width = 4, valueBoxUI(ns("totalValue_subsector")), style = "padding-right: 0; padding-left: 0;"),
                      column(width = 4, chartUI(ns("industryPieChart_subsector"), "Subsector Breakdown"), style = "padding-right: 0; padding-left: 0;"),
                      column(width = 4, chartUI(ns("industryBarChart_subsector"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
+                   ),
+                   # New fluid row for combined charts
+                   fluidRow(
+                     column(width = 12, div(class = "header-text", "Combined Emissions Analysis:"))
+                   ),
+                   fluidRow(
+                     column(width = 4, chartUI(ns("industryLineChart_total"), "Industry Emissions Over Time")),
+                     column(width = 4, chartUI(ns("industryPieChart_gas"), "Gas Breakdown")),
+                     column(width = 4, chartUI(ns("industryBarChart_gas"), "Emissions by Category"))
                    )
           ),
           tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = "Timelapse"),
@@ -64,12 +66,36 @@ subsectorEmissionsUI <- function(id) {
     )
   )
 }
-# File: module_subsector_emissions.R
-
-# Server for Subsector Emissions Module
 subsectorEmissionsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
+    # Ensure full_data_subsector is defined correctly
+    full_data_subsector <- reactive({
+      subsector_total
+    })
+    
+    # Load the data from the other modules
+    full_data_total <- reactive({ national_total })
+    full_data_gas <- reactive({ agri_gas })
+    
+    # Reactive data for the line chart (Industry Emissions Over Time)
+    line_chart_data <- reactive({
+      data <- national_total
+      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
+      data <- data %>% filter(Industry %in% c("Agriculture", "Total"))
+      data
+    })
+    
+    # Reactive data for the gas charts (Pie and Bar charts)
+    gas_chart_data <- reactive({
+      data <- agri_gas
+      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
+
+      data
+    })
+    
+    # Reactive data for the subsector module
     chart_data <- reactive({
       data <- subsector_total
       data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
@@ -94,6 +120,7 @@ subsectorEmissionsServer <- function(id) {
       updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
     })
     
+    # Load and render the subsector charts
     areaChartServer(
       id = "area",
       chart_data = chart_data,
@@ -202,6 +229,7 @@ subsectorEmissionsServer <- function(id) {
       year_input = "year"
     )
     
+    # Summary Module for Subsector Emissions
     current_year <- reactive({ input$summary_current_year_subsector })
     comparison_year <- reactive({ input$summary_comparison_year_subsector })
     
@@ -259,10 +287,33 @@ subsectorEmissionsServer <- function(id) {
       unit = "MtCO₂e"
     )
     
+    # Combined Emissions Analysis Charts from the other modules
+    summaryLineChartServer(
+      id = "industryLineChart_total",
+      data = line_chart_data,
+      unit = "MtCO₂e"
+    )
+    
+    summaryPieChartServer(
+      id = "industryPieChart_gas",
+      data = gas_chart_data,
+      current_year = current_year,
+      category = "Gas",
+      unit = "MtCO₂e"
+    )
+    
+    summaryBarChartServer(
+      id = "industryBarChart_gas",
+      data = gas_chart_data,
+      current_year = current_year,
+      comparison_year = comparison_year,
+      category = "Gas",
+      unit = "MtCO₂e"
+    )
   })
 }
 
-# Demo function to test the module
+
 subsector_demo <- function() {
   ui <- fluidPage(subsectorEmissionsUI("subsector_test"))
   server <- function(input, output, session) {
