@@ -25,12 +25,12 @@ subsectorEmissionsUI <- function(id) {
           tabPanel("Summary Page",
                    value = "Summary_Page",
                    fluidRow(
-                     column(width = 12, div(class = "header-text", "Breakdown of Scottish Agricultural Emissions by Subsector:"))
+                     column(width = 12, div(class = "header-text", "Breakdown of Scottish Agricultural Emissions:"))
                    ),
                    fluidRow(
-                     column(width = 4, chartUI(ns("industryPieChart_subsector"), "Subsector Breakdown"), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryBarChart_subsector"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryLineChart_total"), "Agricultural Emissions and Total Scottish Emissions"))
+                     column(width = 4, chartUI(ns("industryPieChart_subsector")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryBarChart_subsector")), style = "padding-right: 0; padding-left: 0;"),
+                     column(width = 4, chartUI(ns("industryLineChart_total")), style = "padding-right: 0; padding-left: 0;")
                    ),
                    fluidRow(
                      column(width = 12, div(class = "header-text", "Emissions by Subsector:"))
@@ -44,26 +44,26 @@ subsectorEmissionsUI <- function(id) {
                      column(width = 4, valueBoxUI(ns("totalValue_subsector")), style = "padding-right: 0; padding-left: 0;"),
                      column(width = 4, valueBoxUI(ns("totalIndustry4_subsector")), style = "padding-right: 0; padding-left: 0;"),
                      column(width = 4, valueBoxUI(ns("totalIndustry5_subsector")), style = "padding-right: 0; padding-left: 0;")
-                 ),
+                   ),
                    fluidRow(
                      column(width = 12, div(class = "header-text", "Scottish Agricultural Emissions by Gas Type:"))
                    ),
                    fluidRow(
-                     column(width = 4, chartUI(ns("industryPieChart_gas"), "Breakdown of Gas Type")),
-                     column(width = 4, chartUI(ns("industryBarChart_gas"), "Emissions by Gas Type"))
+                     column(width = 4, chartUI(ns("industryPieChart_gas"))),
+                     column(width = 4, chartUI(ns("industryBarChart_gas")))
                    ),
-                 fluidRow(
-                   column(width = 12, 
-                          div(
-                            class = "footer-text", 
-                            style = "font-size: 16px; font-weight: bold; text-align: left; margin-top: 5px;",
-                            HTML(
-                              '<a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.'
+                   fluidRow(
+                     column(width = 12, 
+                            div(
+                              class = "footer-text", 
+                              style = "font-size: 16px; font-weight: bold; text-align: left; margin-top: 5px;",
+                              HTML(
+                                '<a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.'
+                              )
                             )
-                          )
+                     )
                    )
-                 )
-                 ),
+          ),
           tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = "Timelapse"),
           tabPanel("Breakdown", breakdownChartUI(ns("breakdown")), value = "Breakdown"),
           tabPanel("Time Series", lineChartUI(ns("line")), value = "Line_Chart"),
@@ -78,17 +78,14 @@ subsectorEmissionsUI <- function(id) {
   )
 }
 
+
 subsectorEmissionsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     # Ensure full_data_subsector is defined correctly
-    full_data_subsector <- reactive({
-      subsector_total
-    })
-    
-    # Load the data from the other modules
-    full_data_total <- reactive({ national_total })
+    full_data_subsector <- reactive({ subsector_total })
+        full_data_total <- reactive({ national_total })
     full_data_gas <- reactive({ agri_gas })
     
     # Reactive data for the line chart (Industry Emissions Over Time)
@@ -256,27 +253,32 @@ subsectorEmissionsServer <- function(id) {
     summaryPieChartServer(
       id = "industryPieChart_subsector",
       data = full_data_subsector,
+      title = "Agricultural Emissions by Subsector",
       current_year = current_year,
-      category = first_col_name,
+      category = "Subsector",
       unit = "MtCO₂e"
     )
+    
     summaryBarChartServer(
       id = "industryBarChart_subsector",
       data = full_data_subsector,
+      title = "Agricultural Emissions by Subsector",
       current_year = current_year,
       comparison_year = comparison_year,
-      category = first_col_name,
+      category = "Subsector",
       unit = "MtCO₂e"
     )
-      summaryLineChartServer(
+    summaryLineChartServer(
       id = "industryLineChart_total",
       data = line_chart_data,
+      title = "Agricultural Emissions and Total Scottish Emissions",
       unit = "MtCO₂e"
     )
     
     summaryPieChartServer(
       id = "industryPieChart_gas",
       data = gas_chart_data,
+      title = "Breakdown of Gas Type",
       current_year = current_year,
       category = "Gas",
       unit = "MtCO₂e"
@@ -285,6 +287,7 @@ subsectorEmissionsServer <- function(id) {
     summaryBarChartServer(
       id = "industryBarChart_gas",
       data = gas_chart_data,
+      title = "Emissions by Gas Type",
       current_year = current_year,
       comparison_year = comparison_year,
       category = "Gas",

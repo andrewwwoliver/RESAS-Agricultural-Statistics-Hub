@@ -44,24 +44,34 @@ format_number <- function(number) {
   }
 }
 
-# Apply the format_number function to value boxes
 valueBoxManureUI <- function(id, title, value, unit) {
   numeric_value <- as.numeric(value) # Ensure the value is numeric
   formatted_value <- format_number(numeric_value)
   
+  
   box(
+    class = "value-box",
     title = NULL,
     width = 12,
-    status = "primary",
     solidHeader = TRUE,
     div(
-      style = "text-align: center; padding: 10px;",
-      p(style = "font-size: 16px; font-weight: bold;", title),
-      p(style = "font-size: 24px;", formatted_value, span(style = "font-weight: normal;", unit))
+      style = "display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; padding: 5px;",  # Center content vertically and horizontally
+      div(
+        style = "font-size: 14px; font-weight: bold; margin-bottom: 15px; text-align: center;",  # Adjusted title style and added margin for vertical gap
+        h5(class = "value-box-title", title)
+      ),
+      div(
+        style = "display: flex; align-items: center; justify-content: center;",  # Center the value and unit
+        h3(HTML(formatted_value), style = "font-size: 24px; font-weight: bold; margin: 0;"),  # Main value
+        span(class = "value-box-units", unit, style = "font-size: 24px; font-weight: normal; margin-left: 5px;")
+      )
     ),
-    style = "border: 1px solid white; background-color: transparent; box-shadow: none;"
+    style = "border: 1px solid white; background-color: transparent; box-shadow: none; display: flex; align-items: center; justify-content: center;"  # Center the entire content of the box
   )
+  
+  
 }
+
 
 manureUI <- function(id) {
   ns <- NS(id)

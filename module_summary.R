@@ -91,17 +91,10 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
 
 
 
-
-
-
-
-
-
-# UI Module for Chart
-chartUI <- function(id, title) {
+chartUI <- function(id) {
   ns <- NS(id)
   box(
-    title = span(class = "box-title", title),
+    title = uiOutput(ns("chartTitle")),
     width = 12,
     solidHeader = TRUE,
     div(class = "box-content", highchartOutput(ns("chartOutput"), height = "300px"))
@@ -109,10 +102,15 @@ chartUI <- function(id, title) {
 }
 
 
+
 # Server Module for Line Chart on Summary Page
-summaryLineChartServer <- function(id, data, unit = "") {
+summaryLineChartServer <- function(id, data, title, unit = "") {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
+    output$chartTitle <- renderUI({
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
+    })
     
     output$chartOutput <- renderHighchart({
       summary_line_data <- data()
@@ -152,10 +150,13 @@ summaryLineChartServer <- function(id, data, unit = "") {
   })
 }
 
-# Server Module for Pie Chart
-summaryPieChartServer <- function(id, data, current_year, category, unit) {
+summaryPieChartServer <- function(id, data, title, current_year, category, unit) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
+    output$chartTitle <- renderUI({
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, ", ", current_year(), "</div>"))
+    })
     
     output$chartOutput <- renderHighchart({
       pie_data <- data() %>% filter(Year == current_year() & !!sym(category) != "Total") %>% 
@@ -178,10 +179,17 @@ summaryPieChartServer <- function(id, data, current_year, category, unit) {
 
 
 
+
 # Server Module for Bar Chart
-summaryBarChartServer <- function(id, data, current_year, comparison_year, category, unit = "") {
+summaryBarChartServer <- function(id, data, current_year, comparison_year, title, category, unit = "") {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
+    output$chartTitle <- renderUI({
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, ": ", current_year(), " vs. ", comparison_year(), "</div>"))
+    })
+    
+    
     output$chartOutput <- renderHighchart({
       bar_data <- data() %>% filter(Year == current_year() & !!sym(category) != "Total") %>% group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
       line_data <- data() %>% filter(Year == comparison_year() & !!sym(category) != "Total") %>% group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))

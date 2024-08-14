@@ -33,8 +33,7 @@ save(subsector_total, agri_gas, national_total, subsector_source, file = "ghg_da
 # load data
 load("ghg_data.RData")
 
-
-
+#census data -----------------------------
 # File: load_tables.R
 
 library(readxl)
@@ -92,6 +91,31 @@ clean_cells <- function(data) {
   return(data)
 }
 
+# Function to apply rounding and drop only trailing zeros from decimals
+round_values <- function(x) {
+  sapply(x, function(value) {
+    if (is.na(value)) return(NA)  # Handle NA values
+    
+    # Apply rounding based on the specified conditions
+    if (value > 10000) {
+      result <- round(value, 0)
+    } else if (value > 1000) {
+      result <- round(value, 1)
+    } else {
+      result <- value
+    }
+    
+    # Convert to character and drop trailing zeros from decimal numbers only
+    result <- as.character(result)
+    
+    if (grepl("\\.", result)) {  # Check if the result contains a decimal point
+      result <- sub("\\.?0+$", "", result)  # Remove trailing zeros after decimal point
+    }
+    
+    return(result)
+  })
+}
+
 # Read each table, clean it, and assign to a variable
 for (table in names(table_names)) {
   sheet_name <- table_names[table]
@@ -114,6 +138,9 @@ for (table in names(table_names)) {
   # Convert all columns except the first to numeric, setting non-numeric values to NA
   data <- data %>% mutate(across(-1, ~ as.numeric(as.character(.))))
   
+  # Apply rounding and drop trailing zeros to numeric columns (except the first)
+  data <- data %>% mutate(across(-1, ~ round_values(.)))
+  
   # Remove '\r\n' from all character columns and clean multiple spaces in the first column
   data[[1]] <- str_replace_all(data[[1]], "\r\n", " ")
   data <- clean_cells(data)
@@ -124,11 +151,13 @@ for (table in names(table_names)) {
   assign(table, cleaned_data)
 }
 
-
 # Save all tables to an RData file
 save(list = names(table_names), file = "census_data.RData")
 
 load("census_data.RData")
+
+
+
 
 
 
@@ -208,6 +237,7 @@ geojson_write(regions_geojson, file = "regions_simplified.geojson")
 
 ##############----------------------###################
 
+
 #crops / fruit/veg
 
 # Print unique values 
@@ -252,7 +282,7 @@ land_use_data <- agricultural_area_hectares %>%
 
 land_use_subregion <- crops_grass_area_subregion %>%
   filter(`Land use by category` %in% c("Total agricultural area", "Total grass and rough grazing", 
-                                "Sole right grazing", "Total crops and fallow", "Common grazing", "Woodland"))
+                                       "Sole right grazing", "Total crops and fallow", "Common grazing", "Woodland"))
 
 
 # Subset for cereals data
@@ -419,7 +449,6 @@ save(total_animals, file = "total_animals.RData")
 
 
 
-
 # module 2023 data
 # Load necessary libraries
 library(readxl)
@@ -453,14 +482,57 @@ read_and_process_sheet <- function(sheet) {
   return(df)
 }
 
-# Function to round all numeric columns to 2 decimal places
-round_df <- function(df) {
-  df[] <- lapply(df, function(x) if(is.numeric(x)) round(x, 2) else x)
+# Function to clean and convert all columns except the first to numeric
+clean_and_convert_numeric <- function(df) {
+  df[] <- lapply(seq_along(df), function(i) {
+    if (i == 1) {
+      return(df[[i]])  # Keep the first column as is
+    } else {
+      # Remove commas, extra spaces, and convert to numeric for other columns
+      return(as.numeric(gsub(",", "", df[[i]])))
+    }
+  })
   return(df)
 }
 
+# Function to determine the number of significant figures
+signif_figures <- function(x) {
+  if (x == 0) return(1)  # Edge case for 0
+  return(floor(log10(abs(x))) + 1)
+}
+
+# Function to round numbers based on significant figures
+custom_round <- function(x) {
+  if (is.na(x)) return(NA)
+  sf <- signif_figures(x)
+  
+  if (sf > 5) {
+    return(round(x, 0))  # Round to 0 decimal places for 6+ significant figures
+  } else if (sf == 5) {
+    return(round(x, 0))  # Round to 0 decimal places for 5 significant figures
+  } else if (sf == 4) {
+    return(round(x, 1))  # Round to 1 decimal place for 4 significant figures
+  } else if (sf == 3) {
+    return(round(x, 2))  # Round to 2 decimal places for 3 significant figures
+  } else {
+    return(round(x, 2))  # Round to 2 decimal places for 2 or fewer significant figures
+  }
+}
+
+# Updated function to apply custom rounding logic to all numeric columns in a dataframe
+round_df <- function(df) {
+  df <- clean_and_convert_numeric(df)  # Clean and convert to numeric first
+  df[] <- lapply(df, function(x) if (is.numeric(x)) sapply(x, custom_round) else x)
+  return(df)
+}
+
+
 # Read and process the specified sheets into a list of dataframes
-data_frames <- lapply(sheets_to_read, read_and_process_sheet)
+data_frames <- lapply(sheets_to_read, function(sheet) {
+  df <- read_and_process_sheet(sheet)
+  df <- round_df(df)  # Apply rounding after conversion
+  return(df)
+})
 
 # Name the list elements with shortened names
 names(data_frames) <- short_names
@@ -470,15 +542,18 @@ if("Area" %in% colnames(data_frames$grass_crop_nutrient_mgmt)) {
   data_frames$grass_crop_nutrient_mgmt <- select(data_frames$grass_crop_nutrient_mgmt, -Area)
 }
 
-# Ensure 'Percentage of holdings' and 'Average holding area' are numeric in both dataframes
-data_frames$soil_nutrient_mgmt$`Percentage of holdings` <- as.numeric(as.character(data_frames$soil_nutrient_mgmt$`Percentage of holdings`))
-data_frames$grass_crop_nutrient_mgmt$`Percentage of holdings` <- as.numeric(as.character(data_frames$grass_crop_nutrient_mgmt$`Percentage of holdings`))
+# Ensure specific columns are numeric in both dataframes
+convert_columns_to_numeric <- function(df, columns) {
+  for (col in columns) {
+    df[[col]] <- as.numeric(as.character(df[[col]]))
+  }
+  return(df)
+}
 
-data_frames$soil_nutrient_mgmt$`Average holding area` <- as.numeric(as.character(data_frames$soil_nutrient_mgmt$`Average holding area`))
-data_frames$grass_crop_nutrient_mgmt$`Average holding area` <- as.numeric(as.character(data_frames$grass_crop_nutrient_mgmt$`Average holding area`))
+numeric_columns <- c("Percentage of holdings", "Average holding area")
 
-# Round all numeric columns to 2 decimal places in each dataframe
-data_frames <- lapply(data_frames, round_df)
+data_frames$soil_nutrient_mgmt <- convert_columns_to_numeric(data_frames$soil_nutrient_mgmt, numeric_columns)
+data_frames$grass_crop_nutrient_mgmt <- convert_columns_to_numeric(data_frames$grass_crop_nutrient_mgmt, numeric_columns)
 
 # Join 'soil_nutrient_mgmt' and 'grass_crop_nutrient_mgmt' data frames
 combined_nutrient_mgmt <- bind_rows(data_frames$soil_nutrient_mgmt, data_frames$grass_crop_nutrient_mgmt)

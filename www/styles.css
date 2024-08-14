@@ -142,13 +142,9 @@ html, body {
 
 
 /* Apply default font size, family, and color to all common elements */
- p, div, span, a, li, table, th, td, input, button, select, textarea {
-  font-size: 16px;
-}
-
-/* Apply Arial font to all header elements */
 h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, textarea {
   font-family: Arial, sans-serif;
+  font-size: 16px;
 }
 
 
