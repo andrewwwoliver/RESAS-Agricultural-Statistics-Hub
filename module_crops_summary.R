@@ -48,10 +48,10 @@ cropsSummaryServer <- function(id) {
     current_year <- reactive({ input$summary_current_year_crops })
     comparison_year <- reactive({ input$summary_comparison_year_crops })
     
-    valueBoxServer("totalCombineHarvestedCrops", full_data_crops, "Crop/Land use", reactive("Total combine harvested crops"), current_year, comparison_year, "ha")
-    valueBoxServer("totalCropsForStockfeeding", full_data_crops, "Crop/Land use", reactive("Total crops for stockfeeding"), current_year, comparison_year, "ha")
-    valueBoxServer("vegetablesForHumanConsumption", full_data_crops, "Crop/Land use", reactive("Vegetables for human consumption"), current_year, comparison_year, "ha")
-    valueBoxServer("softFruit", full_data_crops, "Crop/Land use", reactive("Soft fruit"), current_year, comparison_year, "ha")
+    valueBoxServer("totalCombineHarvestedCrops", full_data_crops, "Crop/Land use", reactive("Total combine harvested crops"), current_year, comparison_year, "hectares")
+    valueBoxServer("totalCropsForStockfeeding", full_data_crops, "Crop/Land use", reactive("Total crops for stockfeeding"), current_year, comparison_year, "hectares")
+    valueBoxServer("vegetablesForHumanConsumption", full_data_crops, "Crop/Land use", reactive("Vegetables for human consumption"), current_year, comparison_year, "hectares")
+    valueBoxServer("softFruit", full_data_crops, "Crop/Land use", reactive("Soft fruit"), current_year, comparison_year, "hectares")
   })
 }
 

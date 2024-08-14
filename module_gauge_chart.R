@@ -1,14 +1,14 @@
-#module_gauge_chart.R
-library(shiny)
-library(highcharter)
-
 # UI for Gauge Chart Module
 gaugeChartUI <- function(id) {
   ns <- NS(id)
-  tagList(
-    htmlOutput(ns("title")),
-    highchartOutput(ns("gauge_chart"), width = "100%", height = "300px"),
-    htmlOutput(ns("footer"))
+  box(
+    title = NULL,  # Title will be handled separately
+    width = 12,
+    solidHeader = TRUE,
+    div(
+      class = "box-content",
+      highchartOutput(ns("gauge_chart"), width = "100%", height = "100%")  # Make the chart output fully responsive
+    )
   )
 }
 
@@ -17,20 +17,12 @@ gaugeChartServer <- function(id, chart_data, title, color = "#002d54", footer = 
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    output$title <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
-    })
-    
-    output$footer <- renderUI({
-      HTML(footer)
-    })
-    
     output$gauge_chart <- renderHighchart({
       highchart() %>%
         hc_chart(type = "solidgauge") %>%
         hc_pane(
           center = list('50%', '85%'),
-          size = '140%',
+          size = '140%',  # Adjust size to make it more responsive
           startAngle = -90,
           endAngle = 90,
           background = list(
@@ -73,6 +65,18 @@ gaugeChartServer <- function(id, chart_data, title, color = "#002d54", footer = 
               y = 5,
               borderWidth = 0,
               useHTML = TRUE
+            )
+          )
+        ) %>%
+        hc_responsive(
+          rules = list(
+            list(
+              condition = list(maxWidth = 500),
+              chartOptions = list(
+                chart = list(
+                  height = 200  # Adjust height for smaller screens
+                )
+              )
             )
           )
         )

@@ -1,42 +1,66 @@
-
 library(shiny)
 library(highcharter)
 library(dplyr)
+library(shinydashboard)  # Include shinydashboard for the box function
 source("module_gauge_chart.R")
 
 load("module_2023.RData")
-
-# Custom CSS to remove gaps
-custom_css <- "
-.gauge-title {
-  margin-bottom: 0px;
-  padding-bottom: 0px;
-}
-.gauge-footer {
-  margin-top: 0px;
-  padding-top: 0px;
-}
-"
 
 # UI for Soil Testing Module
 soilTestingUI <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$style(HTML(custom_css)),  # Include custom CSS
     fluidRow(
-      column(6, gaugeChartUI(ns("soilTestingGaugeEither"))),
-      column(6, gaugeChartUI(ns("soilTestingGaugeChange")))
+      column(6, 
+             box(
+               width = 12,
+               title = "Soil Testing on Either Grass or Crops in Last Five Years",
+               solidHeader = TRUE,
+               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugeEither")))  # Added padding
+             )),
+      column(6, 
+             box(
+               width = 12,
+               title = "Soil Testing Resulted in Change of Crop Nutrient Application",
+               solidHeader = TRUE,
+               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugeChange")))  # Added padding
+             ))
     ),
     fluidRow(
-      column(6, gaugeChartUI(ns("soilTestingGaugeGrassland"))),
-      column(6, gaugeChartUI(ns("soilTestingGaugeCropland"))),
+      column(6, 
+             box(
+               width = 12,
+               title = "Soil Testing on Grassland in Last Five Years",
+               solidHeader = TRUE,
+               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugeGrassland")))  # Added padding
+             )),
+      column(6, 
+             box(
+               width = 12,
+               title = "Soil Testing on Cropland in Last Five Years",
+               solidHeader = TRUE,
+               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugeCropland")))  # Added padding
+             ))
     ),
     fluidRow(
-      column(6, gaugeChartUI(ns("soilTestingGaugePhGrassland"))),
-      column(6, gaugeChartUI(ns("soilTestingGaugePhCropland"))),
+      column(6, 
+             box(
+               width = 12,
+               title = "Regular pH Testing on Grassland",
+               solidHeader = TRUE,
+               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugePhGrassland")))  # Added padding
+             )),
+      column(6, 
+             box(
+               width = 12,
+               title = "Regular pH Testing on Cropland",
+               solidHeader = TRUE,
+               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugePhCropland")))  # Added padding
+             ))
     )
   )
 }
+
 
 # Server for Soil Testing Module
 soilTestingServer <- function(id, data) {
@@ -90,7 +114,7 @@ soilTestingServer <- function(id, data) {
     gaugeChartServer(
       id = "soilTestingGaugeGrassland",
       chart_data = chart_data_grassland,
-      title = "Soil Testing on Grassland in Last Five Years",
+      #  title = "Soil Testing on Grassland in Last Five Years",
       color = "#6a2063",
       footer = "Source: Combined Nutrient Management Data"
     )
@@ -98,7 +122,7 @@ soilTestingServer <- function(id, data) {
     gaugeChartServer(
       id = "soilTestingGaugeCropland",
       chart_data = chart_data_cropland,
-      title = "Soil Testing on Cropland in Last Five Years",
+      #  title = "Soil Testing on Cropland in Last Five Years",
       color = "#e5682a",
       footer = "Source: Combined Nutrient Management Data"
     )
@@ -106,7 +130,7 @@ soilTestingServer <- function(id, data) {
     gaugeChartServer(
       id = "soilTestingGaugeEither",
       chart_data = chart_data_either,
-      title = "Soil Testing on Either Grass or Crops in Last Five Years",
+      #  title = "Soil Testing on Either Grass or Crops in Last Five Years",
       color = "#002d54",
       footer = "Source: Combined Nutrient Management Data"
     )
@@ -114,17 +138,15 @@ soilTestingServer <- function(id, data) {
     gaugeChartServer(
       id = "soilTestingGaugeChange",
       chart_data = chart_data_change,
-      title = "Soil Testing Resulted in Change of Crop Nutrient Application",
+      #  title = "Soil Testing Resulted in Change of Crop Nutrient Application",
       color = "#2b9c93",
       footer = "Source: Combined Nutrient Management Data"
     )
     
-    
-    
     gaugeChartServer(
       id = "soilTestingGaugePhGrassland",
       chart_data = chart_data_ph_grassland,
-      title = "Regular pH Testing on Grassland",
+      #  title = "Regular pH Testing on Grassland",
       color = "#0b4c0b",
       footer = "Source: Combined Nutrient Management Data"
     )
@@ -132,7 +154,7 @@ soilTestingServer <- function(id, data) {
     gaugeChartServer(
       id = "soilTestingGaugePhCropland",
       chart_data = chart_data_ph_cropland,
-      title = "Regular pH Testing on Cropland",
+      #  title = "Regular pH Testing on Cropland",
       color = "#5d9f3c",
       footer = "Source: Combined Nutrient Management Data"
     )

@@ -1,12 +1,3 @@
-/* styles.css */
-
-.chart-title {
-  font-size: 30px !important;
-  font-weight: bold !important;
-  margin-bottom: 10px !important;
-  font-family: 'Arial', sans-serif !important;
-}
-
 /* General styles */
 .full-width {
   width: 100% !important;
@@ -44,12 +35,6 @@
   padding: 10px;
 }
 
-/* Target the box element within valueBoxManureUI */
-#valueBoxManureUI .box {
-    border: 1px solid white !important;  /* Or transparent */
-    background-color: transparent !important;  /* Optional: make the background transparent */
-    box-shadow: none !important;  /* Remove any shadow if needed */
-}
 
 
 .value-box {
@@ -70,6 +55,7 @@
 .value-box h3, .value-box h5 {
   margin: 0;
   color: #333;
+  font-family: Arial, sans-serif; /* Ensure Arial font */
 }
 
 .value-box h3 {
@@ -154,11 +140,18 @@ html, body {
   border-top: 1px solid #dee2e6;
 }
 
+
 /* Apply default font size, family, and color to all common elements */
-h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, textarea {
-  font-family: Arial, sans-serif;
+ p, div, span, a, li, table, th, td, input, button, select, textarea {
   font-size: 16px;
 }
+
+/* Apply Arial font to all header elements */
+h1, h2, h3, h4, h5, p, div, span, a, li, table, th, td, input, button, select, textarea {
+  font-family: Arial, sans-serif;
+}
+
+
 
 /* Set default font size, family, and color for Highcharts */
 .highcharts-title,

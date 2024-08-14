@@ -235,7 +235,7 @@ get_industry <- function(index, data, current_year, first_col_name) {
       group_by(!!sym(first_col_name)) %>%
       summarise(Value = sum(Value, na.rm = TRUE)) %>%
       arrange(desc(Value)) %>%
-      slice_head(n = 3) %>%
+      slice_head(n = 5) %>%
       pull(!!sym(first_col_name))
     if (length(industries) >= index) {
       industries[index]

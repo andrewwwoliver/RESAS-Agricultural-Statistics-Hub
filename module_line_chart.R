@@ -50,8 +50,14 @@ lineChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, unit 
       unique_groups <- unique(data[[group_column]])
       lapply(unique_groups, function(g) {
         series_data <- data[data[[group_column]] == g, ]
+        
+        # Create a complete sequence of years
+        complete_years <- seq(min(series_data[[x_col]], na.rm = TRUE), max(series_data[[x_col]], na.rm = TRUE))
+        complete_series <- merge(data.frame(x = complete_years), series_data, by.x = "x", by.y = x_col, all.x = TRUE)
+        complete_series <- complete_series %>% transmute(x = as.numeric(x), y = !!sym(y_col))
+        
         hc <<- hc %>%
-          hc_add_series(name = g, data = list_parse2(series_data %>% transmute(x = as.numeric(!!sym(x_col)), y = !!sym(y_col))), color = colors[[g]])
+          hc_add_series(name = g, data = list_parse2(complete_series), color = colors[[g]])
       })
       
       hc %>%
@@ -72,3 +78,4 @@ lineChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, unit 
     })
   })
 }
+
