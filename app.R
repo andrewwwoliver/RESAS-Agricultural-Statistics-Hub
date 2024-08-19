@@ -2,6 +2,7 @@
 source("module_line_chart.R")
 source("module_area_chart.R")
 source("module_data_table.R")
+source("module_percentage_bar_chart.R")
 source("options.R")
 source("module_summary.R")
 source("module_employees.R")

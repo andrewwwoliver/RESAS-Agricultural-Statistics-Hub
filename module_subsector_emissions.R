@@ -12,7 +12,10 @@ subsectorEmissionsUI <- function(id) {
         conditionalPanel(
           condition = "input.tabs == 'Summary_Page'",
           ns = ns,
-          sliderInput(ns("summary_current_year_subsector"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
+          # Add text above the sliders
+          div("Adjust the sliders to compare data from different years.", 
+              style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
+          sliderInput(ns("summary_current_year_subsector"), "Year of Interest", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
           sliderInput(ns("summary_comparison_year_subsector"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1, sep = "")
         )
       ),
@@ -65,7 +68,7 @@ subsectorEmissionsUI <- function(id) {
                    )
           ),
           tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = "Timelapse"),
-          tabPanel("Breakdown", breakdownChartUI(ns("breakdown")), value = "Breakdown"),
+          tabPanel("Sources of Agricultural Emissions", breakdownChartUI(ns("breakdown")), value = "Breakdown"),
           tabPanel("Time Series", lineChartUI(ns("line")), value = "Line_Chart"),
           tabPanel("Area Chart", areaChartUI(ns("area")), value = "Area_Chart"),
           tabPanel("Data Table",
@@ -166,7 +169,7 @@ subsectorEmissionsServer <- function(id) {
     breakdownChartServer(
       id = "breakdown",
       chart_data = reactive({ subsector_source }),  # Assuming subsector_source is your data
-      title = "Breakdown of Scottish Agricultural Emissions by Subsector and Type, 2022-23",
+      title = "Sources of Scottish Agricultural Emissions by Subsector and Type, 2022-23",
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Subsector",
       unit = "MtCO₂e",

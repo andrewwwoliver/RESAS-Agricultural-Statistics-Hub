@@ -1,10 +1,3 @@
-# File: module_land_use_summary.R
-
-library(shiny)
-library(dplyr)
-library(tidyr)
-library(DT)
-
 landUseSummaryUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
@@ -64,10 +57,6 @@ landUseSummaryUI <- function(id) {
           "Select Data to Display",
           choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
           selected = "map"
-        ),
-        tags$div(
-          style = "width: 100%;",
-          downloadButton(ns("download_data"), "Download Data")
         )
       )
     ),
@@ -76,36 +65,21 @@ landUseSummaryUI <- function(id) {
       width = 9,
       tabsetPanel(
         id = ns("tabsetPanel"),
-        tabPanel("Summary",
-                 div(
-                   class = "container-fluid",  # Use container-fluid for full-width responsive container
-                   tags$div(
-                     style = "font-size: 24px; font-weight: bold;",
-                     "Most of Scotland's area is used for agriculture"
-                   ),
-                   tags$div(
-                     style = "margin-top: 20px; text-align: left;",  # Align the image container to the left
-                     tags$img(src = "land_use_map.svg", alt = "Land Use Map", style = "max-width: 100%; height: auto; max-height: 500px;")
-                   ),
-                   tags$div(
-                     style = "margin-top: 20px; font-size: 16px;",
-                     HTML("
-                       <p>This map shows the main farming types found in each area. Large areas of Scotland have hilly or rocky land suitable for livestock, but limited growing conditions. These areas are shown in light green on the map. The areas in black have better soil and can support crops usually grown for animal feed. Dark green areas can support vegetables, fruit and cereal farming for human consumption.</p>
-                       <p>The total Scottish agricultural area in 2023 was 5.33 million hectares, 69 per cent of Scotland’s total land. However, it should be noted that large areas of agricultural land are only lightly farmed. For example, hilly or mountainous areas are mostly used for rough grazing. The total Scottish agricultural area excludes common grazing land.</p>
-                       <p>More information about land use is available in the Scottish Agricultural Census.</p>
-                       <p>The twin climate change and environment crises mean considerations as to how we own, use and manage our land have never been as important as they are now. Scotland’s land and the natural capital it supports are some of our most valuable assets. It is vital to our environment, economy and wellbeing as individuals and communities. Information about land use policy is available on <a href='https://www.gov.scot' target='_blank'>gov.scot</a>.</p>
-                     ")
-                   )
-                 )
-        ),
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Bar Chart", barChartUI(ns("bar_chart"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 tags$div(
+                   style = "margin-top: 20px;",
+                   downloadButton(ns("download_data"), "Download Data")
+                 )
+        )
       )
     )
   )
 }
+
 
 
 landUseSummaryServer <- function(id) {
@@ -175,16 +149,18 @@ landUseSummaryServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        datatable(land_use_subregion)
+        datatable(land_use_subregion, options = list(
+          scrollX = TRUE))
       } else {
-        datatable(land_use_data)
+        datatable(land_use_data, options = list(
+          scrollX = TRUE))
       }
     })
     
     output$download_data <- createDownloadHandler(
       input = input,
-      file_map_name = "Land_Use_Subregion_Data.xlsx",
-      file_timeseries_name = "Land_Use_Timeseries_Data.xlsx",
+      file_map_name = "Land Use Subregion Data 2023.xlsx",
+      file_timeseries_name = "Land Use Timeseries Data 2012 to 2023.xlsx",
       map_data = land_use_subregion,
       timeseries_data = land_use_data
     )

@@ -7,7 +7,10 @@ farmTypesUI <- function(id) {
       sidebarPanel(
         width = 3,
         radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area", "Total from Standard Outputs" = "total", "Average standard outputs per holding" = "average"), selected = "holdings"),
-        uiOutput(ns("variable_select")),  # Added variable select UI
+        conditionalPanel(
+          condition = paste0("input['", ns("tabs"), "'] == '", ns("bar"), "'"),  # Show variable select only on Bar Chart tab
+          uiOutput(ns("variable_select"))  # Variable select UI
+        )
       ),
       mainPanel(
         id = ns("mainpanel"),
@@ -29,39 +32,23 @@ farmTypesServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Create reactive data excluding 'All'
-    chart_data <- reactive({
-      data <- farm_type %>%
+    # Create reactive data excluding 'All' and depending only on data_type
+    filtered_data <- reactive({
+      farm_type %>%
         filter(`Main farm type` != "All")
-      if (!is.null(input$variables)) {
+    })
+    
+    # Get filtered data based on selected variables (only for bar chart)
+    chart_data <- reactive({
+      data <- filtered_data()
+      if (input$tabs == ns("bar") && !is.null(input$variables)) {
         data <- data %>%
           filter(`Main farm type` %in% input$variables)
       }
       data
     })
     
-    # Get initial order based on 'Holdings'
-    initial_order <- reactive({
-      data <- chart_data() %>%
-        arrange(desc(Holdings))
-      data$`Main farm type`
-    })
-    
-    output$variable_select <- renderUI({
-      choices <- unique(farm_type$`Main farm type`)
-      selected <- setdiff(choices, "All")
-      selectizeInput(
-        ns("variables"), 
-        "Click within the box to select variables", 
-        choices = choices, 
-        selected = selected,
-        multiple = TRUE,
-        options = list(
-          plugins = list('remove_button')
-        )
-      )
-    })
-    
+    # Select the appropriate column based on data_type
     y_col <- reactive({
       switch(input$data_type,
              "holdings" = "Holdings",
@@ -86,39 +73,55 @@ farmTypesServer <- function(id) {
              "average" = "Average Standard Outputs per Holding: {point.y:.2f}")
     })
     
+    # Render the data table based only on data_type selection
+    output$data_table <- renderDT({
+      datatable(
+        filtered_data() %>%
+          select(`Main farm type`, y_col()),
+        colnames = c("Main Farm Type", yAxisTitle())
+      )
+    })
+    
+    # Create a download handler for the data
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste("Farm_Types_", input$data_type, ".xlsx", sep = "")
+      },
+      content = function(file) {
+        write.xlsx(filtered_data() %>% 
+                     select(`Main farm type`, y_col()), file, rowNames = FALSE)
+      }
+    )
+    
+    # Render the variable selection UI dynamically
+    output$variable_select <- renderUI({
+      choices <- unique(farm_type$`Main farm type`)
+      selected <- setdiff(choices, "All")
+      selectizeInput(
+        ns("variables"), 
+        "Click within the box to select variables", 
+        choices = choices, 
+        selected = selected,
+        multiple = TRUE,
+        options = list(
+          plugins = list('remove_button')
+        )
+      )
+    })
+    
+    # Render the bar chart using the filtered data
     barChartServer(
       id = "bar_chart",
-      chart_data = reactive({
-        data <- chart_data()
-        data <- data %>%
-          mutate(`Main farm type` = factor(`Main farm type`, levels = initial_order())) %>%
-          arrange(`Main farm type`)
-        data
-      }),
+      chart_data = chart_data,
       title = "Farm Types in Scotland",
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Main Farm Type",
-      unit = "holdings",
+      unit = input$data_type,
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "Main farm type",
       y_col = y_col,
       tooltip_format = tooltip_format,
-      maintain_order = TRUE
-    )
-    
-    render_data_table(
-      table_id = "data_table",
-      chart_data = chart_data,
-      output = output
-    )
-    
-    handle_data_download(
-      download_id = ns("downloadData"),
-      chart_type = "Farm Types",
-      chart_data = chart_data,
-      input = input,
-      output = output,
-      year_input = NULL
+      maintain_order = FALSE
     )
   })
 }

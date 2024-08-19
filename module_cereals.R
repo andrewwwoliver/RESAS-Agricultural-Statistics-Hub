@@ -46,7 +46,9 @@ cerealsUI <- function(id) {
       conditionalPanel(
         condition = "input.tabsetPanel === 'Cereals Summary'",
         ns = ns,
-        sliderInput(ns("summary_current_year_cereals"), "Current Year", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        div("Adjust the sliders to compare data from different years.", 
+            style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
+        sliderInput(ns("summary_current_year_cereals"), "Year of Interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
         sliderInput(ns("summary_comparison_year_cereals"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
       )
     ),
@@ -55,8 +57,8 @@ cerealsUI <- function(id) {
       tabsetPanel(
         id = ns("tabsetPanel"),
         tabPanel("Map", mapUI(ns("map"))),
-        tabPanel("Time Series", lineChartUI(ns("line"))),
-        tabPanel("Area Chart", areaChartUI(ns("area"))),
+        tabPanel("Time Series", lineChartUI(ns("line"), note_type = 2)),
+        tabPanel("Area Chart", areaChartUI(ns("area"), note_type = 2)),
         tabPanel("Data Table", DTOutput(ns("table"))),
         # New section
         tabPanel("Cereals Summary",

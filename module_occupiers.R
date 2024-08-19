@@ -1,16 +1,3 @@
-## File: module_occupiers.R
-
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(DT)
-library(geojsonio)
-
-# Load the required modules
-source("module_map.R")
-source("module_line_chart.R")
-
 occupiersUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
@@ -23,7 +10,23 @@ occupiersUI <- function(id) {
       tabsetPanel(
         id = ns("tabs"),
         tabPanel("Map", mapUI(ns("map")), value = "map"),
-        tabPanel("Population Pyramid", highchartOutput(ns("pyramid_chart"), height = "500px"), value = "bar_chart"),
+        tabPanel("Population Pyramid", 
+                 div(
+                   htmlOutput(ns("pyramid_title")),
+                   highchartOutput(ns("pyramid_chart"), height = "500px"),
+                   htmlOutput(ns("pyramid_footer")),
+                   div(
+                     class = "note",
+                     style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+                     HTML(
+                       "<strong>Note:</strong><ul>
+                          <li>To add or remove a series from the chart, select/deselect the variable from the sidebar menu.</li>
+                          <li>You can see data values for a specific variable by hovering your mouse over the bar.</li>
+                        </ul>"
+                     )
+                   )
+                 ), 
+                 value = "bar_chart"),
         tabPanel("Time Series", lineChartUI(ns("line_chart")), value = "timeseries"),
         tabPanel("Data Table", 
                  DTOutput(ns("data_table")),
@@ -33,6 +36,8 @@ occupiersUI <- function(id) {
     )
   )
 }
+
+
 occupiersServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -46,6 +51,7 @@ occupiersServer <- function(id) {
         separate(Gender_Age, into = c("Gender", "Age"), sep = " ", extra = "merge") %>%
         mutate(Count = as.numeric(Count))
     })
+    
     
     # Data Processing for Map
     regions_data <- reactive({
@@ -80,7 +86,7 @@ occupiersServer <- function(id) {
           "Occupiers not working on the holding"
         ))
       } else if (input$tabs == "data_table") {
-        radioButtons(ns("data_source"), "Choose data to show:", choices = c("Chart Data", "Map Data", "Timeseries Data"))
+        radioButtons(ns("data_source"), "Choose data to show:", choices = c("Map Data", "Population Pyramid Data",  "Timeseries Data"))
       } else if (input$tabs == "timeseries") {
         checkboxGroupInput(
           ns("variables"), 
@@ -99,6 +105,16 @@ occupiersServer <- function(id) {
       chart_data() %>%
         filter(Age %in% input$variables_bar) %>%
         mutate(Count = ifelse(Gender == "Female", -Count, Count))
+    })
+    
+    # Bar Chart Title
+    output$pyramid_title <- renderUI({
+      HTML("<div style='font-size: 20px; font-weight: bold;'>Breakdown of Occupiers by Age and Gender</div>")
+    })
+    
+    # Bar Chart Footer
+    output$pyramid_footer <- renderUI({
+      HTML('<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>')
     })
     
     # Bar Chart - Output
@@ -126,7 +142,6 @@ occupiersServer <- function(id) {
         hc_add_series(name = "Female", data = as.list(female_data), color = "#002d54", tooltip = list(pointFormatter = JS("function() { return 'Female: ' + Math.abs(this.y).toLocaleString() + ' occupiers'; }"))) %>%
         hc_add_series(name = "Male", data = as.list(male_data), color = "#2b9c93", tooltip = list(pointFormatter = JS("function() { return 'Male: ' + this.y.toLocaleString() + ' occupiers'; }"))) %>%
         hc_tooltip(shared = FALSE) %>%
-        hc_title(text = "Breakdown of Occupiers by Age and Gender", align = "left", style = list(fontSize = "20px", fontWeight = "bold")) %>%
         hc_legend(align = "center") %>%
         hc_xAxis(title = list(text = "Age group")) %>%
         hc_yAxis(title = list(text = "Number of working occupiers"),
@@ -134,7 +149,6 @@ occupiersServer <- function(id) {
                return Math.abs(this.value).toLocaleString();
              }")))
     })
-    
     
     # Timeseries Chart - Using the modular line chart
     filtered_timeseries_data <- reactive({
@@ -160,18 +174,43 @@ occupiersServer <- function(id) {
       data = regions_data,
       variable = reactive(input$variable),
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
-      title = "Occupiers by Region"
+      title = paste("Occupiers by Region -", census_year)  # Dynamic title with census_year
     )
+    
+    # Pivoting Chart Data Wider for Data Table View
+    pivoted_chart_data <- reactive({
+      chart_data() %>%
+        pivot_wider(names_from = Age, values_from = Count)
+    })
+    
+    # Pivoting Map Data Wider for Data Table View
+    pivoted_regions_data <- reactive({
+      regions_data() %>%
+        pivot_wider(names_from = sub_region, values_from = value)
+    })
+    
+    # Pivoting Timeseries Data Wider for Data Table View
+    pivoted_timeseries_data <- reactive({
+      occupiers_timeseries_data() %>%
+        pivot_wider(names_from = Year, values_from = Value)
+    })
     
     # Data Table - Output
     output$data_table <- renderDT({
       req(input$data_source)
-      if (input$data_source == "Chart Data") {
-        datatable(chart_data())
+      if (input$data_source == "Population Pyramid Data") {
+        datatable(pivoted_chart_data(), options = list(
+          scrollX = TRUE,
+          pageLength = 26  # Adjust this to show all entries
+        ))
       } else if (input$data_source == "Map Data") {
-        datatable(regions_data())
-      } else {
-        datatable(filtered_timeseries_data())
+        datatable(pivoted_regions_data(), options = list(
+          scrollX = TRUE
+        ))
+      } else if (input$data_source == "Timeseries Data") {
+        datatable(pivoted_timeseries_data(), options = list(
+          scrollX = TRUE
+        ))
       }
     })
     
@@ -181,12 +220,12 @@ occupiersServer <- function(id) {
         paste(input$data_source, Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
-        if (input$data_source == "Chart Data") {
-          write.csv(chart_data(), file, row.names = FALSE)
+        if (input$data_source == "Population Pyramid") {
+          write.csv(pivoted_chart_data(), file, row.names = FALSE)
         } else if (input$data_source == "Map Data") {
-          write.csv(regions_data(), file, row.names = FALSE)
+          write.csv(pivoted_regions_data(), file, row.names = FALSE)
         } else {
-          write.csv(filtered_timeseries_data(), file, row.names = FALSE)
+          write.csv(pivoted_timeseries_data(), file, row.names = FALSE)
         }
       }
     )

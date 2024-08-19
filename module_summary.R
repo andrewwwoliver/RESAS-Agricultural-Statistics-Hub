@@ -71,7 +71,7 @@ valueBoxServer <- function(id, data, category, industry, current_year, compariso
               style = "display: flex; align-items: center; margin-bottom: 5px;",
               create_yoy_arrow(yoy_change),
               span(class = "value-box-yoy", 
-                   ifelse(is.na(yoy_change), "NA", sprintf("%+.2f%% %d vs. %d", yoy_change, current_year(), comparison_year())), 
+                   ifelse(is.na(yoy_change), "Comparison not available", sprintf("%+.2f%% %d vs. %d", yoy_change, current_year(), comparison_year())), 
                    style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
             )
           ),

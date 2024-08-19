@@ -3,9 +3,8 @@ library(highcharter)
 library(dplyr)
 library(tidyr)
 
-# Load the required modules
-source("module_map.R")
-source("module_line_chart.R")
+# Assume the `createSourceText` function is defined elsewhere and sourced
+# source("createSourceText.R")
 
 # Coerce all relevant columns to character before pivoting
 occupiers_employees_subregion <- occupiers_employees_subregion %>%
@@ -39,19 +38,7 @@ employeesMapUI <- function(id) {
         id = ns("tabs"),
         tabPanel("Map", mapUI(ns("map")), value = "map"),
         tabPanel("Time Series", 
-                 lineChartUI(ns("line_chart")), 
-                 div(
-                   class = "note",
-                   style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-                   HTML(
-                     "<strong>Note:</strong><ul>
-                       <li>To add a series to the chart, click inside the white box on the sidebar and select a variable.</li>
-                       <li>To remove a series, click the x beside the variable name within the sidebar.</li>
-                       <li>Select a year range by adjusting the slider on the sidebar or by zooming into the graph by clicking and dragging over an area you wish to see.</li>
-                       <li>You can see data values for a specific year by hovering your mouse over the line.</li>
-                     </ul>"
-                   )
-                 ),
+                 lineChartUI(ns("line_chart"), note_type = 2),  # Use note_type = 2 for the second note
                  value = "timeseries"),
         tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"), value = "data_table")
       )
@@ -67,6 +54,7 @@ employeesMapServer <- function(id) {
     occupiers_employees <- occupiers_employees %>%
       mutate(across(starts_with("20"), safe_as_numeric))
     
+    # Reactive data for the time series chart
     chart_data <- reactive({
       occupiers_employees %>%
         pivot_longer(cols = -`Occupiers and employees by category`, names_to = "Year", values_to = "Value") %>%
@@ -81,42 +69,37 @@ employeesMapServer <- function(id) {
       } else if (input$tabs == "data_table") {
         radioButtons(ns("data_source"), "Choose data to show:", choices = c("Chart Data", "Map Data"))
       } else if (input$tabs == "timeseries") {
-        tagList(
-          selectizeInput(
-            ns("variables"), 
-            "Click within the box to add more variables", 
-            choices = unique(chart_data()$`Occupiers and employees by category`), 
-            selected = c('Regular full-time staff total', 'Regular part-time staff total', 'Total Casual and seasonal staff'), 
-            multiple = TRUE, 
-            options = list(plugins = list('remove_button'), placeholder = "Click to add more variables")
-          ),
-          sliderInput(
-            ns("year_range"),
-            "Select Year Range",
-            min = 2012,
-            max = 2023,
-            value = c(2012, 2023),
-            step = 1,
-            sep = "",
-            ticks = TRUE
-          )
+        selectizeInput(
+          ns("variables"), 
+          "Click within the box to add more variables", 
+          choices = unique(chart_data()$`Occupiers and employees by category`), 
+          selected = c('Regular full-time staff total', 'Regular part-time staff total', 'Total Casual and seasonal staff'), 
+          multiple = TRUE, 
+          options = list(plugins = list('remove_button'), placeholder = "Click to add more variables")
         )
       }
     })
     
-    filtered_chart_data <- reactive({
-      req(input$variables, input$year_range)
-      data <- chart_data()
-      data %>% 
-        filter(
-          `Occupiers and employees by category` %in% input$variables,
-          Year >= input$year_range[1] & Year <= input$year_range[2]
-        )
+    # Pivot the chart data wider for the data table view
+    pivoted_chart_data <- reactive({
+      chart_data() %>%
+        pivot_wider(names_from = Year, values_from = Value)
     })
     
+    # Pivot the map data wider for the data table view
+    pivoted_regions_data <- reactive({
+      filtered_regions_data %>%
+        pivot_wider(names_from = sub_region, values_from = value)
+    })
+    
+    # Time series chart rendering
     lineChartServer(
       id = "line_chart",
-      chart_data = filtered_chart_data,
+      chart_data = reactive({
+        req(input$variables)
+        chart_data() %>%
+          filter(`Occupiers and employees by category` %in% input$variables)
+      }),
       title = "Agricultural Employees Time Series",
       yAxisTitle = "Employees (1,000)",
       xAxisTitle = "Year",
@@ -126,6 +109,7 @@ employeesMapServer <- function(id) {
       y_col = "Value"
     )
     
+    # Map rendering
     mapServer(
       id = "map",
       data = reactive({
@@ -137,26 +121,38 @@ employeesMapServer <- function(id) {
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Agricultural Employees by Region"
-    )
+    )  
     
+    # Render the data table with scrollable options for both chart and map data
     output$data_table <- renderDT({
       req(input$data_source)
       if (input$data_source == "Chart Data") {
-        datatable(chart_data())
-      } else {
-        datatable(filtered_regions_data)
+        datatable(pivoted_chart_data(), options = list(
+          scrollX = TRUE,
+          pageLength = 26  # Show all 26 entries on a single page
+        ))
+      } else if (input$data_source == "Map Data") {
+        datatable(pivoted_regions_data(), options = list(
+          scrollX = TRUE,
+          pageLength = 10  # You can adjust this if needed for the map data
+        ))
       }
     })
     
+    # Create a download handler with appropriate naming
     output$downloadData <- downloadHandler(
       filename = function() {
-        paste(input$data_source, Sys.Date(), ".csv", sep = "")
+        if (input$data_source == "Chart Data") {
+          paste("Scottish Agricultural Employees Timeseries Data - 2012 to 2023.csv", sep = "")
+        } else if (input$data_source == "Map Data") {
+          paste("Scottish Agricultural Employees Regional Data - 2023.csv", sep = "")
+        }
       },
       content = function(file) {
         if (input$data_source == "Chart Data") {
-          write.csv(chart_data(), file, row.names = FALSE)
-        } else {
-          write.csv(filtered_regions_data(), file, row.names = FALSE)
+          write.csv(pivoted_chart_data(), file, row.names = FALSE)
+        } else if (input$data_source == "Map Data") {
+          write.csv(pivoted_regions_data(), file, row.names = FALSE)
         }
       }
     )

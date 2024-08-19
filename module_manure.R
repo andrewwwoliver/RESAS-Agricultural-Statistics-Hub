@@ -48,7 +48,6 @@ valueBoxManureUI <- function(id, title, value, unit) {
   numeric_value <- as.numeric(value) # Ensure the value is numeric
   formatted_value <- format_number(numeric_value)
   
-  
   box(
     class = "value-box",
     title = NULL,
@@ -61,16 +60,15 @@ valueBoxManureUI <- function(id, title, value, unit) {
         h5(class = "value-box-title", title)
       ),
       div(
-        style = "display: flex; align-items: center; justify-content: center;",  # Center the value and unit
-        h3(HTML(formatted_value), style = "font-size: 24px; font-weight: bold; margin: 0;"),  # Main value
-        span(class = "value-box-units", unit, style = "font-size: 24px; font-weight: normal; margin-left: 5px;")
+        style = "text-align: center;",  # Center the value and unit together
+        h3(HTML(formatted_value), style = "font-size: 24px; font-weight: bold; margin: 0;"),  # Main value centered
+        div(style = "font-size: 16px; font-weight: normal; margin-top: 5px;", unit)  # Unit placed below the value, also centered
       )
     ),
     style = "border: 1px solid white; background-color: transparent; box-shadow: none; display: flex; align-items: center; justify-content: center;"  # Center the entire content of the box
   )
-  
-  
 }
+
 
 
 manureUI <- function(id) {
@@ -88,19 +86,19 @@ manureUI <- function(id) {
                  fluidRow(
                    column(width = 4,
                           valueBoxManureUI(ns("total_manure"), "Total Manure Applied", 
-                                           national_data$value[national_data$variable == "Manure"], "tons"),
+                                           national_data$value[national_data$variable == "Manure"], "tonnes"),
                           p(style = "color: white;", "/"),
                           valueBoxManureUI(ns("total_holdings"), "Total Holdings", 
-                                           national_data$value[national_data$variable == "Holdings"], "units"),
+                                           national_data$value[national_data$variable == "Holdings"], "holdings"),
                           p(style = "color: white;", "/"),
                           valueBoxManureUI(ns("total_application_rate"), "Total Application Rate", 
-                                           national_data$value[national_data$variable == "Application rate"], "units"),
+                                           national_data$value[national_data$variable == "Application rate"], "tonnes / hectare"),
                           p(style = "color: white;", "/"),
                           valueBoxManureUI(ns("average_mixed_sward"), "Average Mixed Sward per Holding", 
-                                           national_data$value[national_data$variable == "Average mixed sward area per holding"], "ha"),
+                                           national_data$value[national_data$variable == "Average mixed sward area per holding"], "hectares"),
                           p(style = "color: white;", "/"),
                           valueBoxManureUI(ns("average_grassland"), "Average Grassland Area per Holding", 
-                                           national_data$value[national_data$variable == "Average grassland area per holding"], "ha")
+                                           national_data$value[national_data$variable == "Average grassland area per holding"], "hectares")
                    ),
                    column(width = 8,
                           mapRegionsUI(ns("map"))
@@ -134,8 +132,8 @@ manureServer <- function(id) {
         manure_data_long %>%
           filter(variable == input$variable)
       }),
-      unit = "quantity",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="#">Source: Agricultural Data</a></div>',
+      unit = "tonnes / hectare",
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/" target="_blank">Source: Scottish Agricultural Census: Module June 2023</a></div>',
       variable = reactive(input$variable),
       title = "Manure Quantity by Region"
     )
@@ -157,6 +155,7 @@ manureServer <- function(id) {
     )
   })
 }
+
 
 # Test the module
 content_demo <- function() {

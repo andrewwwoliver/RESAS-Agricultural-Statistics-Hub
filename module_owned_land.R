@@ -1,5 +1,3 @@
-## File: module_owned_land.R
-
 library(shiny)
 library(highcharter)
 library(dplyr)
@@ -56,6 +54,12 @@ ownedLandServer <- function(id) {
       data
     })
     
+    # Pivot Wider for Data Table
+    wide_data <- reactive({
+      filtered_owned_rented_land() %>%
+        pivot_wider(names_from = `Area owned or rented`, values_from = Value)
+    })
+    
     # Line Chart
     lineChartServer(
       id = "line_chart",
@@ -69,9 +73,15 @@ ownedLandServer <- function(id) {
       y_col = "Value"
     )
     
-    # Data Table
+    # Data Table with Scrollable X-Axis
     output$data_table <- renderDT({
-      datatable(filtered_owned_rented_land())
+      datatable(
+        wide_data(),
+        options = list(
+          scrollX = TRUE,
+          pageLength = 20
+        )
+      )
     })
     
     # Download Handler
@@ -80,7 +90,7 @@ ownedLandServer <- function(id) {
         paste("owned_rented_land", Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
-        write.csv(filtered_owned_rented_land(), file, row.names = FALSE)
+        write.csv(wide_data(), file, row.names = FALSE)
       }
     )
   })

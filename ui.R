@@ -4,6 +4,7 @@ source("module_summary.R")
 source("module_line_chart.R")
 source("module_area_chart.R")
 source("module_bar_chart.R")
+source("module_percentage_bar_chart.R")
 source("module_timelapse_bar_chart.R")
 source("module_breakdown_chart.R")
 source("module_data_table.R")
@@ -82,10 +83,10 @@ ui <- fluidPage(
             ),
             navbarMenu("Agri-Environment",
                        tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
-                       tabPanel("Fertiliser Usage", value = "fertiliser", fertiliserUsageUI("fertiliser")),
                        tabPanel("Nitrogen Usage", value = "nitrogen", nitrogenUI("nitrogen")),
                        tabPanel("Manure Usage", value = "manure", manureUI("manure")),
                        tabPanel("Soil Testing", value = "soil", soilTestingUI("soil")),
+                       tabPanel("Fertiliser Usage", value = "fertiliser", fertiliserUsageUI("fertiliser")),
                        tabPanel("Further Information", value = "info", informationUI("info"))
             ),
             navbarMenu("Livestock",

@@ -1,3 +1,8 @@
+#####################################
+####
+census_year <- 2023
+
+
 # File: utils.R
 
 createDownloadHandler <- function(input, file_map_name, file_timeseries_name, map_data, timeseries_data) {
@@ -52,6 +57,16 @@ format_number <- function(number) {
     rounded_number <- round(number, 2)
     return(format(rounded_number, big.mark = ",", scientific = FALSE, nsmall = 2))
   }
+}
+
+createSourceText <- function() {
+  tags$p(
+    style = "font-size: 16px; font-weight: normal; margin: 20px 0 20px 0;",
+    "This data is sourced from the ",
+    tags$a(href = "https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/",
+           "Scottish Agricultural Census: June 2023"),
+    " which was published on 31 October 2023. Full data tables and detailed analysis are available within the full report."
+  )
 }
 
 

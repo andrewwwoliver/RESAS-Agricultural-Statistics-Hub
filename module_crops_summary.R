@@ -15,7 +15,9 @@ cropsSummaryUI <- function(id) {
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        sliderInput(ns("summary_current_year_crops"), "Current Year", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        div("Adjust the sliders to compare data from different years.", 
+            style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
+        sliderInput(ns("summary_current_year_crops"), "Year of Interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
         sliderInput(ns("summary_comparison_year_crops"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
       ),
       mainPanel(

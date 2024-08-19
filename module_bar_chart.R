@@ -11,7 +11,9 @@ barChartUI <- function(id) {
       style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
       HTML(
         "<strong>Note:</strong><ul>
+        <li>To add or remove a series from the chart, select/deselect the variable from the sidebar menu.</li>
           <li>You can see data values for a specific variable by hovering your mouse over the bars.</li>
+
         </ul>"
       )
     )

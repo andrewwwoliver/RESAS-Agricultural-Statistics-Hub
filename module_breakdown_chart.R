@@ -34,9 +34,10 @@ breakdownChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, 
       data_long <- chart_data() %>%
         pivot_longer(cols = -Source, names_to = "Subsector", values_to = "Value") %>%
         arrange(match(Source, rev(unique(Source))))
+      breakdown_colors = c("#2b9c93", "#002d54", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c")
       
       unique_sources <- unique(data_long$Source)
-      color_map <- setNames(rev(preset_colors)[1:length(unique_sources)], unique_sources)
+      color_map <- setNames(rev(breakdown_colors)[1:6], unique_sources)
       
       series_data <- lapply(unique_sources, function(source) {
         list(

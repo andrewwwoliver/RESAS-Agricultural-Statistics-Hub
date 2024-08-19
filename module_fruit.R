@@ -52,8 +52,8 @@ fruitUI <- function(id) {
       tabsetPanel(
         id = ns("tabsetPanel"),
         tabPanel("Map", mapUI(ns("map"))),
-        tabPanel("Time Series", lineChartUI(ns("line"))),
-        tabPanel("Area Chart", areaChartUI(ns("area"))),
+        tabPanel("Time Series", lineChartUI(ns("line"), note_type = 2)),
+        tabPanel("Area Chart", areaChartUI(ns("area"), note_type = 2)),
         tabPanel("Data Table", DTOutput(ns("table")))
       )
     )

@@ -1,4 +1,3 @@
-# home.R
 # Define UI for the home module
 homeUI <- function(id) {
   ns <- NS(id)
@@ -28,8 +27,9 @@ homeUI <- function(id) {
         ),
         tags$ul(
           tags$li(actionLink(ns("nav_subsector"), "Agriculture Emissions")),
-          tags$li(actionLink(ns("nav_total"), "Industry Emissions")),
-          tags$li(actionLink(ns("nav_gas"), "Gas Emissions")),
+          tags$li(actionLink(ns("nav_nitrogen"), "Nitrogen Usage")),
+          tags$li(actionLink(ns("nav_manure"), "Manure Usage")),
+          tags$li(actionLink(ns("nav_soil"), "Soil Testing")),
           tags$li(actionLink(ns("nav_fertiliser"), "Fertiliser Usage")),
           tags$li(actionLink(ns("nav_info"), "Further Information"))
         ),
@@ -50,6 +50,7 @@ homeUI <- function(id) {
           "Crops"
         ),
         tags$ul(
+          tags$li(actionLink(ns("nav_crops_summary_module"), "Summary")),
           tags$li(actionLink(ns("nav_cereals_module"), "Cereals")),
           tags$li(actionLink(ns("nav_oilseed_module"), "Oilseed")),
           tags$li(actionLink(ns("nav_potatoes_module"), "Potatoes")),
@@ -116,7 +117,7 @@ homeUI <- function(id) {
           tags$li("Checkboxes: Select or deselect checkboxes to include or exclude variables from the charts."),
           tags$li("Sliders: Adjust the sliders to filter data based on specific years."),
           tags$li("Multiple Inputs: Use the dropdown menus on some pages by clicking within the white box to select specific data categories. You can also type in the dropdown to quickly find the options you need."),
-          tags$li("Tables: Click on table headers to sort data. Use the search box to filter table contents. Click the download data button to save the data for your own use."),
+          tags$li("Data tables: Click on table headers to sort data. Use the search box to filter table contents. Click the download data button to save the data for your own use."),
           tags$li("Maps: Hover over regions on the map to see detailed statistics. Use the zoom and pan controls to navigate the map.")
         ),
         tags$div(
@@ -136,6 +137,7 @@ homeServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
+    # List of pages and their corresponding tab values
     pages <- list(
       land_use = "land_use",
       farm_types = "farm_types",
@@ -144,16 +146,18 @@ homeServer <- function(id) {
       owned_land = "owned_land",
       legal_responsibility = "legal_responsibility",
       subsector = "subsector",
-      total = "total",
-      gas = "gas",
+      nitrogen = "nitrogen",
+      manure = "manure",
+      soil = "soil",
       fertiliser = "fertiliser",
       info = "info",
-      animals_summary_module = "animals_summary_module",  # Added the summary animals module
+      animals_summary_module = "animals_summary_module",  # Working summary animals module
       cattle_module = "cattle_module",
       sheep_module = "sheep_module",
       pigs_module = "pigs_module",
       poultry_module = "poultry_module",
       other_animals_module = "other_animals_module",
+      crops_summary_module = "crops_summary_module",  # Adding the crops summary module
       cereals_module = "cereals_module",
       oilseed_module = "oilseed_module",
       potatoes_module = "potatoes_module",
@@ -163,6 +167,7 @@ homeServer <- function(id) {
       fruit_module = "fruit_module"
     )
     
+    # Set up observeEvent for each page
     lapply(names(pages), function(page) {
       observeEvent(input[[paste0("nav_", page)]], {
         updateTabsetPanel(session, "navbar", selected = pages[[page]])

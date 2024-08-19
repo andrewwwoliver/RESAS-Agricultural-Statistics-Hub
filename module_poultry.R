@@ -54,8 +54,8 @@ poultryUI <- function(id) {
       tabsetPanel(
         id = ns("tabsetPanel"),
         tabPanel("Map", mapUI(ns("map"))),
-        tabPanel("Time Series", lineChartUI(ns("line"))),
-        tabPanel("Area Chart", areaChartUI(ns("area"))),
+        tabPanel("Time Series", lineChartUI(ns("line"), note_type = 2)),
+        tabPanel("Area Chart", areaChartUI(ns("area"), note_type = 2)),
         tabPanel("Data Table", DTOutput(ns("table")))
       )
     )
@@ -103,7 +103,7 @@ poultryServer <- function(id) {
       title = "Poultry Area Chart Data",
       yAxisTitle = "Number of Poultry (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = '<div style="font-size: 16px; font-weight: bold;">* Estimates for 2023 are not comparable to previous years due to methodological improvements.<br/><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
     )
@@ -114,7 +114,7 @@ poultryServer <- function(id) {
       title = "Poultry Area Chart Data",
       yAxisTitle = "Number of Poultry (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = '<div style="font-size: 16px; font-weight: bold;">* Estimates for 2023 are not comparable to previous years due to methodological improvements.<br/><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
     )

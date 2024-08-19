@@ -7,17 +7,20 @@ full_data_animals <- reactive({
       cols = starts_with("Total"),
       names_to = "Animal_Type",
       values_to = "Value"
-    )
+    ) %>%
+    mutate(Value = as.numeric(Value))  # Ensure the 'Value' column is numeric
 })
 
-# UI for Summary Animals Module
+
 animalsSummaryUI <- function(id) {
   ns <- NS(id)
   tagList(
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        sliderInput(ns("summary_current_year_animals"), "Current Year", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        div("Adjust the sliders to compare data from different years.", 
+            style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
+        sliderInput(ns("summary_current_year_animals"), "Year of Interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
         sliderInput(ns("summary_comparison_year_animals"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
       ),
       mainPanel(
@@ -30,12 +33,15 @@ animalsSummaryUI <- function(id) {
                    fluidRow(
                      column(width = 6, valueBoxUI(ns("totalCattle")), style = "padding-right: 0; padding-left: 0; padding-bottom: 10px;"),
                      column(width = 6, valueBoxUI(ns("totalSheep")), style = "padding-right: 0; padding-left: 0; padding-bottom: 10px;")
-                     
                    ),
                    fluidRow(
                      column(width = 6, valueBoxUI(ns("totalPigs")), style = "padding-right: 0; padding-left: 0;"),
                      column(width = 6, valueBoxUI(ns("totalPoultry")), style = "padding-right: 0; padding-left: 0;")
-                     
+                   ),
+                   # Add the footer text
+                   div(
+                     style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+                     HTML("<strong>Note:</strong> Poultry estimates for 2023 are not comparable to previous years due to methodological improvements.")
                    )
           )
         )
@@ -43,6 +49,7 @@ animalsSummaryUI <- function(id) {
     )
   )
 }
+
 
 # Server for Summary Animals Module
 animalsSummaryServer <- function(id) {

@@ -1,167 +1,219 @@
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(shinydashboard)  # Include shinydashboard for the box function
-source("module_gauge_chart.R")
-
-load("module_2023.RData")
-
-# UI for Soil Testing Module
 soilTestingUI <- function(id) {
   ns <- NS(id)
   tagList(
     fluidRow(
-      column(6, 
-             box(
-               width = 12,
-               title = "Soil Testing on Either Grass or Crops in Last Five Years",
-               solidHeader = TRUE,
-               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugeEither")))  # Added padding
-             )),
-      column(6, 
-             box(
-               width = 12,
-               title = "Soil Testing Resulted in Change of Crop Nutrient Application",
-               solidHeader = TRUE,
-               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugeChange")))  # Added padding
-             ))
+      column(12,
+             tags$p(style = "font-size: 16px; padding: 10px; border-bottom: 1px solid #ddd;",
+                    HTML('This data is sourced from the <a href="https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/" target="_blank">Scottish Agricultural Census: Module June 2023</a>. This module provides insights into soil cover, tillage, irrigation, nutrient management, and fertiliser application and storage. The report highlights the significant role these practices play in reducing emissions and improving soil and nutrient management across Scottish agricultural holdings. For more detailed information, please refer to the full report.')
+             )
+      )
     ),
-    fluidRow(
-      column(6, 
-             box(
-               width = 12,
-               title = "Soil Testing on Grassland in Last Five Years",
-               solidHeader = TRUE,
-               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugeGrassland")))  # Added padding
-             )),
-      column(6, 
-             box(
-               width = 12,
-               title = "Soil Testing on Cropland in Last Five Years",
-               solidHeader = TRUE,
-               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugeCropland")))  # Added padding
-             ))
-    ),
-    fluidRow(
-      column(6, 
-             box(
-               width = 12,
-               title = "Regular pH Testing on Grassland",
-               solidHeader = TRUE,
-               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugePhGrassland")))  # Added padding
-             )),
-      column(6, 
-             box(
-               width = 12,
-               title = "Regular pH Testing on Cropland",
-               solidHeader = TRUE,
-               div(style = "padding: 15px;", gaugeChartUI(ns("soilTestingGaugePhCropland")))  # Added padding
-             ))
+    tabsetPanel(
+      tabPanel("Soil Testing",
+               fluidRow(
+                 column(12,
+                        div(style = "font-size: 20px; font-weight: bold;", "Soil testing is more likely to be carried out on cropping land than grassland"),
+                        percentageBarChartUI(ns("soilTestingOverview"), chart_height = 420)
+                 )
+               ),
+               fluidRow(
+                 column(12,
+                        div(style = "font-size: 20px; font-weight: bold;", "Many holdings made changes to nutrient application based on soil testing"),
+                        percentageBarChartUI(ns("soilTestingEffectiveness"), chart_height = 240)
+                 )
+               ),
+               fluidRow(
+                 column(12,
+                        div(style = "font-size: 20px; font-weight: bold;", "pH Testing Overview"),
+                        percentageBarChartUI(ns("phTestingEffectiveness"), chart_height = 340)
+                 )
+               )
+      ),
+      tabPanel("Nutrient Management Plans",
+               fluidRow(
+                 column(12,
+                        div(style = "font-size: 20px; font-weight: bold;", "Nutrient management plans are more likely to be conducted on cropping land than grassland"),
+                        percentageBarChartUI(ns("nutrientManagementOverview"), chart_height = 480)
+                 )
+               ),
+               fluidRow(
+                 column(12,
+                        div(style = "font-size: 20px; font-weight: bold;", "Few holdings regularly update a nutrient management plan"),
+                        percentageBarChartUI(ns("nutrientManagementEffectiveness"), chart_height = 240)
+                 )
+               )
+      ),
+      tabPanel("Data Table",
+               fluidRow(
+                 column(3,
+                        radioButtons(
+                          ns("table_type"),
+                          "Select Chart Type",
+                          choices = c("Soil Testing", "Nutrient Management"),
+                          selected = "Soil Testing"
+                        )
+                 ),
+                 column(9,
+                        DTOutput(ns("table")),
+                        tags$div(
+                          style = "margin-top: 20px;",
+                          downloadButton(ns("download_data"), "Download Data")
+                        )
+                 )
+               )
+      )
     )
   )
 }
 
 
-# Server for Soil Testing Module
-soilTestingServer <- function(id, data) {
+# Server for Soil Testing and Nutrient Management Module
+soilTestingServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    data <- reactive({ combined_nutrient_mgmt })
-    
-    chart_data_grassland <- reactive({
-      req(data())
-      data() %>%
-        filter(`Soil nutrient management` == "Soil testing on grassland in last five years") %>%
-        pull(`Percentage of holdings`)
+    # Data filtering and preparation for Soil Testing
+    overview_data <- reactive({
+      combined_nutrient_mgmt %>% 
+        filter(`Soil nutrient management` %in% c(
+          "Soil testing on grassland in last five years",
+          "Soil testing on cropland in last five years",
+          "Soil testing on either grass or crops in last five years"
+        ))
     })
     
-    chart_data_cropland <- reactive({
-      req(data())
-      data() %>%
-        filter(`Soil nutrient management` == "Soil testing on cropland in last five years") %>%
-        pull(`Percentage of holdings`)
+    effectiveness_data <- reactive({
+      combined_nutrient_mgmt %>%
+        filter(`Soil nutrient management` %in% c(
+          "Soil testing resulted in change of crop nutrient application"
+        ))
     })
     
-    chart_data_either <- reactive({
-      req(data())
-      data() %>%
-        filter(`Soil nutrient management` == "Soil testing on either grass or crops in last five years") %>%
-        pull(`Percentage of holdings`)
+    ph_testing_data <- reactive({
+      combined_nutrient_mgmt %>%
+        filter(`Soil nutrient management` %in% c(
+          "Regular pH testing on grassland",
+          "Regular pH testing on cropland"
+        ))
     })
     
-    chart_data_change <- reactive({
-      req(data())
-      data() %>%
-        filter(`Soil nutrient management` == "Soil testing resulted in change of crop nutrient application") %>%
-        pull(`Percentage of holdings`)
+    # Data filtering and preparation for Nutrient Management
+    nutrient_management_overview_data <- reactive({
+      combined_nutrient_mgmt %>%
+        filter(`Soil nutrient management` %in% c(
+          "Nutrient management plan used on grassland",
+          "Nutrient management plan used on cropland"
+        ))
     })
     
-    chart_data_ph_grassland <- reactive({
-      req(data())
-      data() %>%
-        filter(`Soil nutrient management` == "Regular pH testing on grassland") %>%
-        pull(`Percentage of holdings`)
+    nutrient_management_effectiveness_data <- reactive({
+      combined_nutrient_mgmt %>%
+        filter(`Soil nutrient management` %in% c(
+          "Wrote or updated nutrient management plan in last year"
+        ))
     })
     
-    chart_data_ph_cropland <- reactive({
-      req(data())
-      data() %>%
-        filter(`Soil nutrient management` == "Regular pH testing on cropland") %>%
-        pull(`Percentage of holdings`)
+    precision_farming_data <- reactive({
+      combined_nutrient_mgmt %>%
+        filter(`Soil nutrient management` %in% c(
+          "Uses precision farming technology to vary nitrogen application rate"
+        ))
     })
     
-    gaugeChartServer(
-      id = "soilTestingGaugeGrassland",
-      chart_data = chart_data_grassland,
-      #  title = "Soil Testing on Grassland in Last Five Years",
-      color = "#6a2063",
-      footer = "Source: Combined Nutrient Management Data"
+    # Bar charts for Soil Testing
+    percentageBarChartServer(
+      id = "soilTestingOverview",
+      chart_data = overview_data,
+      title = NULL,  # Titles handled by the fluid rows
+      yAxisTitle = "Percentage of Holdings",
+      xAxisTitle = "",
+      x_col = "Soil nutrient management",
+      y_col = "Percentage of holdings",
+      unit = "%"
     )
     
-    gaugeChartServer(
-      id = "soilTestingGaugeCropland",
-      chart_data = chart_data_cropland,
-      #  title = "Soil Testing on Cropland in Last Five Years",
-      color = "#e5682a",
-      footer = "Source: Combined Nutrient Management Data"
+    percentageBarChartServer(
+      id = "soilTestingEffectiveness",
+      chart_data = effectiveness_data,
+      title = NULL,
+      yAxisTitle = "Percentage of Holdings",
+      xAxisTitle = "",
+      x_col = "Soil nutrient management",
+      y_col = "Percentage of holdings",
+      unit = "%"
     )
     
-    gaugeChartServer(
-      id = "soilTestingGaugeEither",
-      chart_data = chart_data_either,
-      #  title = "Soil Testing on Either Grass or Crops in Last Five Years",
-      color = "#002d54",
-      footer = "Source: Combined Nutrient Management Data"
+    percentageBarChartServer(
+      id = "phTestingEffectiveness",
+      chart_data = ph_testing_data,
+      title = NULL,
+      yAxisTitle = "Percentage of Holdings",
+      xAxisTitle = "",
+      x_col = "Soil nutrient management",
+      y_col = "Percentage of holdings",
+      unit = "%"
     )
     
-    gaugeChartServer(
-      id = "soilTestingGaugeChange",
-      chart_data = chart_data_change,
-      #  title = "Soil Testing Resulted in Change of Crop Nutrient Application",
-      color = "#2b9c93",
-      footer = "Source: Combined Nutrient Management Data"
+    # Bar charts for Nutrient Management
+    percentageBarChartServer(
+      id = "nutrientManagementOverview",
+      chart_data = nutrient_management_overview_data,
+      title = NULL,  # Titles handled by the fluid rows
+      yAxisTitle = "Percentage of Holdings",
+      xAxisTitle = "",
+      x_col = "Soil nutrient management",
+      y_col = "Percentage of holdings",
+      unit = "%"
     )
     
-    gaugeChartServer(
-      id = "soilTestingGaugePhGrassland",
-      chart_data = chart_data_ph_grassland,
-      #  title = "Regular pH Testing on Grassland",
-      color = "#0b4c0b",
-      footer = "Source: Combined Nutrient Management Data"
+    percentageBarChartServer(
+      id = "nutrientManagementEffectiveness",
+      chart_data = nutrient_management_effectiveness_data,
+      title = NULL,
+      yAxisTitle = "Percentage of Holdings",
+      xAxisTitle = "",
+      x_col = "Soil nutrient management",
+      y_col = "Percentage of holdings",
+      unit = "%"
     )
     
-    gaugeChartServer(
-      id = "soilTestingGaugePhCropland",
-      chart_data = chart_data_ph_cropland,
-      #  title = "Regular pH Testing on Cropland",
-      color = "#5d9f3c",
-      footer = "Source: Combined Nutrient Management Data"
+    # Reactive data based on selected chart type
+    table_data <- reactive({
+      if (input$table_type == "Soil Testing") {
+        combined_nutrient_mgmt %>% 
+          filter(`Soil nutrient management` %in% c(
+            "Soil testing on grassland in last five years",
+            "Soil testing on cropland in last five years",
+            "Soil testing on either grass or crops in last five years"
+          ))
+      } else {
+        combined_nutrient_mgmt %>%
+          filter(`Soil nutrient management` %in% c(
+            "Nutrient management plan used on grassland",
+            "Nutrient management plan used on cropland"
+          ))
+      }
+    })
+    
+    # Render data table
+    output$table <- renderDT({
+      datatable(table_data(), options = list(scrollX = TRUE))
+    })
+    
+    # Download handler for data
+    output$download_data <- downloadHandler(
+      filename = function() {
+        paste(input$table_type, "Data.xlsx", sep = "_")
+      },
+      content = function(file) {
+        write.xlsx(table_data(), file)
+      }
     )
+
   })
 }
 
-# Testing function for Soil Testing Module
+# Testing function for the entire module
 soilTestingDemo <- function() {
   ui <- fluidPage(soilTestingUI("soil_testing_demo"))
   server <- function(input, output, session) {

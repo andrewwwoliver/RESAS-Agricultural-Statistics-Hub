@@ -6,7 +6,7 @@ fertiliserUsageUI <- function(id) {
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area"), selected = "holdings")  # Changed order here
+        radioButtons(ns("data_type"), "Data Type", choices = c("Holdings" = "holdings", "Area" = "area"), selected = "holdings")
       ),
       mainPanel(
         id = ns("mainpanel"),
@@ -16,7 +16,10 @@ fertiliserUsageUI <- function(id) {
           tabPanel("Bar Chart", barChartUI(ns("bar_chart")), value = ns("bar")),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
-                   downloadButton(ns("downloadData"), "Download Data"),
+                   tags$div(
+                     style = "margin-top: 20px;",
+                     downloadButton(ns("downloadData"), "Download Data")
+                   ),
                    value = ns("data"))
         )
       )
@@ -69,9 +72,9 @@ fertiliserUsageServer <- function(id) {
     
     tooltip_format <- reactive({
       if (input$data_type == "holdings") {
-        "Holdings: {point.y:.0f}"
+        "Holdings: {point.y:.0f} holdings"
       } else {
-        "Area (hectares): {point.y:.2f}"
+        "Area: {point.y:.2f} hectares"
       }
     })
     
@@ -81,26 +84,27 @@ fertiliserUsageServer <- function(id) {
       title = "Fertiliser Usage by Type in Scotland",
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Fertiliser Type",
-      unit = "holdings",
+      unit = "",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "Fertiliser by type",
       y_col = y_col,
       tooltip_format = tooltip_format
     )
     
-    render_data_table(
-      table_id = "data_table",
-      chart_data = chart_data,
-      output = output
-    )
+    output$data_table <- renderDT({
+      datatable(chart_data(), options = list(
+        scrollX = TRUE
+      ))
+    })
     
-    handle_data_download(
-      download_id = ns("downloadData"),
-      chart_type = "Fertiliser Usage",
-      chart_data = chart_data,
-      input = input,
-      output = output,
-      year_input = NULL
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste("Fertiliser_Usage_Data_", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(chart_data(), file, row.names = FALSE)
+      }
     )
   })
 }
+

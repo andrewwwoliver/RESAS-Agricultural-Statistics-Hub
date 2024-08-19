@@ -23,6 +23,7 @@ mapUI <- function(id) {
         style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
         HTML(
           "<strong>Note:</strong><ul>
+          <li>Where areas are shaded in grey, the data has been suppressed to prevent disclosure of individual holdings.</li>
             <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
             <li>You can see data values for each variable by hovering your mouse over the region.</li>
             <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
@@ -88,7 +89,7 @@ mapServer <- function(id, data, variable, unit = "", title, footer) {
               if (value >= 1000) {
                 formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
               } else {
-                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
+                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
               }
               return '<b>' + this.sub_region + '</b><br/>' +
                      '%s: ' + formattedValue + ' %s';

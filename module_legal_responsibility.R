@@ -25,30 +25,25 @@ legalResponsibilityUI <- function(id) {
   )
 }
 
-# File: module_legal_responsibility.R
-
 legalResponsibilityServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Create reactive data excluding 'Total'
     chart_data <- reactive({
       data <- legal_responsibility %>%
         filter(`Legal responsibility` != "Total")
       data
     })
     
-    # Get initial order based on 'Holdings'
     initial_order <- reactive({
       data <- chart_data() %>%
         arrange(desc(Holdings))
       data$`Legal responsibility`
     })
     
-    # Update checkboxGroupInput choices
     observe({
       choices <- unique(chart_data()$`Legal responsibility`)
-      selected <- choices  # Select all choices, including 'Unknown'
+      selected <- choices
       updateCheckboxGroupInput(session, "selected_variables", choices = choices, selected = selected)
     })
     
@@ -103,19 +98,19 @@ legalResponsibilityServer <- function(id) {
       maintain_order = TRUE
     )
     
-    render_data_table(
-      table_id = "data_table",
-      chart_data = chart_data,
-      output = output
-    )
+    output$data_table <- renderDT({
+      datatable(chart_data(), options = list(
+        scrollX = TRUE
+      ))
+    })
     
-    handle_data_download(
-      download_id = ns("downloadData"),
-      chart_type = "Legal Responsibility",
-      chart_data = chart_data,
-      input = input,
-      output = output,
-      year_input = NULL
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste("Legal_Responsibility_Data_", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(chart_data(), file, row.names = FALSE)
+      }
     )
   })
 }
