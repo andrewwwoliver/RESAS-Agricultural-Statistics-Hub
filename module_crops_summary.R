@@ -17,8 +17,8 @@ cropsSummaryUI <- function(id) {
         width = 3,
         div("Adjust the sliders to compare data from different years.", 
             style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
-        sliderInput(ns("summary_current_year_crops"), "Year of Interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
-        sliderInput(ns("summary_comparison_year_crops"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
+        sliderInput(ns("summary_current_year_crops"), "Year of interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        sliderInput(ns("summary_comparison_year_crops"), "Comparison year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
       ),
       mainPanel(
         id = ns("mainpanel"),
@@ -34,7 +34,24 @@ cropsSummaryUI <- function(id) {
                    fluidRow(
                      column(width = 6, valueBoxUI(ns("vegetablesForHumanConsumption")), style = "padding-right: 0; padding-left: 0;"),
                      column(width = 6, valueBoxUI(ns("softFruit")), style = "padding-right: 0; padding-left: 0;")
+                   ),
+                   # Add the footer text
+                   div(
+                     style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+                     HTML("<strong>Note:</strong> Poultry estimates for 2023 are not comparable to previous years due to methodological improvements.")
                    )
+          ),
+          tabPanel("Data Table",
+                   fluidRow(
+                     column(12, 
+                            DTOutput(ns("data_table")),
+                            tags$div(
+                              style = "margin-top: 20px;",
+                              downloadButton(ns("download_data"), "Download Data")
+                            )
+                     )
+                   ),
+                   footer = generateCensusTableFooter() 
           )
         )
       )
@@ -42,7 +59,8 @@ cropsSummaryUI <- function(id) {
   )
 }
 
-# Server for Summary Crops Module
+library(scales)
+
 cropsSummaryServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -54,8 +72,35 @@ cropsSummaryServer <- function(id) {
     valueBoxServer("totalCropsForStockfeeding", full_data_crops, "Crop/Land use", reactive("Total crops for stockfeeding"), current_year, comparison_year, "hectares")
     valueBoxServer("vegetablesForHumanConsumption", full_data_crops, "Crop/Land use", reactive("Vegetables for human consumption"), current_year, comparison_year, "hectares")
     valueBoxServer("softFruit", full_data_crops, "Crop/Land use", reactive("Soft fruit"), current_year, comparison_year, "hectares")
+    
+    # Pivot the data wider for the data table and format numbers with commas, excluding the 'Year' column
+    pivoted_data <- reactive({
+      full_data_crops() %>%
+        pivot_wider(names_from = `Crop/Land use`, values_from = `Value`) %>%
+        mutate(across(where(is.numeric) & !contains("Year"), comma))  # Format all numeric columns except 'Year' with commas
+    })
+    
+    # Render the pivoted data table
+    output$data_table <- renderDT({
+      datatable(pivoted_data(), options = list(
+        scrollX = TRUE,   # Enable horizontal scrolling
+        pageLength = 20   # Show 20 entries by default
+      ))
+    })
+    
+    # Download handler for the pivoted data
+    output$download_data <- downloadHandler(
+      filename = function() {
+        paste("Crops_Summary_Data_", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(pivoted_data(), file, row.names = FALSE)
+      }
+    )
   })
 }
+
+
 
 # Testing module
 content_demo <- function() {

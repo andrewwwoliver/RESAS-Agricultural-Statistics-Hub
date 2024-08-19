@@ -49,7 +49,12 @@ humanVegetablesUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
         tabPanel("Area Chart", areaChartUI(ns("area"))),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("download_data"), "Download Data"),
+                 generateCensusTableFooter()
+
+        )
       )
     )
   )
@@ -74,7 +79,8 @@ humanVegetablesServer <- function(id) {
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Vegetables for Human Consumption Distribution by Region (hectares)"
+      title = paste("Vegetables for human consumption distribution by region in Scotland in", census_year),
+      legend_title = "Area (hectares)"
     )
     
     chart_data <- reactive({
@@ -89,8 +95,8 @@ humanVegetablesServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Vegetables for Human Consumption Area Planted",
-      yAxisTitle = "Area of Vegetables (1,000 hectares)",
+      title = "Area used to grow vegetables for human consumption across time",
+      yAxisTitle = "Area of vegetables (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -101,8 +107,8 @@ humanVegetablesServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Human Vegetables Area Planted",
-      yAxisTitle = "Area of Vegetables (1,000 hectares)",
+      title = "Area used to grow vegetables for human consumption across time",
+      yAxisTitle = "Area of vegetables (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -114,13 +120,51 @@ humanVegetablesServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        human_vegetables_subregion %>%
-          datatable()
+        human_vegetables_map %>%
+          filter(`Land use by category` == input$variable) %>%
+          pivot_wider(names_from = sub_region, values_from = value) %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       } else {
-        human_vegetables_data  %>%
-          datatable()
+        human_vegetables_data %>%
+          pivot_longer(cols = -`Vegetables and fruits for human consumption`, names_to = "year", values_to = "value") %>%
+          pivot_wider(names_from = year, values_from = value) %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       }
     })
+    
+    output$download_data <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Human_Vegetables_Subregion_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Human_Vegetables_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          human_vegetables_map %>%
+            filter(`Land use by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value)
+        } else {
+          human_vegetables_data %>%
+            pivot_longer(cols = -`Vegetables and fruits for human consumption`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value)
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
+    )
   })
 }
 
@@ -131,3 +175,4 @@ human_vegetables_demo <- function() {
   }
   shinyApp(ui, server)
 }
+human_vegetables_demo()

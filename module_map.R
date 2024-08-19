@@ -15,8 +15,9 @@ mapUI <- function(id) {
   ns <- NS(id)
   tagList(
     mainPanel(
+      width = 12,  # Ensures the main panel uses full width
       htmlOutput(ns("title")),
-      highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
+      highchartOutput(ns("map"), height = "75vh", width = "100%"),  # Set width to 100% for full utilization
       htmlOutput(ns("footer")),
       div(
         class = "note",
@@ -34,7 +35,8 @@ mapUI <- function(id) {
   )
 }
 
-mapServer <- function(id, data, variable, unit = "", title, footer) {
+
+mapServer <- function(id, data, variable, unit = "", title, footer, legend_title = "Legend") {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -107,11 +109,17 @@ mapServer <- function(id, data, variable, unit = "", title, footer) {
         ) %>%
         hc_chart(reflow = TRUE) %>% # Make chart responsive
         hc_legend(
-          layout = "horizontal",
-          align = "center",
-          verticalAlign = "bottom",
-          title = list(text = "Legend", style = list(fontSize = '15px')),
-          itemStyle = list(width = '100px')
+          layout = "vertical",            # Change layout to vertical
+          align = "right",                # Align the legend to the right
+          verticalAlign = "middle",       # Align the legend to the middle vertically
+          x = -10,                        # Move the legend left by 10px for right padding
+          title = list(text = legend_title, style = list(fontSize = '15px')),  # Use the provided or default title
+          itemStyle = list(
+            width = '300px',              # Adjust width as needed
+            padding = "0 10px 0 0"        # Add padding-right of 10px
+          ),
+          symbolHeight = 300,             # Adjust the height of the color bar
+          itemMarginTop = 10              # Adjust the margin at the top of each item
         )
     })
   })

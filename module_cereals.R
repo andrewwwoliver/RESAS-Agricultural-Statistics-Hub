@@ -1,3 +1,5 @@
+# File: module_cereals.R
+
 cerealsUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
@@ -48,8 +50,8 @@ cerealsUI <- function(id) {
         ns = ns,
         div("Adjust the sliders to compare data from different years.", 
             style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
-        sliderInput(ns("summary_current_year_cereals"), "Year of Interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
-        sliderInput(ns("summary_comparison_year_cereals"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
+        sliderInput(ns("summary_current_year_cereals"), "Year of interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        sliderInput(ns("summary_comparison_year_cereals"), "Comparison year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
       )
     ),
     mainPanel(
@@ -59,15 +61,19 @@ cerealsUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"), note_type = 2)),
         tabPanel("Area Chart", areaChartUI(ns("area"), note_type = 2)),
-        tabPanel("Data Table", DTOutput(ns("table"))),
-        # New section
-        tabPanel("Cereals Summary",
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("downloadData"), "Download Data"),
+                 generateCensusTableFooter()
+
+        ),
+        tabPanel("Summary",
                  fluidRow(
-                   column(width = 6, h3("Cereals Summary Section")),
+                   column(width = 6, h3("Cereals summary section")),
                    column(width = 3, selectInput(ns("summary_variable"), "Select Variable", choices = unique(cereals_data$`Crop/Land use`), selected = "Total cereals"))
                  ),
                  fluidRow(
-                   column(width = 6, p("This content is under development")),
+                   column(width = 6, p("This content is under development.")),
                    column(width = 6, valueBoxUI(ns("summaryValueBox")), style = "padding-right: 0; padding-left: 0; padding-bottom: 10px;")
                  )
         )
@@ -75,7 +81,6 @@ cerealsUI <- function(id) {
     )
   )
 }
-
 
 cerealsServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -96,7 +101,8 @@ cerealsServer <- function(id) {
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Cereals Distribution by Region (hectares)"
+      title = paste("Cereals distribution by region in Scotland in", census_year),
+      legend_title = "Area (hectares)"
     )
     
     chart_data <- reactive({
@@ -111,8 +117,8 @@ cerealsServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Cereals Area Planted",
-      yAxisTitle = "Area of Cereals (1,000 hectares)",
+      title = "Area used to grow cereals over time",
+      yAxisTitle = "Area of cereals (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -123,8 +129,8 @@ cerealsServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Cereals Area Planted",
-      yAxisTitle = "Area of Cereals (1,000 hectares)",
+      title = "Area used to grow cereals over time",
+      yAxisTitle = "Area of cereals (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -136,13 +142,51 @@ cerealsServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        cereals_subregion %>%
-          datatable()
+        cereals_map %>%
+          filter(`Land use by category` == input$variable) %>%
+          pivot_wider(names_from = sub_region, values_from = value) %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       } else {
-        cereals_data  %>%
-          datatable()
+        cereals_data %>%
+          pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+          pivot_wider(names_from = year, values_from = value) %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       }
     })
+    
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Cereals_Map_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Cereals_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          cereals_map %>%
+            filter(`Land use by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value)
+        } else {
+          cereals_data %>%
+            pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value)
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
+    )
     
     # Reactive expression for the selected variable and years
     summary_data <- reactive({
@@ -160,8 +204,7 @@ cerealsServer <- function(id) {
   })
 }
 
-
-
+# Testing module
 cereals_demo <- function() {
   ui <- fluidPage(cerealsUI("cereals_test"))
   server <- function(input, output, session) {

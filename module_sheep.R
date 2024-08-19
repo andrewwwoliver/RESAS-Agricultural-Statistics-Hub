@@ -75,7 +75,12 @@ sheepUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
         tabPanel("Area Chart", areaChartUI(ns("area"))),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("downloadData"), "Download Data"),
+                 generateCensusTableFooter()
+
+        )
       )
     )
   )
@@ -106,7 +111,8 @@ sheepServer <- function(id) {
       }),
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Sheep Distribution by Region"
+      title = paste("Sheep distribution by region in Scotland in", census_year),
+      legend_title = "Number of sheep"
     )
     
     chart_data <- reactive({
@@ -121,8 +127,8 @@ sheepServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Sheep Area Chart Data",
-      yAxisTitle = "Number of Sheep (1,000)",
+      title = "Number of sheep by category across time",
+      yAxisTitle = "Number of sheep (1,000)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
@@ -132,8 +138,8 @@ sheepServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Sheep Area Chart Data",
-      yAxisTitle = "Number of Sheep (1,000)",
+      title = "Number of sheep by category across time",
+      yAxisTitle = "Number of sheep (1,000)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
@@ -146,13 +152,49 @@ sheepServer <- function(id) {
         req(input$variable)
         sheep_data %>%
           filter(`Livestock by category` == input$variable) %>%
-          datatable()
+          pivot_wider(names_from = sub_region, values_from = value) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       } else {
         number_of_sheep %>%
           pivot_longer(cols = -`Sheep by category`, names_to = "year", values_to = "value") %>%
-          datatable()
+          pivot_wider(names_from = year, values_from = value) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       }
     })
+    
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Sheep_Map_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Sheep_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          sheep_data %>%
+            filter(`Livestock by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value) %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma))
+        } else {
+          number_of_sheep %>%
+            pivot_longer(cols = -`Sheep by category`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value) %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma))
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
+    )
   })
 }
 

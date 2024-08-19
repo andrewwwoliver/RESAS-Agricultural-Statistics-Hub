@@ -30,7 +30,9 @@ occupiersUI <- function(id) {
         tabPanel("Time Series", lineChartUI(ns("line_chart")), value = "timeseries"),
         tabPanel("Data Table", 
                  DTOutput(ns("data_table")),
-                 downloadButton(ns("downloadData"), "Download Data"),
+                 downloadButton(ns("downloadData"), "Download Data"), 
+                 generateCensusTableFooter(),
+
                  value = "data_table")
       )
     )
@@ -107,9 +109,9 @@ occupiersServer <- function(id) {
         mutate(Count = ifelse(Gender == "Female", -Count, Count))
     })
     
-    # Bar Chart Title
+    # Bar Chart Title with Census Year
     output$pyramid_title <- renderUI({
-      HTML("<div style='font-size: 20px; font-weight: bold;'>Breakdown of Occupiers by Age and Gender</div>")
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>Breakdown of occupiers by age and gender in ", census_year, "</div>"))
     })
     
     # Bar Chart Footer
@@ -160,7 +162,7 @@ occupiersServer <- function(id) {
     lineChartServer(
       id = "line_chart",
       chart_data = filtered_timeseries_data,
-      title = "Agricultural Occupiers Time Series",
+      title = "Agricultural occupiers over time",
       yAxisTitle = "Occupiers (1,000)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -174,25 +176,29 @@ occupiersServer <- function(id) {
       data = regions_data,
       variable = reactive(input$variable),
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
-      title = paste("Occupiers by Region -", census_year)  # Dynamic title with census_year
-    )
+      title = paste("Occupiers by region in Scotland in", census_year),
+      legend_title = "Number of occupiers"   
+      )
     
     # Pivoting Chart Data Wider for Data Table View
     pivoted_chart_data <- reactive({
       chart_data() %>%
-        pivot_wider(names_from = Age, values_from = Count)
+        pivot_wider(names_from = Age, values_from = Count)%>%
+        mutate(across(where(is.numeric) & !contains("Year"), comma))
     })
     
     # Pivoting Map Data Wider for Data Table View
     pivoted_regions_data <- reactive({
       regions_data() %>%
-        pivot_wider(names_from = sub_region, values_from = value)
+        pivot_wider(names_from = sub_region, values_from = value)%>%
+        mutate(across(where(is.numeric) & !contains("Year"), comma))
     })
     
     # Pivoting Timeseries Data Wider for Data Table View
     pivoted_timeseries_data <- reactive({
       occupiers_timeseries_data() %>%
-        pivot_wider(names_from = Year, values_from = Value)
+        pivot_wider(names_from = Year, values_from = Value)%>%
+        mutate(across(where(is.numeric) & !contains("Year"), comma))
     })
     
     # Data Table - Output

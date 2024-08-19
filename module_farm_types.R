@@ -20,7 +20,9 @@ farmTypesUI <- function(id) {
           tabPanel("Bar Chart", barChartUI(ns("bar_chart")), value = ns("bar")),
           tabPanel("Data Table",
                    DTOutput(ns("data_table")),
-                   downloadButton(ns("downloadData"), "Download Data"),
+                   downloadButton(ns("downloadData"), "Download Data"), 
+                   generateCensusTableFooter(),
+
                    value = ns("data"))
         )
       )
@@ -32,15 +34,21 @@ farmTypesServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Create reactive data excluding 'All' and depending only on data_type
-    filtered_data <- reactive({
+    # Create reactive data excluding 'All' and depending only on data_type (for chart)
+    filtered_data_chart <- reactive({
       farm_type %>%
         filter(`Main farm type` != "All")
     })
     
+    # Create reactive data for the table with commas added to numeric values
+    filtered_data_table <- reactive({
+      filtered_data_chart() %>%
+        mutate(across(where(is.numeric), comma))
+    })
+    
     # Get filtered data based on selected variables (only for bar chart)
     chart_data <- reactive({
-      data <- filtered_data()
+      data <- filtered_data_chart()
       if (input$tabs == ns("bar") && !is.null(input$variables)) {
         data <- data %>%
           filter(`Main farm type` %in% input$variables)
@@ -73,12 +81,13 @@ farmTypesServer <- function(id) {
              "average" = "Average Standard Outputs per Holding: {point.y:.2f}")
     })
     
-    # Render the data table based only on data_type selection
+    # Render the data table based only on data_type selection with 20 entries by default
     output$data_table <- renderDT({
       datatable(
-        filtered_data() %>%
+        filtered_data_table() %>%
           select(`Main farm type`, y_col()),
-        colnames = c("Main Farm Type", yAxisTitle())
+        colnames = c("Main Farm Type", yAxisTitle()),
+        options = list(pageLength = 20, scrollX = TRUE)  # Show 20 entries by default, enable horizontal scrolling
       )
     })
     
@@ -88,7 +97,7 @@ farmTypesServer <- function(id) {
         paste("Farm_Types_", input$data_type, ".xlsx", sep = "")
       },
       content = function(file) {
-        write.xlsx(filtered_data() %>% 
+        write.xlsx(filtered_data_table() %>% 
                      select(`Main farm type`, y_col()), file, rowNames = FALSE)
       }
     )
@@ -113,9 +122,9 @@ farmTypesServer <- function(id) {
     barChartServer(
       id = "bar_chart",
       chart_data = chart_data,
-      title = "Farm Types in Scotland",
+      title = paste("Farm types in Scotland in", census_year),
       yAxisTitle = yAxisTitle,
-      xAxisTitle = "Main Farm Type",
+      xAxisTitle = "Main farm type",
       unit = input$data_type,
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "Main farm type",
@@ -125,3 +134,4 @@ farmTypesServer <- function(id) {
     )
   })
 }
+

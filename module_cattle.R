@@ -1,7 +1,4 @@
 # File: module_cattle.R
-
-
-
 cattleUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
@@ -59,16 +56,22 @@ cattleUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"), note_type = 2)),
         tabPanel("Area Chart", areaChartUI(ns("area"), note_type = 2)),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("downloadData"), "Download Data"),
+                 generateCensusTableFooter()
+        )
       )
     )
   )
 }
 
+
 cattleServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
+    # Processing data for Map
     cattle_data <- livestock_subregion %>%
       filter(`Livestock by category` %in% c(
         "Total Female Dairy Cattle",
@@ -82,6 +85,7 @@ cattleServer <- function(id) {
       pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
       mutate(value = safe_as_numeric(value))
     
+    # Map Server
     mapServer(
       id = "map",
       data = reactive({
@@ -90,9 +94,11 @@ cattleServer <- function(id) {
       }),
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Cattle Distribution by Region"
+      title = paste("Cattle distribution by region in Scotland in", census_year),
+      legend_title = "Number of cattle"
     )
     
+    # Processing data for Area Chart and Time Series
     chart_data <- reactive({
       req(input$timeseries_variables)
       filtered_data <- number_of_cattle %>%
@@ -102,43 +108,78 @@ cattleServer <- function(id) {
       filtered_data
     })
     
+    # Area Chart Server
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Cattle Area Chart Data",
-      yAxisTitle = "Number of Cattle (1,000)",
+      title = "Number of cattle by category across time",
+      yAxisTitle = "Number of cattle (1,000)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
     )
     
+    # Line Chart Server
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Cattle Area Chart Data",
-      yAxisTitle = "Number of Cattle (1,000)",
+      title = "Number of cattle by category across time",
+      yAxisTitle = "Number of cattle (1,000)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
       y_col = "value"
     )
     
+    # Data Table output
     output$table <- renderDT({
       req(input$tabsetPanel == "Data Table")
-      if (input$table_data == "map") {
-        req(input$variable)
+      data <- if (input$table_data == "map") {
         cattle_data %>%
           filter(`Livestock by category` == input$variable) %>%
-          datatable()
+          pivot_wider(names_from = sub_region, values_from = value) %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) # Pivot wider for map data
       } else {
         number_of_cattle %>%
           pivot_longer(cols = -`Cattle by category`, names_to = "year", values_to = "value") %>%
-          datatable()
+          pivot_wider(names_from = year, values_from = value) %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) # Pivot wider for time series data
       }
+      datatable(
+        data,
+        options = list(
+          scrollX = TRUE,  # Enable horizontal scrolling
+          pageLength = 20  # Show 20 entries by default
+        )
+      )
     })
+    
+    # Data Download Handler
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Cattle_Map_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Cattle_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          cattle_data %>%
+            filter(`Livestock by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value)
+        } else {
+          number_of_cattle %>%
+            pivot_longer(cols = -`Cattle by category`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value)
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
+    )
   })
 }
+
 
 cattle_demo <- function() {
   ui <- fluidPage(cattleUI("cattle_test"))

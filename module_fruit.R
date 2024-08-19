@@ -11,8 +11,7 @@ fruitUI <- function(id) {
         radioButtons(
           ns("variable"), 
           "Select Variable", 
-          choices = unique(fruit_subregion$`Land use by category`),
-          
+          choices = unique(fruit_subregion$`Land use by category`)
         )
       ),     
       conditionalPanel(
@@ -54,7 +53,12 @@ fruitUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"), note_type = 2)),
         tabPanel("Area Chart", areaChartUI(ns("area"), note_type = 2)),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("download_data"), "Download Data"),
+                 generateCensusTableFooter()
+
+        )
       )
     )
   )
@@ -79,7 +83,8 @@ fruitServer <- function(id) {
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Fruit Area Distribution by Region (hectares)"
+      title = paste("Fruit distribution by region in Scotland in", census_year),
+      legend_title = "Area (hectares)"
     )
     
     chart_data <- reactive({
@@ -94,8 +99,8 @@ fruitServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Fruit Area Planted",
-      yAxisTitle = "Number of Fruit (hectares)",
+      title = "Area used to grow fruit across time",
+      yAxisTitle = "Area of fruit (hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -106,8 +111,8 @@ fruitServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Fruit Area Planted",
-      yAxisTitle = "Area of Fruit (hectares)",
+      title = "Area used to grow fruit across time",
+      yAxisTitle = "Area of fruit (hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -119,16 +124,53 @@ fruitServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        fruit_subregion %>%
-          datatable()
+        fruit_map %>%
+          filter(`Land use by category` == input$variable) %>%
+          pivot_wider(names_from = sub_region, values_from = value) %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       } else {
-        fruit_data  %>%
-          datatable()
+        fruit_data %>%
+          pivot_longer(cols = -`Vegetables and fruits for human consumption`, names_to = "year", values_to = "value") %>%
+          pivot_wider(names_from = year, values_from = value) %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       }
     })
+    
+    output$download_data <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Fruit_Subregion_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Fruit_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          fruit_map %>%
+            filter(`Land use by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value)
+        } else {
+          fruit_data %>%
+            pivot_longer(cols = -`Vegetables and fruits for human consumption`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value)
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
+    )
   })
 }
-
 
 fruit_demo <- function() {
   ui <- fluidPage(fruitUI("fruit_test"))
@@ -137,5 +179,4 @@ fruit_demo <- function() {
   }
   shinyApp(ui, server)
 }
-
 fruit_demo()

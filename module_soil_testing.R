@@ -1,13 +1,6 @@
 soilTestingUI <- function(id) {
   ns <- NS(id)
   tagList(
-    fluidRow(
-      column(12,
-             tags$p(style = "font-size: 16px; padding: 10px; border-bottom: 1px solid #ddd;",
-                    HTML('This data is sourced from the <a href="https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/" target="_blank">Scottish Agricultural Census: Module June 2023</a>. This module provides insights into soil cover, tillage, irrigation, nutrient management, and fertiliser application and storage. The report highlights the significant role these practices play in reducing emissions and improving soil and nutrient management across Scottish agricultural holdings. For more detailed information, please refer to the full report.')
-             )
-      )
-    ),
     tabsetPanel(
       tabPanel("Soil Testing",
                fluidRow(
@@ -24,7 +17,7 @@ soilTestingUI <- function(id) {
                ),
                fluidRow(
                  column(12,
-                        div(style = "font-size: 20px; font-weight: bold;", "pH Testing Overview"),
+                        div(style = "font-size: 20px; font-weight: bold;", "pH testing is more likely to be carried out on cropping land than grassland"),
                         percentageBarChartUI(ns("phTestingEffectiveness"), chart_height = 340)
                  )
                )
@@ -62,9 +55,11 @@ soilTestingUI <- function(id) {
                  )
                )
       )
-    )
+    ),
+    generate2023ModuleTableFooter()  # Place the footer outside the tabsetPanel, but still inside the mainPanel
   )
 }
+
 
 
 # Server for Soil Testing and Nutrient Management Module

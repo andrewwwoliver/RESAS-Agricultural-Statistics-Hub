@@ -20,8 +20,8 @@ animalsSummaryUI <- function(id) {
         width = 3,
         div("Adjust the sliders to compare data from different years.", 
             style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
-        sliderInput(ns("summary_current_year_animals"), "Year of Interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
-        sliderInput(ns("summary_comparison_year_animals"), "Comparison Year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
+        sliderInput(ns("summary_current_year_animals"), "Year of interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
+        sliderInput(ns("summary_comparison_year_animals"), "Comparison year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
       ),
       mainPanel(
         id = ns("mainpanel"),
@@ -43,29 +43,65 @@ animalsSummaryUI <- function(id) {
                      style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
                      HTML("<strong>Note:</strong> Poultry estimates for 2023 are not comparable to previous years due to methodological improvements.")
                    )
-          )
+          ),
+          tabPanel("Data Table",
+                   fluidRow(
+                     column(12,
+                            DTOutput(ns("data_table")),
+                            tags$div(
+                              style = "margin-top: 20px;",
+                              downloadButton(ns("download_data"), "Download Data")
+                            )
+                     )
+                   )
+          ),
+          footer = generateCensusTableFooter()  
         )
       )
     )
   )
 }
 
-
-# Server for Summary Animals Module
 animalsSummaryServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     current_year <- reactive({ input$summary_current_year_animals })
     comparison_year <- reactive({ input$summary_comparison_year_animals })
+    
     valueBoxServer("totalCattle", full_data_animals, "Animal_Type", reactive("Total cattle"), current_year, comparison_year, "cattle")
     valueBoxServer("totalSheep", full_data_animals, "Animal_Type", reactive("Total sheep"), current_year, comparison_year, "sheep")
     valueBoxServer("totalPigs", full_data_animals, "Animal_Type", reactive("Total pigs"), current_year, comparison_year, "pigs")
     valueBoxServer("totalPoultry", full_data_animals, "Animal_Type", reactive("Total poultry"), current_year, comparison_year, "poultry")
     
+    # Pivot the data wider
+    pivoted_data <- reactive({
+      full_data_animals() %>%
+        pivot_wider(names_from = Animal_Type, values_from = Value) %>%
+        mutate(across(where(is.numeric) & !contains("Year"), comma))
+    })
     
+    # Render the pivoted data table
+    output$data_table <- renderDT({
+      datatable(pivoted_data(), options = list(
+        scrollX = TRUE,   # Enable horizontal scrolling
+        pageLength = 20   # Show 20 entries by default
+      ))
+    })
+    
+    # Download handler for the pivoted data
+    output$download_data <- downloadHandler(
+      filename = function() {
+        paste("Animal_Summary_Data_", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(pivoted_data(), file, row.names = FALSE)
+      }
+    )
   })
 }
+
+
 
 # Testing module
 content_demo <- function() {

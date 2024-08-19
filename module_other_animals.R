@@ -62,7 +62,13 @@ otherAnimalsUI <- function(id) {
         id = ns("tabsetPanel"),
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("downloadData"), "Download Data"),
+                 generateCensusTableFooter()
+
+                 
+        )
       )
     )
   )
@@ -94,7 +100,8 @@ otherAnimalsServer <- function(id) {
       }),
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Other Animals Distribution by Region"
+      title = paste("Other animals distribution by region in Scotland in", census_year),
+      legend_title = "Number of animals"
     )
     
     chart_data <- reactive({
@@ -106,13 +113,12 @@ otherAnimalsServer <- function(id) {
         mutate(year = as.numeric(year))  # Ensure year is numeric
       filtered_data
     })
-  
     
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Other Animals Area Chart Data",
-      yAxisTitle = "Number of Animals (1,000)",
+      title = "Number of other animals over time",
+      yAxisTitle = "Number of animals (1,000)",
       xAxisTitle = "Year",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "year",
@@ -125,13 +131,49 @@ otherAnimalsServer <- function(id) {
         req(input$variable)
         other_animals_data %>%
           filter(`Livestock by category` == input$variable) %>%
-          datatable()
+          pivot_wider(names_from = sub_region, values_from = value)  %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       } else {
         number_of_other_livestock %>%
-          pivot_longer(cols = -`Cattle by category`, names_to = "year", values_to = "value") %>%
-          datatable()
+          pivot_longer(cols = -`Livestock by category`, names_to = "year", values_to = "value") %>%
+          pivot_wider(names_from = year, values_from = value)  %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       }
     })
+    
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Other_Animals_Map_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Other_Animals_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          other_animals_data %>%
+            filter(`Livestock by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value)
+        } else {
+          number_of_other_livestock %>%
+            pivot_longer(cols = -`Livestock by category`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value)
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
+    )
   })
 }
 

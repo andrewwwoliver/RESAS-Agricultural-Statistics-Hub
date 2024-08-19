@@ -85,19 +85,19 @@ manureUI <- function(id) {
         tabPanel("Summary",
                  fluidRow(
                    column(width = 4,
-                          valueBoxManureUI(ns("total_manure"), "Total Manure Applied", 
+                          valueBoxManureUI(ns("total_manure"), "Total manure applied", 
                                            national_data$value[national_data$variable == "Manure"], "tonnes"),
                           p(style = "color: white;", "/"),
-                          valueBoxManureUI(ns("total_holdings"), "Total Holdings", 
+                          valueBoxManureUI(ns("total_holdings"), "Total holdings", 
                                            national_data$value[national_data$variable == "Holdings"], "holdings"),
                           p(style = "color: white;", "/"),
-                          valueBoxManureUI(ns("total_application_rate"), "Total Application Rate", 
+                          valueBoxManureUI(ns("total_application_rate"), "Total application rate", 
                                            national_data$value[national_data$variable == "Application rate"], "tonnes / hectare"),
                           p(style = "color: white;", "/"),
-                          valueBoxManureUI(ns("average_mixed_sward"), "Average Mixed Sward per Holding", 
+                          valueBoxManureUI(ns("average_mixed_sward"), "Average mixed sward per holding", 
                                            national_data$value[national_data$variable == "Average mixed sward area per holding"], "hectares"),
                           p(style = "color: white;", "/"),
-                          valueBoxManureUI(ns("average_grassland"), "Average Grassland Area per Holding", 
+                          valueBoxManureUI(ns("average_grassland"), "Average grassland area per holding", 
                                            national_data$value[national_data$variable == "Average grassland area per holding"], "hectares")
                    ),
                    column(width = 8,
@@ -106,9 +106,13 @@ manureUI <- function(id) {
                  ),
                  value = "map"
         ),
-        tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"), value = "data_table")
-      )
-    )
+        tabPanel("Data Table", 
+                 DTOutput(ns("data_table")), 
+                 downloadButton(ns("downloadData"), "Download Data"), 
+                 value = "data_table") ,
+        footer = generate2023ModuleTableFooter()  
+  )
+  )
   )
 }
 
@@ -132,16 +136,24 @@ manureServer <- function(id) {
         manure_data_long %>%
           filter(variable == input$variable)
       }),
-      unit = "tonnes / hectare",
+      unit = " ",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/" target="_blank">Source: Scottish Agricultural Census: Module June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Manure Quantity by Region"
+      title = paste("Manure quantity by region in Scotland in", census_year),
     )
     
     output$data_table <- renderDT({
       req(input$data_source)
+      
       if (input$data_source == "Map Data") {
-        datatable(manure_qty)
+        datatable(
+          manure_qty %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma)),
+          options = list(
+            scrollX = TRUE,     # Enable horizontal scrolling
+            pageLength = 20     # Show 20 entries by default
+          )
+        )
       }
     })
     
@@ -167,4 +179,4 @@ content_demo <- function() {
 }
 
 # Uncomment the line below to run the test
-# content_demo()
+#content_demo()

@@ -35,10 +35,6 @@ potatoesUI <- function(id) {
           "Select Data to Display",
           choices = c("Map Data" = "map", "Time Series Data" = "timeseries"),
           selected = "map"
-        ),
-        tags$div(
-          style = "width: 100%;",
-          downloadButton(ns("download_data"), "Download Data")
         )
       )
     ),
@@ -49,14 +45,15 @@ potatoesUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
         tabPanel("Area Chart", areaChartUI(ns("area"))),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("download_data"), "Download Data"),
+                  generateCensusTableFooter()
+        )
       )
     )
   )
 }
-# File: module_potatoes.R
-
-source("utils.R")
 
 potatoesServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -77,7 +74,8 @@ potatoesServer <- function(id) {
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Potatoes Distribution by Region (hectares)"
+      title = paste("Potatoes distribution by region in Scotland in", census_year),
+      legend_title = "Area (hectares)"
     )
     
     chart_data <- reactive({
@@ -92,8 +90,8 @@ potatoesServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Potatoes Area Planted",
-      yAxisTitle = "Area of Potatoes (1,000 hectares)",
+      title = "Area used to grow potatoes over time",
+      yAxisTitle = "Area of potatoes (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -104,8 +102,8 @@ potatoesServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Potatoes Area Planted",
-      yAxisTitle = "Area of Potatoes (1,000 hectares)",
+      title = "Area used to grow potatoes over time",
+      yAxisTitle = "Area of potatoes (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -117,18 +115,50 @@ potatoesServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        datatable(potatoes_subregion)
+        potatoes_map %>%
+          filter(`Land use by category` == input$variable) %>%
+          pivot_wider(names_from = sub_region, values_from = value)  %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       } else {
-        datatable(potatoes_data)
+        potatoes_data %>%
+          pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+          pivot_wider(names_from = year, values_from = value)  %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma))%>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       }
     })
     
-    output$download_data <- createDownloadHandler(
-      input = input,
-      file_map_name = "Potato_Subregion_Data.xlsx",
-      file_timeseries_name = "Potato_Timeseries_Data.xlsx",
-      map_data = potatoes_subregion,
-      timeseries_data = potatoes_data
+    output$download_data <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Potato_Subregion_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Potato_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          potatoes_map %>%
+            filter(`Land use by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value)
+        } else {
+          potatoes_data %>%
+            pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value)
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
     )
   })
 }
@@ -142,4 +172,3 @@ potatoes_demo <- function() {
 }
 
 potatoes_demo()
-

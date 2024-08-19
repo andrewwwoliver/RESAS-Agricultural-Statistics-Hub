@@ -1,11 +1,3 @@
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-
-# Assume the `createSourceText` function is defined elsewhere and sourced
-# source("createSourceText.R")
-
 # Coerce all relevant columns to character before pivoting
 occupiers_employees_subregion <- occupiers_employees_subregion %>%
   mutate(across(-`Occupiers and employees by category`, as.character))
@@ -40,11 +32,21 @@ employeesMapUI <- function(id) {
         tabPanel("Time Series", 
                  lineChartUI(ns("line_chart"), note_type = 2),  # Use note_type = 2 for the second note
                  value = "timeseries"),
-        tabPanel("Data Table", DTOutput(ns("data_table")), downloadButton(ns("downloadData"), "Download Data"), value = "data_table")
+        tabPanel("Data Table", 
+                 DTOutput(ns("data_table")),
+                 div(
+                   style = "background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-top: 10px; font-style: bold;",
+                   "Note: Migrant labour is not directly comparable to other employee measures as it is measured in person working days."
+                 ),  # Separate note about migrant labour
+                 downloadButton(ns("downloadData"), "Download Data"),   
+                 generateCensusTableFooter(),  # Existing footer
+
+                 value = "data_table")
       )
     )
   )
 }
+
 
 employeesMapServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -83,13 +85,15 @@ employeesMapServer <- function(id) {
     # Pivot the chart data wider for the data table view
     pivoted_chart_data <- reactive({
       chart_data() %>%
-        pivot_wider(names_from = Year, values_from = Value)
+        pivot_wider(names_from = Year, values_from = Value) %>%
+        mutate(across(where(is.numeric) & !contains("Year"), comma))
     })
     
     # Pivot the map data wider for the data table view
     pivoted_regions_data <- reactive({
       filtered_regions_data %>%
-        pivot_wider(names_from = sub_region, values_from = value)
+        pivot_wider(names_from = sub_region, values_from = value) %>%
+        mutate(across(where(is.numeric) & !contains("Year"), comma))
     })
     
     # Time series chart rendering
@@ -100,7 +104,7 @@ employeesMapServer <- function(id) {
         chart_data() %>%
           filter(`Occupiers and employees by category` %in% input$variables)
       }),
-      title = "Agricultural Employees Time Series",
+      title = "Agricultural employees over time",
       yAxisTitle = "Employees (1,000)",
       xAxisTitle = "Year",
       unit = "employees",
@@ -120,7 +124,8 @@ employeesMapServer <- function(id) {
       unit = "employees",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Agricultural Employees by Region"
+      title = paste("Agricultural employees by region in Scotland in", census_year),
+      legend_title = "Number of employees"
     )  
     
     # Render the data table with scrollable options for both chart and map data

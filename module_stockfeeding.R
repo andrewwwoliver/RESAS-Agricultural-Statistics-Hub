@@ -11,8 +11,7 @@ stockfeedingUI <- function(id) {
         radioButtons(
           ns("variable"), 
           "Select Variable", 
-          choices = unique(stockfeeding_subregion$`Land use by category`),
-          
+          choices = unique(stockfeeding_subregion$`Land use by category`)
         )
       ),     
       conditionalPanel(
@@ -50,7 +49,12 @@ stockfeedingUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
         tabPanel("Area Chart", areaChartUI(ns("area"))),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("download_data"), "Download Data"),
+                 generateCensusTableFooter()
+
+        )
       )
     )
   )
@@ -75,7 +79,8 @@ stockfeedingServer <- function(id) {
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Stockfeeding Area Distribution by Region (hectares)"
+      title = paste("Stockfeeding crops distribution by region in Scotland in", census_year),
+      legend_title = "Area (hectares)"
     )
     
     chart_data <- reactive({
@@ -90,8 +95,8 @@ stockfeedingServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Stockfeeding Area Planted",
-      yAxisTitle = "Area of Stockfeeding Crops (1,000 hectares)",
+      title = "Area used to grow crops for stockfeeding over time",
+      yAxisTitle = "Area of crops (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -102,8 +107,8 @@ stockfeedingServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Stockfeeding Area Planted",
-      yAxisTitle = "Area of Stockfeeding Crops (1,000 hectares)",
+      title = "Area used to grow crops for stockfeeding over time",
+      yAxisTitle = "Area of crops (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -115,16 +120,53 @@ stockfeedingServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        stockfeeding_subregion %>%
-          datatable()
+        stockfeeding_map %>%
+          filter(`Land use by category` == input$variable) %>%
+          pivot_wider(names_from = sub_region, values_from = value) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       } else {
-        stockfeeding_data  %>%
-          datatable()
+        stockfeeding_data %>%
+          pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+          pivot_wider(names_from = year, values_from = value) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       }
     })
+    
+    output$download_data <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Stockfeeding_Subregion_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Stockfeeding_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          stockfeeding_map %>%
+            filter(`Land use by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value) %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma))
+        } else {
+          stockfeeding_data %>%
+            pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value) %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma))
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
+    )
   })
 }
-
 
 stockfeeding_demo <- function() {
   ui <- fluidPage(stockfeedingUI("stockfeeding_test"))
@@ -133,5 +175,4 @@ stockfeeding_demo <- function() {
   }
   shinyApp(ui, server)
 }
-
 stockfeeding_demo()

@@ -72,7 +72,8 @@ landUseSummaryUI <- function(id) {
                  DTOutput(ns("table")),
                  tags$div(
                    style = "margin-top: 20px;",
-                   downloadButton(ns("download_data"), "Download Data")
+                   downloadButton(ns("download_data"), "Download Data"),
+                   generateCensusTableFooter()
                  )
         )
       )
@@ -81,27 +82,41 @@ landUseSummaryUI <- function(id) {
 }
 
 
-
 landUseSummaryServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    land_use_map <- land_use_subregion %>%
-      select(-Scotland) %>%
-      mutate(across(everything(), as.character)) %>%
-      pivot_longer(cols = -`Land use by category`, names_to = "sub_region", values_to = "value") %>%
-      mutate(value = as.numeric(value))
+    # Map data remains unformatted for proper rendering
+    land_use_map <- reactive({
+      land_use_subregion %>%
+        select(-Scotland) %>%
+        mutate(across(everything(), as.character)) %>%
+        pivot_longer(cols = -`Land use by category`, names_to = "sub_region", values_to = "value") %>%
+        mutate(value = as.numeric(value))
+    })
+    
+    # Table data with formatted values for better readability
+    table_data <- reactive({
+      if (input$table_data == "map") {
+        land_use_subregion %>%
+          mutate(across(where(is.numeric), comma))  # Format numeric columns with commas
+      } else {
+        land_use_data %>%
+          mutate(across(where(is.numeric), comma))  # Format numeric columns with commas
+      }
+    })
     
     mapServer(
       id = "map",
       data = reactive({
         req(input$variable)
-        land_use_map %>% filter(`Land use by category` == input$variable)
+        land_use_map() %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Land Use by Region (hectares)"
+      title = paste("Land use by region in Scotland in", census_year),
+      legend_title = "Area (hectares)"
     )
     
     chart_data <- reactive({
@@ -113,19 +128,18 @@ landUseSummaryServer <- function(id) {
     
     timeseries_data <- reactive({
       req(input$timeseries_variables)
-      filtered_data <- land_use_data %>%
+      land_use_data %>%
         filter(`Crop/Land use` %in% input$timeseries_variables) %>%
         pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
         mutate(year = as.numeric(year))  # Ensure year is numeric
-      filtered_data
     })
     
     barChartServer(
       id = "bar_chart",
       chart_data = chart_data,
-      title = "Agricultural Area in 2023 by Land Use Type",
+      title = paste("Agricultural area by land use type in", census_year),
       yAxisTitle = "Area (1,000 hectares)",
-      xAxisTitle = "Land Use Type",
+      xAxisTitle = "Land use type",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       x_col = "Variable",
@@ -136,8 +150,8 @@ landUseSummaryServer <- function(id) {
     lineChartServer(
       id = "line",
       chart_data = timeseries_data,
-      title = "Land Use Chart Data",
-      yAxisTitle = "Area of Land Use (1,000 hectares)",
+      title = "Land use over time",
+      yAxisTitle = "Area of land use (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -145,27 +159,28 @@ landUseSummaryServer <- function(id) {
       y_col = "value"
     )
     
+    # Render the data table with formatted values
     output$table <- renderDT({
-      req(input$tabsetPanel == "Data Table")
-      if (input$table_data == "map") {
-        req(input$variable)
-        datatable(land_use_subregion, options = list(
-          scrollX = TRUE))
-      } else {
-        datatable(land_use_data, options = list(
-          scrollX = TRUE))
-      }
+      datatable(
+        table_data(),
+        options = list(
+          scrollX = TRUE,  # Enable horizontal scrolling
+          pageLength = 20  # Show 20 entries by default
+        )
+      )
     })
     
+    # Download handler with formatted values
     output$download_data <- createDownloadHandler(
       input = input,
       file_map_name = "Land Use Subregion Data 2023.xlsx",
       file_timeseries_name = "Land Use Timeseries Data 2012 to 2023.xlsx",
-      map_data = land_use_subregion,
-      timeseries_data = land_use_data
+      map_data = table_data(),  # Use the formatted data for download
+      timeseries_data = table_data()  # Use the formatted data for download
     )
   })
 }
+
 
 land_use_demo <- function() {
   ui <- fluidPage(landUseSummaryUI("land_use_test"))

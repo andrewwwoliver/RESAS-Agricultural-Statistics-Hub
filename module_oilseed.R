@@ -11,8 +11,7 @@ oilseedUI <- function(id) {
         radioButtons(
           ns("variable"), 
           "Select Variable", 
-          choices = unique(oilseed_subregion$`Land use by category`),
-          
+          choices = unique(oilseed_subregion$`Land use by category`)
         )
       ),
       conditionalPanel(
@@ -29,7 +28,6 @@ oilseedUI <- function(id) {
           )
         )
       ),
-      
       conditionalPanel(
         condition = "input.tabsetPanel === 'Data Table'",
         ns = ns,
@@ -48,7 +46,12 @@ oilseedUI <- function(id) {
         tabPanel("Map", mapUI(ns("map"))),
         tabPanel("Time Series", lineChartUI(ns("line"))),
         tabPanel("Area Chart", areaChartUI(ns("area"))),
-        tabPanel("Data Table", DTOutput(ns("table")))
+        tabPanel("Data Table", 
+                 DTOutput(ns("table")),
+                 downloadButton(ns("downloadData"), "Download Data"),
+                 generateCensusTableFooter()
+
+        )
       )
     )
   )
@@ -73,7 +76,8 @@ oilseedServer <- function(id) {
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
       variable = reactive(input$variable),
-      title = "Oilseed Distribution by Region (hectares)"
+      title = paste("Oilseed distribution by region in Scotland in", census_year),
+      legend_title = "Area (hectares)"
     )
     
     chart_data <- reactive({
@@ -88,8 +92,8 @@ oilseedServer <- function(id) {
     areaChartServer(
       id = "area",
       chart_data = chart_data,
-      title = "Oilseed Area Planted",
-      yAxisTitle = "Number of Oilseed (1,000)",
+      title = "Area used to grow oilseed in Scotland over time",
+      yAxisTitle = "Area of oilseed (1,000)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -101,7 +105,7 @@ oilseedServer <- function(id) {
       id = "line",
       chart_data = chart_data,
       title = "Oilseed Area Planted",
-      yAxisTitle = "Number of Oilseed (1,000)",
+      yAxisTitle = "Area of oilseed (1,000)",
       xAxisTitle = "Year",
       unit = "hectares",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
@@ -113,17 +117,55 @@ oilseedServer <- function(id) {
       req(input$tabsetPanel == "Data Table")
       if (input$table_data == "map") {
         req(input$variable)
-        oilseed_subregion %>%
-          datatable()
+        oilseed_map %>%
+          filter(`Land use by category` == input$variable) %>%
+          pivot_wider(names_from = sub_region, values_from = value) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       } else {
-        oilseed_data  %>%
-          datatable()
+        oilseed_data %>%
+          pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+          pivot_wider(names_from = year, values_from = value) %>%
+          datatable(
+            options = list(
+              scrollX = TRUE,  # Enable horizontal scrolling
+              pageLength = 20  # Show 20 entries by default
+            )
+          )
       }
     })
+    
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        if (input$table_data == "map") {
+          paste("Oilseed_Map_Data_", Sys.Date(), ".csv", sep = "")
+        } else {
+          paste("Oilseed_Timeseries_Data_", Sys.Date(), ".csv", sep = "")
+        }
+      },
+      content = function(file) {
+        data <- if (input$table_data == "map") {
+          oilseed_map %>%
+            filter(`Land use by category` == input$variable) %>%
+            pivot_wider(names_from = sub_region, values_from = value) %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma))
+        } else {
+          oilseed_data %>%
+            pivot_longer(cols = -`Crop/Land use`, names_to = "year", values_to = "value") %>%
+            pivot_wider(names_from = year, values_from = value) %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma))
+        }
+        write.csv(data, file, row.names = FALSE)
+      }
+    )
   })
 }
 
-
+# Testing module
 oilseed_demo <- function() {
   ui <- fluidPage(oilseedUI("oilseed_test"))
   server <- function(input, output, session) {

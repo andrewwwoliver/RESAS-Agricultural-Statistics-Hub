@@ -1,12 +1,3 @@
-# File: module_nitrogen_usage.R
-
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(DT)
-library(shinydashboard)
-
 # Load the data
 load("module_2023.RData")  # Assuming nitrogen_400 and nitrogen_250 are loaded from this file
 
@@ -87,22 +78,22 @@ nitrogenUI <- function(id) {
       width = 9,
       tabsetPanel(
         id = ns("tabs"),
-        tabPanel("Nitrogen Application (400 kg/Ha cap)",
+        tabPanel("Nitrogen Application (400 kg/ha cap)",
                  fluidRow(
                    column(width = 4,
-                          valueBoxNitrogenUI(ns("total_nitrogen_400"), "Total Nitrogen Applied", 
+                          valueBoxNitrogenUI(ns("total_nitrogen_400"), "Total nitrogen applied", 
                                              national_data_400[national_data_400$variable == "Total nitrogen", "value"], "kg"),
                           p(style = "color: white;", "/"),
-                          valueBoxNitrogenUI(ns("total_holdings_400"), "Total Holdings", 
+                          valueBoxNitrogenUI(ns("total_holdings_400"), "Total holdings", 
                                              national_data_400[national_data_400$variable == "Holdings", "value"], "holdings"),
                           p(style = "color: white;", "/"),
-                          valueBoxNitrogenUI(ns("total_application_rate_400"), "Total Application Rate", 
+                          valueBoxNitrogenUI(ns("total_application_rate_400"), "Total application rate", 
                                              national_data_400[national_data_400$variable == "Application rate", "value"], "kg / hectares"),
                           p(style = "color: white;", "/"),
-                          valueBoxNitrogenUI(ns("average_mixed_sward_400"), "Average Mixed Sward per Holding", 
+                          valueBoxNitrogenUI(ns("average_mixed_sward_400"), "Average mixed sward per holding", 
                                              national_data_400[national_data_400$variable == "Average mixed sward area per holding", "value"], "ha"),
                           p(style = "color: white;", "/"),
-                          valueBoxNitrogenUI(ns("average_grassland_400"), "Average Grassland Area per Holding", 
+                          valueBoxNitrogenUI(ns("average_grassland_400"), "Average grassland area per holding", 
                                              national_data_400[national_data_400$variable == "Average grassland area per holding", "value"], "ha")
                    ),
                    column(width = 8,
@@ -111,22 +102,22 @@ nitrogenUI <- function(id) {
                  ),
                  value = "map_400"
         ),
-        tabPanel("Nitrogen Application (250 kg/Ha cap)",
+        tabPanel("Nitrogen Application (250 kg/ha cap)",
                  fluidRow(
                    column(width = 4,
-                          valueBoxNitrogenUI(ns("total_nitrogen_250"), "Total Nitrogen Applied", 
+                          valueBoxNitrogenUI(ns("total_nitrogen_250"), "Total nitrogen applied", 
                                              national_data_250[national_data_250$variable == "Total nitrogen", "value"], "kg"),
                           p(style = "color: white;", "/"),
-                          valueBoxNitrogenUI(ns("total_holdings_250"), "Total Holdings", 
+                          valueBoxNitrogenUI(ns("total_holdings_250"), "Total holdings", 
                                              national_data_250[national_data_250$variable == "Holdings", "value"], "holdings"),
                           p(style = "color: white;", "/"),
-                          valueBoxNitrogenUI(ns("total_application_rate_250"), "Total Application Rate", 
+                          valueBoxNitrogenUI(ns("total_application_rate_250"), "Total application rate", 
                                              national_data_250[national_data_250$variable == "Application rate", "value"], "kg / hectare"),
                           p(style = "color: white;", "/"),
-                          valueBoxNitrogenUI(ns("average_mixed_sward_250"), "Average Mixed Sward per Holding", 
+                          valueBoxNitrogenUI(ns("average_mixed_sward_250"), "Average mixed sward per holding", 
                                              national_data_250[national_data_250$variable == "Average mixed sward area per holding", "value"], "hectare"),
                           p(style = "color: white;", "/"),
-                          valueBoxNitrogenUI(ns("average_grassland_250"), "Average Grassland Area per Holding", 
+                          valueBoxNitrogenUI(ns("average_grassland_250"), "Average grassland area per holding", 
                                              national_data_250[national_data_250$variable == "Average grassland area per holding", "value"], "hectare")
                    ),
                    column(width = 8,
@@ -139,7 +130,8 @@ nitrogenUI <- function(id) {
                  DTOutput(ns("data_table")),
                  downloadButton(ns("downloadData"), "Download Data"), 
                  value = "data_table"
-        )
+        ),
+        footer = generate2023ModuleTableFooter()  
       )
     )
   )
@@ -158,7 +150,7 @@ nitrogenServer <- function(id) {
       } else if (input$tabs == "map_250") {
         radioButtons(ns("variable_250"), "Select Variable", choices = variables_nitrogen)
       } else if (input$tabs == "data_table") {
-        radioButtons(ns("data_source"), "Choose data to show:", choices = c("400 kg/Ha cap", "250 kg/Ha cap"))
+        radioButtons(ns("data_source"), "Choose data to show:", choices = c("400 kg/ha cap", "250 kg/ha cap"))
       }
     })
     
@@ -169,11 +161,11 @@ nitrogenServer <- function(id) {
         nitrogen_400_long %>%
           filter(variable == input$variable_400)
       }),
-      unit = "kg / hectare",
+      unit = " ",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/" target="_blank">Source: Scottish Agricultural Census: Module June 2023</a></div>',
       variable = reactive(input$variable_400),
-      title = "Nitrogen Usage (400 kg/Ha cap) by Region"
-    )
+      title = paste("Nitrogen usage (400 kg/ha cap) by region in Scotland in", census_year),
+        )
     
     mapRegionsServer(
       id = "map_250",
@@ -182,31 +174,47 @@ nitrogenServer <- function(id) {
         nitrogen_250_long %>%
           filter(variable == input$variable_250)
       }),
-      unit = "kg / hectare",
+      unit = " ",
       footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/" target="_blank">Source: Scottish Agricultural Census: Module June 2023</a></div>',
       variable = reactive(input$variable_250),
-      title = "Nitrogen Usage (250 kg/Ha cap) by Region"
+      title = paste("Nitrogen usage (250 kg/ha cap) by region in Scotland in", census_year),
     )
     
     output$data_table <- renderDT({
       req(input$data_source)
-      if (input$data_source == "400 kg/Ha cap") {
-        datatable(nitrogen_400)
-      } else if (input$data_source == "250 kg/Ha cap") {
-        datatable(nitrogen_250)
+      
+      if (input$data_source == "400 kg/ha cap") {
+        datatable(
+          nitrogen_400 %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma)),
+          options = list(
+            scrollX = TRUE,     # Enable horizontal scrolling
+            pageLength = 20     # Show 20 entries by default
+          )
+        )
+      } else if (input$data_source == "250 kg/ha cap") {
+        datatable(
+          nitrogen_250 %>%
+            mutate(across(where(is.numeric) & !contains("Year"), comma)),
+          options = list(
+            scrollX = TRUE,     # Enable horizontal scrolling
+            pageLength = 20     # Show 20 entries by default
+          )
+        )
       }
     })
     
+    
     output$downloadData <- downloadHandler(
       filename = function() {
-        if (input$data_source == "400 kg/Ha cap") {
+        if (input$data_source == "400 kg/ha cap") {
           paste("nitrogen_data_400", Sys.Date(), ".csv", sep = "")
         } else {
           paste("nitrogen_data_250", Sys.Date(), ".csv", sep = "")
         }
       },
       content = function(file) {
-        if (input$data_source == "400 kg/Ha cap") {
+        if (input$data_source == "400 kg/ha cap") {
           write.csv(nitrogen_400, file, row.names = FALSE)
         } else {
           write.csv(nitrogen_250, file, row.names = FALSE)

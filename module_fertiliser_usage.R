@@ -18,7 +18,9 @@ fertiliserUsageUI <- function(id) {
                    DTOutput(ns("data_table")),
                    tags$div(
                      style = "margin-top: 20px;",
-                     downloadButton(ns("downloadData"), "Download Data")
+                     downloadButton(ns("downloadData"), "Download Data"),
+                     generateCensusTableFooter()
+                     
                    ),
                    value = ns("data"))
         )
@@ -31,6 +33,7 @@ fertiliserUsageServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
+    # Data for the chart (keeps numeric values unformatted)
     chart_data <- reactive({
       data <- manure_fertiliser
       if (!is.null(input$variables)) {
@@ -38,6 +41,12 @@ fertiliserUsageServer <- function(id) {
           filter(`Fertiliser by type` %in% input$variables)
       }
       data
+    })
+    
+    # Data for the table (formats numeric values with commas)
+    table_data <- reactive({
+      chart_data() %>%
+        mutate(across(where(is.numeric), comma))
     })
     
     output$variable_select <- renderUI({
@@ -78,6 +87,7 @@ fertiliserUsageServer <- function(id) {
       }
     })
     
+    # Bar chart rendering using unformatted data
     barChartServer(
       id = "bar_chart",
       chart_data = chart_data,
@@ -91,18 +101,24 @@ fertiliserUsageServer <- function(id) {
       tooltip_format = tooltip_format
     )
     
+    # Data table rendering using formatted data
     output$data_table <- renderDT({
-      datatable(chart_data(), options = list(
-        scrollX = TRUE
-      ))
+      datatable(
+        table_data(),
+        options = list(
+          scrollX = TRUE,  # Enable horizontal scrolling
+          pageLength = 20  # Show 20 entries by default
+        )
+      )
     })
     
+    # Download handler for the data table with appropriate naming
     output$downloadData <- downloadHandler(
       filename = function() {
         paste("Fertiliser_Usage_Data_", Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
-        write.csv(chart_data(), file, row.names = FALSE)
+        write.csv(table_data(), file, row.names = FALSE)
       }
     )
   })

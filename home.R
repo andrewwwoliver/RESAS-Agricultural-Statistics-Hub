@@ -116,7 +116,7 @@ homeUI <- function(id) {
           tags$li("Charts: Hover over chart elements to see detailed data. Click and drag on an area of the graph to zoom in to see an area in more detail. Press the reset zoom button to return to the default view."),
           tags$li("Checkboxes: Select or deselect checkboxes to include or exclude variables from the charts."),
           tags$li("Sliders: Adjust the sliders to filter data based on specific years."),
-          tags$li("Multiple Inputs: Use the dropdown menus on some pages by clicking within the white box to select specific data categories. You can also type in the dropdown to quickly find the options you need."),
+          tags$li("Multiple inputs: Use the dropdown menus on some pages by clicking within the white box to select specific data categories. You can also type in the dropdown to quickly find the options you need."),
           tags$li("Data tables: Click on table headers to sort data. Use the search box to filter table contents. Click the download data button to save the data for your own use."),
           tags$li("Maps: Hover over regions on the map to see detailed statistics. Use the zoom and pan controls to navigate the map.")
         ),

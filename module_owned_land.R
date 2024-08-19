@@ -28,7 +28,8 @@ ownedLandUI <- function(id) {
                  value = "timeseries"),
         tabPanel("Data Table", 
                  DTOutput(ns("data_table")), 
-                 downloadButton(ns("downloadData"), "Download Data"), 
+                 downloadButton(ns("downloadData"), "Download Data"),   
+                 generateCensusTableFooter(),
                  value = "data_table")
       )
     )
@@ -64,7 +65,7 @@ ownedLandServer <- function(id) {
     lineChartServer(
       id = "line_chart",
       chart_data = filtered_owned_rented_land,
-      title = "Owned and Rented Land Timeseries",
+      title = "Area of holdings owned and rented across time",
       yAxisTitle = "Area (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
@@ -76,7 +77,8 @@ ownedLandServer <- function(id) {
     # Data Table with Scrollable X-Axis
     output$data_table <- renderDT({
       datatable(
-        wide_data(),
+        wide_data()  %>%
+          mutate(across(where(is.numeric) & !contains("Year"), comma)),
         options = list(
           scrollX = TRUE,
           pageLength = 20
