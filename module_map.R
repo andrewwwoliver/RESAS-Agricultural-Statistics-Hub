@@ -86,16 +86,16 @@ mapServer <- function(id, data, variable, unit = "", title, footer, legend_title
             useHTML = TRUE,
             headerFormat = "<b>{point.key}</b><br/>",
             pointFormatter = JS(sprintf("function() {
-              var value = this.value;
-              var formattedValue;
-              if (value >= 1000) {
-                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-              } else {
-                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
-              }
-              return '<b>' + this.sub_region + '</b><br/>' +
-                     '%s: ' + formattedValue + ' %s';
-            }", variable_name, unit))
+          var value = this.value;
+          var formattedValue;
+          if (value >= 1000) {
+            formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+          } else {
+            formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+          }
+          return '<b>' + this.sub_region + '</b><br/>' +
+                 '%s: ' + formattedValue + ' %s';
+        }", variable_name, unit))
           ),
           nullColor = '#E0E0E0'  # Color for regions with no data
         ) %>%
@@ -104,9 +104,7 @@ mapServer <- function(id, data, variable, unit = "", title, footer, legend_title
           min = 0,
           stops = color_stops(5),
           labels = list(
-            format = "{value:,.0f}"  # Ensure the labels show the correct values
-          )
-        ) %>%
+            format = "{value:,.0f}"))  %>%  
         hc_chart(reflow = TRUE) %>% # Make chart responsive
         hc_legend(
           layout = "vertical",            # Change layout to vertical
@@ -122,5 +120,6 @@ mapServer <- function(id, data, variable, unit = "", title, footer, legend_title
           itemMarginTop = 10              # Adjust the margin at the top of each item
         )
     })
+    
   })
 }

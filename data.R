@@ -135,6 +135,10 @@ for (table in names(table_names)) {
 }
 # Set all values in the 2022 column to NA
 number_of_poultry$`2022` <- NA
+
+crops_grass_area_subregion <- crops_grass_area_subregion %>%
+  rename(`Na h-Eileanan Siar` = `Na h Eileanan Siar`)
+
 # Save all tables to an RData file
 save(list = names(table_names), file = "census_data.RData")
 
