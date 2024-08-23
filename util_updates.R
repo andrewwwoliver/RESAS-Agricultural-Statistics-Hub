@@ -5,6 +5,7 @@
 ####
 #####################################
 
+### IMPORTANT
 #  WHENEVER YOU ARE UPDATING THE APP, ENSURE TO UPDATE THE FOOTER, IN UI.R WITH THE CURRENT DATE
 
 

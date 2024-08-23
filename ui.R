@@ -50,7 +50,7 @@ source("module_structure_information.R")
 create_footer <- function() {
   div(
     class = "footer",
-    span("Last Updated: 22/08/2024"),
+    span("Last Updated: 23/08/2024"),
     img(src = "sg.png", alt = "SG Logo", style = "height: 30px; margin-left: 10px;")
   )
 }
