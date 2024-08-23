@@ -126,7 +126,7 @@ farmTypesServer <- function(id) {
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Main farm type",
       unit = input$data_type,
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Main farm type",
       y_col = y_col,
       tooltip_format = tooltip_format,

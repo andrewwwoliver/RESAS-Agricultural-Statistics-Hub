@@ -1,322 +1,271 @@
-subsectorEmissionsUI <- function(id) {
+# File: module_map.R
+
+library(shiny)
+library(highcharter)
+library(geojsonio)
+library(dplyr)
+
+# Load the GeoJSON file
+geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
+
+# Convert GeoJSON to a Highcharts-compatible format
+geojson_list <- geojson_list(geojson_data)
+
+mapUI <- function(id) {
   ns <- NS(id)
   tagList(
-    sidebarLayout(
-      sidebarPanel(
-        width = 3,
-        conditionalPanel(
-          condition = "input.tabs != 'Summary_Page'",
-          ns = ns,
-          uiOutput(ns("variable_select")),
-          actionButton(ns("select_all_button"), "Select All"),
-          actionButton(ns("deselect_all_button"), "Deselect All"),
-          sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
-        ),
-        conditionalPanel(
-          condition = "input.tabs == 'Summary_Page'",
-          ns = ns,
-          sliderInput(ns("summary_current_year_subsector"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
-          sliderInput(ns("summary_comparison_year_subsector"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1, sep = "")
-        )
-      ),
-      
-      mainPanel(
-        id = ns("mainpanel"),
-        width = 9,
-        tabsetPanel(
-          id = ns("tabs"),
-          tabPanel("Summary Page",
-                   value = "Summary_Page",
-                   fluidRow(
-                     column(width = 12, div(class = "header-text", "Top 3 Emitting Subsectors:"))
-                   ),
-                   fluidRow(
-                     column(width = 4, valueBoxUI(ns("totalIndustry1_subsector")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, valueBoxUI(ns("totalIndustry2_subsector")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, valueBoxUI(ns("totalIndustry3_subsector")), style = "padding-right: 0; padding-left: 0;")
-                   ),
-                   fluidRow(
-                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
-                   ),
-                   fluidRow(
-                     column(width = 4, valueBoxUI(ns("totalValue_subsector")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryPieChart_subsector"), "Subsector Breakdown"), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryBarChart_subsector"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
-                   ),
-                   # New fluid row for combined charts
-                   fluidRow(
-                     column(width = 12, div(class = "header-text", "Combined Emissions Analysis:"))
-                   ),
-                   fluidRow(
-                     column(width = 4, chartUI(ns("industryLineChart_total"), "Industry Emissions Over Time")),
-                     column(width = 4, chartUI(ns("industryPieChart_gas"), "Gas Breakdown")),
-                     column(width = 4, chartUI(ns("industryBarChart_gas"), "Emissions by Category"))
-                   )
-          ),
-          tabPanel("Timelapse", timelapseBarChartUI(ns("timelapse_bar")), value = "Timelapse"),
-          tabPanel("Breakdown", highchartOutput(ns("breakdown")), value = "Breakdown"),
-          tabPanel("Time Series", lineChartUI(ns("line")), value = "Line_Chart"),
-          tabPanel("Area Chart", areaChartUI(ns("area")), value = "Area_Chart"),
-          tabPanel("Data Table",
-                   DTOutput(ns("data_table")),
-                   downloadButton(ns("downloadData"), "Download Data"),
-                   value = "Data_Table")
+    mainPanel(
+      htmlOutput(ns("title")),
+      highchartOutput(ns("map"), height = "75vh"),  # Set the height to be responsive
+      htmlOutput(ns("footer")),
+      div(
+        class = "note",
+        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+        HTML(
+          "<strong>Note:</strong><ul>
+          <li>Where areas are shaded in grey, the data has been suppressed to prevent disclosure of individual holdings.</li>
+            <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
+            <li>You can see data values for each variable by hovering your mouse over the region.</li>
+            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
+          </ul>"
         )
       )
     )
   )
 }
-subsectorEmissionsServer <- function(id) {
+
+mapServer <- function(id, data, variable, unit = "", title, footer) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Load the data from the other modules
-    full_data_total <- reactive({ national_total })
-    full_data_gas <- reactive({ agri_gas })
-    
-    # Reactive data for the line chart (Industry Emissions Over Time)
-    line_chart_data <- reactive({
-      data <- national_total
-      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
-      data <- data %>% filter(Industry %in% c("Agriculture", "Total"))
-      data
+    output$title <- renderUI({
+      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
     })
     
-    # Reactive data for the gas charts (Pie and Bar charts)
-    gas_chart_data <- reactive({
-      data <- agri_gas
-      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
-      if (!is.null(input$variables)) {
-        data <- data %>%
-          filter(Gas %in% input$variables)
-      }
-      data
+    output$footer <- renderUI({
+      HTML(footer)
     })
     
-    # Reactive data for the subsector module
+    filtered_data <- reactive({
+      req(variable)  # Ensure that variable is not null or missing
+      req(variable())  # Ensure that variable() is not null or missing
+      req(data())      # Ensure that data() is not null or missing
+      
+      first_col_name <- names(data())[1]  # Get the name of the first column dynamically
+      data() %>%
+        filter(!!sym(first_col_name) == variable())  # Use the first column name for filtering
+    })
+    output$map <- renderHighchart({
+      data <- filtered_data()
+      hc_data <- data %>% 
+        mutate(sub_region = as.character(sub_region)) %>%
+        select(sub_region, value) %>%
+        list_parse()
+      
+      variable_name <- variable()  # Get the selected variable name
+      
+      highchart(type = "map") %>%
+        hc_add_series(
+          mapData = geojson_list, 
+          joinBy = c("sub_region", "sub_region"),
+          data = hc_data,
+          borderColor = "#FFFFFF",
+          borderWidth = 0.5,
+          states = list(
+            hover = list(
+              color = "#BADA55"
+            )
+          ),
+          dataLabels = list(
+            enabled = FALSE  # Disable the overlays
+          ),
+          tooltip = list(
+            useHTML = TRUE,
+            headerFormat = "<b>{point.key}</b><br/>",
+            pointFormatter = JS(sprintf("function() {
+          var value = this.value;
+          var formattedValue;
+          if (value >= 1000) {
+            formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+          } else {
+            formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+          }
+          return '<b>' + this.sub_region + '</b><br/>' +
+                 '%s: ' + formattedValue + ' %s';
+        }", variable_name, unit))
+          ),
+          nullColor = '#E0E0E0'  # Color for regions with no data
+        ) %>%
+        hc_mapNavigation(enabled = TRUE) %>%
+        hc_colorAxis(
+          min = 0,
+          stops = color_stops(5),
+          labels = list(
+            format = "{value:,.0f}"  # Ensure the labels show the correct values
+          )
+        ) %>%
+        hc_chart(reflow = TRUE) %>% # Make chart responsive
+        hc_legend(
+          layout = "vertical",        # Change layout to vertical
+          align = "right",            # Align the legend to the right
+          verticalAlign = "middle",   # Align the legend to the middle vertically
+          title = list(text = "Legend", style = list(fontSize = '15px')),
+          itemStyle = list(
+            width = '150px',          # Adjust width as needed
+            style = "padding-right: 20px;"  # Add custom padding-right
+          ),
+          symbolHeight = 300          # Adjust the height of the color bar
+        )
+    })
+    
+    
+  })
+}
+
+# File: module_other_animals.R
+
+otherAnimalsUI <- function(id) {
+  ns <- NS(id)
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Map'",
+        ns = ns,
+        radioButtons(
+          ns("variable"), 
+          "Select Variable", 
+          choices = c(
+            "Goats and kids" = "Goats and kids",
+            "Deer" = "Deer",
+            "Horses" = "Horses",
+            "Donkeys" = "Donkeys",
+            "Camelids" = "Camelids",
+            "Beehives" = "Beehives"
+          )
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Time Series'",
+        ns = ns,
+        checkboxGroupInput(
+          ns("timeseries_variables"),
+          "Select Time Series Variables",
+          choices = c(
+            "Goats",
+            "Deer",
+            "Horses",
+            "Donkeys",
+            "Camelids",
+            "Beehives"
+          ),
+          selected = c(
+            "Goats",
+            "Deer",
+            "Horses",
+            "Donkeys",
+            "Camelids",
+            "Beehives"
+          )
+        )
+      ),
+      conditionalPanel(
+        condition = "input.tabsetPanel === 'Data Table'",
+        ns = ns,
+        radioButtons(
+          ns("table_data"),
+          "Select Data to Display",
+          choices = c("Map Data" = "map", "Chart Data" = "timeseries"),
+          selected = "map"
+        )
+      )
+    ),
+    mainPanel(
+      width = 9,
+      tabsetPanel(
+        id = ns("tabsetPanel"),
+        tabPanel("Map", mapUI(ns("map"))),
+        tabPanel("Time Series", lineChartUI(ns("line"))),
+        tabPanel("Data Table", DTOutput(ns("table")))
+      )
+    )
+  )
+}
+
+otherAnimalsServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    other_animals_data <- livestock_subregion %>%
+      filter(`Livestock by category` %in% c(
+        "Goats and kids",
+        "Deer",
+        "Horses",
+        "Donkeys",
+        "Camelids",
+        "Beehives"
+      )) %>%
+      select(-Scotland) %>%
+      mutate(across(everything(), as.character)) %>%
+      pivot_longer(cols = -`Livestock by category`, names_to = "sub_region", values_to = "value") %>%
+      mutate(value = safe_as_numeric(value))
+    
+    mapServer(
+      id = "map",
+      data = reactive({
+        req(input$variable)
+        other_animals_data %>% filter(`Livestock by category` == input$variable)
+      }),
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      variable = reactive(input$variable),
+      title = "Other Animals Distribution by Region"
+    )
+    
     chart_data <- reactive({
-      data <- subsector_total
-      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
-      if (!is.null(input$variables)) {
-        data <- data %>%
-          filter(Subsector %in% input$variables)
-      }
-      data
+      req(input$timeseries_variables)
+      filtered_data <- number_of_other_livestock %>%
+        mutate(across(-`Livestock by category`, as.numeric)) %>%
+        filter(`Livestock by category` %in% input$timeseries_variables) %>%
+        pivot_longer(cols = -`Livestock by category`, names_to = "year", values_to = "value") %>%
+        mutate(year = as.numeric(year))  # Ensure year is numeric
+      filtered_data
     })
     
-    output$variable_select <- renderUI({
-      choices <- unique(subsector_total$Subsector)
-      selected <- setdiff(choices, "Total")
-      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
-    })
-    
-    observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = setdiff(unique(subsector_total$Subsector), "Total"))
-    })
-    
-    observeEvent(input$deselect_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
-    })
-    
-    # Load and render the subsector charts
-    areaChartServer(
-      id = "area",
-      chart_data = chart_data,
-      title = "Agricultural Emissions by Subsector in Scotland",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
-    
-    timelapseBarChartServer(
-      id = "timelapse_bar",
-      chart_data = chart_data,
-      title = "Agricultural Greenhouse Gas Emissions Timelapse",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
     
     lineChartServer(
       id = "line",
       chart_data = chart_data,
-      title = "Agricultural Greenhouse Gas Emissions by Subsector in Scotland",
-      yAxisTitle = "Emissions (MtCO₂e)",
+      title = "Other Animals Area Chart Data",
+      yAxisTitle = "Number of Animals (1,000)",
       xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
+      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      x_col = "year",
+      y_col = "value"
     )
     
-    # Breakdown chart server logic
-    output$breakdown <- renderHighchart({
-      data_long <- subsector_source %>%
-        pivot_longer(cols = -Source, names_to = "Subsector", values_to = "Value") %>%
-        arrange(match(Source, rev(unique(Source))))
-      
-      unique_sources <- unique(data_long$Source)
-      color_map <- setNames(rev(preset_colors)[1:length(unique_sources)], unique_sources)
-      
-      series_data <- lapply(unique_sources, function(source) {
-        list(
-          name = source,
-          data = data_long %>%
-            filter(Source == source) %>%
-            arrange(match(Subsector, unique(data_long$Subsector))) %>%
-            pull(Value),
-          color = color_map[[source]]
-        )
-      })
-      
-      highchart() %>%
-        hc_chart(type = "bar", zoomType = "xy") %>%
-        hc_xAxis(categories = unique(data_long$Subsector), 
-                 labels = list(style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial'))) %>%
-        hc_yAxis(title = list(text = "Emissions (MtCO₂e)", style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial')),
-                 labels = list(style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial')),
-                 tickInterval = 0.5) %>%
-        hc_plotOptions(bar = list(
-          stacking = "normal",
-          groupPadding = 0,
-          pointPadding = 0.1,
-          borderWidth = 0
-        )) %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          headerFormat = "<span style='font-size: 16px; font-family: Arial'><b>{point.key}</b></span><br/>",
-          pointFormatter = JS("function() {
-            var value = this.y;
-            var formattedValue;
-            if (value >= 1000) {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            } else {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
-            }
-            return this.series.name + ': ' + formattedValue + ' MtCO₂e';
-          }"),
-          style = list(fontSize = "16px", fontFamily = "Arial")
-        ) %>%
-        hc_legend(
-          align = "right", 
-          verticalAlign = "middle", 
-          layout = "vertical",
-          itemStyle = list(fontSize = '16px', fontFamily = 'Arial', fontWeight = 'normal')
-        ) %>%
-        hc_add_series_list(series_data)
+    output$table <- renderDT({
+      req(input$tabsetPanel == "Data Table")
+      if (input$table_data == "map") {
+        req(input$variable)
+        other_animals_data %>%
+          filter(`Livestock by category` == input$variable) %>%
+          datatable()
+      } else {
+        number_of_other_livestock %>%
+          pivot_longer(cols = -`Cattle by category`, names_to = "year", values_to = "value") %>%
+          datatable()
+      }
     })
-    
-    render_data_table(
-      table_id = "data_table",
-      chart_data = chart_data,
-      output = output
-    )
-    
-    handle_data_download(
-      download_id = "downloadData",
-      chart_type = "Subsector",
-      chart_data = chart_data,
-      input = input,
-      output = output,
-      year_input = "year"
-    )
-    
-    # Summary Module for Subsector Emissions
-    current_year <- reactive({ input$summary_current_year_subsector })
-    comparison_year <- reactive({ input$summary_comparison_year_subsector })
-    
-    first_col_name <- "Subsector"
-    
-    valueBoxServer(
-      id = "totalIndustry1_subsector",
-      data = full_data_subsector,
-      category = first_col_name,
-      industry = get_industry(1, full_data_subsector, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalIndustry2_subsector",
-      data = full_data_subsector,
-      category = first_col_name,
-      industry = get_industry(2, full_data_subsector, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalIndustry3_subsector",
-      data = full_data_subsector,
-      category = first_col_name,
-      industry = get_industry(3, full_data_subsector, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalValue_subsector",
-      data = full_data_subsector,
-      category = first_col_name,
-      industry = reactive("Total"),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    summaryPieChartServer(
-      id = "industryPieChart_subsector",
-      data = full_data_subsector,
-      current_year = current_year,
-      category = first_col_name,
-      unit = "MtCO₂e"
-    )
-    summaryBarChartServer(
-      id = "industryBarChart_subsector",
-      data = full_data_subsector,
-      current_year = current_year,
-      comparison_year = comparison_year,
-      category = first_col_name,
-      unit = "MtCO₂e"
-    )
-    
-    # Combined Emissions Analysis Charts from the other modules
-    summaryLineChartServer(
-      id = "industryLineChart_total",
-      data = line_chart_data,
-      unit = "MtCO₂e"
-    )
-    
-    summaryPieChartServer(
-      id = "industryPieChart_gas",
-      data = gas_chart_data,
-      current_year = current_year,
-      category = "Gas",
-      unit = "MtCO₂e"
-    )
-    
-    summaryBarChartServer(
-      id = "industryBarChart_gas",
-      data = gas_chart_data,
-      current_year = current_year,
-      comparison_year = comparison_year,
-      category = "Gas",
-      unit = "MtCO₂e"
-    )
   })
 }
 
-subsector_demo <- function() {
-  ui <- fluidPage(subsectorEmissionsUI("subsector_test"))
+# Testing module
+other_animals_demo <- function() {
+  ui <- fluidPage(otherAnimalsUI("other_animals_test"))
   server <- function(input, output, session) {
-    subsectorEmissionsServer("subsector_test")
+    otherAnimalsServer("other_animals_test")
   }
   shinyApp(ui, server)
 }
 
-subsector_demo()
+other_animals_demo()

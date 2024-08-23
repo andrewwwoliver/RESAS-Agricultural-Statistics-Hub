@@ -1,16 +1,5 @@
 # File: module_sheep.R
 
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(geojsonio)
-library(DT)
-
-# Load the required module
-source("module_map.R")
-source("module_area_chart.R")
-source("module_line_chart.R")
 
 sheepUI <- function(id) {
   ns <- NS(id)
@@ -109,7 +98,7 @@ sheepServer <- function(id) {
         req(input$variable)
         sheep_data %>% filter(`Livestock by category` == input$variable)
       }),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Sheep distribution by region in Scotland in", census_year),
       legend_title = "Number of sheep"
@@ -130,7 +119,7 @@ sheepServer <- function(id) {
       title = "Number of sheep by category across time",
       yAxisTitle = "Number of sheep (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -141,7 +130,7 @@ sheepServer <- function(id) {
       title = "Number of sheep by category across time",
       yAxisTitle = "Number of sheep (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )

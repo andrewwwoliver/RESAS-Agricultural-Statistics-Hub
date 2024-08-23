@@ -1,11 +1,4 @@
-# File: module_manure.R
 
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(DT)
-library(shinydashboard)
 
 # Load the data
 load("module_2023.RData")
@@ -31,7 +24,6 @@ national_data <- manure_qty %>%
 # List of variables for radio buttons
 variables_manure <- colnames(manure_qty)[-1]
 
-source("module_regions_map.R")
 
 # Helper function to format numbers with commas and appropriate decimal places
 format_number <- function(number) {

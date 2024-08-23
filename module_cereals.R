@@ -50,8 +50,8 @@ cerealsUI <- function(id) {
         ns = ns,
         div("Adjust the sliders to compare data from different years.", 
             style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
-        sliderInput(ns("summary_current_year_cereals"), "Year of interest", min = 2012, max = 2023, value = 2023, step = 1, sep = ""),
-        sliderInput(ns("summary_comparison_year_cereals"), "Comparison year", min = 2012, max = 2023, value = 2022, step = 1, sep = "")
+        sliderInput(ns("summary_current_year_cereals"), "Year of interest", min = 2012, max = census_year, value = census_year, step = 1, sep = ""),
+        sliderInput(ns("summary_comparison_year_cereals"), "Comparison year", min = 2012, max = census_year, value = census_year-1, step = 1, sep = "")
       )
     ),
     mainPanel(
@@ -99,7 +99,7 @@ cerealsServer <- function(id) {
         cereals_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Cereals distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -121,7 +121,7 @@ cerealsServer <- function(id) {
       yAxisTitle = "Area of cereals (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -133,7 +133,7 @@ cerealsServer <- function(id) {
       yAxisTitle = "Area of cereals (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )

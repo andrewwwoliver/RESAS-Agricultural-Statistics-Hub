@@ -1,31 +1,5 @@
 # server.R
-# Source the necessary modules for server logic
-source("module_subsector_emissions.R")
-source("module_fertiliser_usage.R")
-source("module_map.R")
-source("module_employees.R")
-source("module_legal_responsibility.R")
-source("module_land_use_summary.R")
-source("module_farm_types.R")
-source("module_occupiers.R")
-source("module_owned_land.R")
-source("module_cattle.R")
-source("module_sheep.R")
-source("module_pigs.R")
-source("module_poultry.R")
-source("module_other_animals.R")
-source("module_cereals.R")
-source("module_oilseed.R")
-source("module_potatoes.R")
-source("module_beans.R")
-source("module_stockfeeding.R")
-source("module_human_vegetables.R")
-source("module_fruit.R")
-source("home.R")
-source("module_soil_testing.R")
-source("module_manure.R")
-source("module_nitrogen_usage.R")
-source("module_crops_summary.R")
+
 
 
 server <- function(input, output, session) {

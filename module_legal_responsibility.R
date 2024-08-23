@@ -98,7 +98,7 @@ legalResponsibilityServer <- function(id) {
       title = paste("Legal responsibility of holdings in Scotland", census_year),
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Legal responsibility",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Legal responsibility",
       y_col = y_col,
       tooltip_format = tooltip_format,

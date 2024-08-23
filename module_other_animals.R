@@ -98,7 +98,7 @@ otherAnimalsServer <- function(id) {
         req(input$variable)
         other_animals_data %>% filter(`Livestock by category` == input$variable)
       }),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Other animals distribution by region in Scotland in", census_year),
       legend_title = "Number of animals"
@@ -120,7 +120,7 @@ otherAnimalsServer <- function(id) {
       title = "Number of other animals over time",
       yAxisTitle = "Number of animals (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )

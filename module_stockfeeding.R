@@ -77,7 +77,7 @@ stockfeedingServer <- function(id) {
         stockfeeding_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Stockfeeding crops distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -99,7 +99,7 @@ stockfeedingServer <- function(id) {
       yAxisTitle = "Area of crops (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -111,7 +111,7 @@ stockfeedingServer <- function(id) {
       yAxisTitle = "Area of crops (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )

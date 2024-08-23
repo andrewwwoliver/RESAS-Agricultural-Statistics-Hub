@@ -1,9 +1,3 @@
-# File: module_map.R
-
-library(shiny)
-library(highcharter)
-library(geojsonio)
-library(dplyr)
 
 # Load the GeoJSON file
 geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")

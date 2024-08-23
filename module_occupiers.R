@@ -116,7 +116,7 @@ occupiersServer <- function(id) {
     
     # Bar Chart Footer
     output$pyramid_footer <- renderUI({
-      HTML('<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>')
+      HTML(census_footer)
     })
     
     # Bar Chart - Output
@@ -165,7 +165,7 @@ occupiersServer <- function(id) {
       title = "Agricultural occupiers over time",
       yAxisTitle = "Occupiers (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Year",
       y_col = "Value"
     )
@@ -175,7 +175,7 @@ occupiersServer <- function(id) {
       id = "map",
       data = regions_data,
       variable = reactive(input$variable),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       title = paste("Occupiers by region in Scotland in", census_year),
       legend_title = "Number of occupiers"   
       )

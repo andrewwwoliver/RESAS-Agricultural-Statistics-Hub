@@ -1,10 +1,11 @@
 ##options.R
-
+# Libraries
 library(shiny)
 library(highcharter)
 library(tidyverse)
 library(shinyWidgets)
 library(shinythemes)
+library(shinydashboard)
 library(rsconnect)
 library(png)
 library(htmltools)
@@ -12,6 +13,15 @@ library(DT)
 library(shinyjs)
 library(RColorBrewer)
 library(shinyjs)
+library(tidyr)
+library(geojsonio)
+
+# Load the .RData file containing the datasets
+load("ghg_data.RData")
+load("census_data.RData")
+load("crops_data.RData")
+load("total_animals.RData")
+load("module_2023.RData")
 
 
 # Highchart options
@@ -22,13 +32,6 @@ options(highcharter.lang = hcoptslang)
 
 # Load the theme
 thm <- source("hc_theme.R")$value
-
-# Load the .RData file containing the datasets
-load("ghg_data.RData")
-load("census_data.RData")
-load("crops_data.RData")
-load("total_animals.RData")
-load("module_2023.RData")
 
 
 # Preset list of colors

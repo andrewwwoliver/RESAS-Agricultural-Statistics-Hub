@@ -12,14 +12,12 @@ subsectorEmissionsUI <- function(id) {
         conditionalPanel(
           condition = "input.tabs == 'Summary_Page'",
           ns = ns,
-          # Add text above the sliders
           div("Adjust the sliders to compare data from different years.", 
               style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
-          sliderInput(ns("summary_current_year_subsector"), "Year of interest", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
-          sliderInput(ns("summary_comparison_year_subsector"), "Comparison year", min = 1990, max = 2022, value = 2021, step = 1, sep = "")
+          sliderInput(ns("summary_current_year_subsector"), "Year of interest", min = 1990, max = emissions_year, value = emissions_year, step = 1, sep = ""),
+          sliderInput(ns("summary_comparison_year_subsector"), "Comparison year", min = 1990, max = emissions_year, value = emissions_year - 1, step = 1, sep = "")
         )
       ),
-      
       mainPanel(
         id = ns("mainpanel"),
         width = 9,
@@ -36,7 +34,7 @@ subsectorEmissionsUI <- function(id) {
                      column(width = 4, chartUI(ns("industryLineChart_total")), style = "padding-right: 0; padding-left: 0;")
                    ),
                    fluidRow(
-                     column(width = 12, div(class = "header-text", "Emissions by subsector:"))
+                     column(width = 12, div(class = "header-text", style = "padding-top: 20px;" ,"Emissions by subsector:"))
                    ),
                    fluidRow(
                      column(width = 4, valueBoxUI(ns("totalIndustry1_subsector")), style = "padding-right: 0; padding-left: 0;"),
@@ -49,7 +47,7 @@ subsectorEmissionsUI <- function(id) {
                      column(width = 4, valueBoxUI(ns("totalIndustry5_subsector")), style = "padding-right: 0; padding-left: 0;")
                    ),
                    fluidRow(
-                     column(width = 12, div(class = "header-text", "Scottish agricultural emissions by gas type:"))
+                     column(width = 12, div(class = "header-text", style = "margin-top: 20px;" , "Scottish agricultural emissions by gas type:"))
                    ),
                    fluidRow(
                      column(width = 4, chartUI(ns("industryPieChart_gas"))),
@@ -62,6 +60,19 @@ subsectorEmissionsUI <- function(id) {
                               style = "font-size: 16px; font-weight: bold; text-align: left; margin-top: 5px;",
                               HTML(
                                 '<a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.'
+                              )
+                            )
+                     )
+                   ),
+                   fluidRow(
+                     column(width = 12, 
+                            div(
+                              class = "note",
+                              style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+                              HTML(
+                                "<strong>Note:</strong><ul>
+                                  <li>You can see data values by hovering your mouse over the content on charts.</li>
+                                </ul>"
                               )
                             )
                      )
@@ -81,6 +92,8 @@ subsectorEmissionsUI <- function(id) {
     )
   )
 }
+
+
 
 
 subsectorEmissionsServer <- function(id) {
@@ -138,7 +151,7 @@ subsectorEmissionsServer <- function(id) {
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
       unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>',
+      footer = emissions_footer,
       x_col = "Year",
       y_col = "Value"
     )
@@ -150,7 +163,7 @@ subsectorEmissionsServer <- function(id) {
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
       unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>',
+      footer = emissions_footer,
       x_col = "Year",
       y_col = "Value"
     )
@@ -162,7 +175,7 @@ subsectorEmissionsServer <- function(id) {
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
       unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>',
+      footer = emissions_footer,  
       x_col = "Year",
       y_col = "Value"
     )
@@ -174,8 +187,8 @@ subsectorEmissionsServer <- function(id) {
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Subsector",
       unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>'
-    )
+      footer = emissions_footer
+      )
     
     
     

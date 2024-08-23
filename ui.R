@@ -1,18 +1,24 @@
-source("options.R")
-source("utils.R")
-source("module_summary.R")
-source("module_line_chart.R")
-source("module_area_chart.R")
-source("module_bar_chart.R")
-source("module_percentage_bar_chart.R")
-source("module_timelapse_bar_chart.R")
-source("module_breakdown_chart.R")
-source("module_data_table.R")
-source("module_regions_map.R")
+source("util_updates.R")
+source("util_functions.R")
+source("util_options.R")
+source("hc_theme.R")
+
+
+source("function_summary.R")
+source("function_line_chart.R")
+source("function_area_chart.R")
+source("function_bar_chart.R")
+source("function_percentage_bar_chart.R")
+source("function_timelapse_bar_chart.R")
+source("function_breakdown_chart.R")
+source("function_data_table.R")
+source("function_regions_map.R")
+source("function_map.R")
+
+
 source("module_subsector_emissions.R")
 source("module_information.R")
 source("module_fertiliser_usage.R")
-source("module_map.R")
 source("module_employees.R")
 source("module_legal_responsibility.R")
 source("module_farm_types.R")
@@ -31,25 +37,24 @@ source("module_beans.R")
 source("module_stockfeeding.R")
 source("module_human_vegetables.R")
 source("module_fruit.R")
-source("home.R")
+source("module_home.R")
 source("module_economy_summary.R")
 source("module_animals_summary.R")
-source("hc_theme.R")
 source("module_soil_testing.R")
 source("module_manure.R")
 source("module_nitrogen_usage.R")
 source("module_crops_summary.R")
+source("module_structure_information.R")
 
-library(shinyjs)
-library(shinythemes)
 
 create_footer <- function() {
   div(
     class = "footer",
-    span("Last Updated: ", format(Sys.Date(), "%d/%m/%Y")),
+    span("Last Updated: 22/08/2024"),
     img(src = "sg.png", alt = "SG Logo", style = "height: 30px; margin-left: 10px;")
   )
 }
+
 
 # Integrate the home module into the main UI
 ui <- fluidPage(
@@ -60,7 +65,7 @@ ui <- fluidPage(
     includeHTML("google-analytics.html"),
     tags$script(HTML("
       $(document).on('click', 'a[data-value=\"home\"]', function() {
-        history.pushState(null, '', '/');
+        history.pushState(null, '', '/AgStatsHub');
       });
     "))
   ),
@@ -79,7 +84,8 @@ ui <- fluidPage(
                        tabPanel("Employees", value = "employees", employeesMapUI("employees")),
                        tabPanel("Occupiers", value = "occupiers", occupiersUI("occupiers")),
                        tabPanel("Ownership Status", value = "owned_land", ownedLandUI("owned_land")),
-                       tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility"))
+                       tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility")),
+                       tabPanel("Further Information", value = "structure_information", structureInformationUI("structure_information"))
             ),
             navbarMenu("Agri-Environment",
                        tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),

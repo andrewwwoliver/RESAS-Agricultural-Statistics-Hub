@@ -1,4 +1,4 @@
-# File: module_area_chart.R
+# File: function_area_chart.R
 areaChartUI <- function(id, note_type = 1) {
   ns <- NS(id)
   

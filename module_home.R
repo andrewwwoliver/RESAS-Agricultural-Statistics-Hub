@@ -19,7 +19,8 @@ homeUI <- function(id) {
           tags$li(actionLink(ns("nav_employees"), "Employees")),
           tags$li(actionLink(ns("nav_occupiers"), "Occupiers")),
           tags$li(actionLink(ns("nav_owned_land"), "Ownership Status")),
-          tags$li(actionLink(ns("nav_legal_responsibility"), "Legal Responsibility"))
+          tags$li(actionLink(ns("nav_legal_responsibility"), "Legal Responsibility")),
+          tags$li(actionLink(ns("nav_structure_information"), "Further Information"))
         ),
         tags$div(
           style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
@@ -58,17 +59,45 @@ homeUI <- function(id) {
           tags$li(actionLink(ns("nav_stockfeeding_module"), "Stockfeeding")),
           tags$li(actionLink(ns("nav_human_vegetables_module"), "Vegetables")),
           tags$li(actionLink(ns("nav_fruit_module"), "Fruit"))
+        ),
+        tags$div(
+          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
+          "Economy"
+        ),
+        tags$ul(
+          tags$li(actionLink(ns("nav_economy"), "Economy"))
         )
       ),
       mainPanel(
         width = 9,
         tags$div(
           style = "margin-top: 20px; font-size: 24px; font-weight: bold;",
-          "Welcome to the RESAS Agricultural Statistics Hub"
+          "Welcome to the RESAS Agricultural Statistics Hub."
         ),
         tags$p(
           style = "font-size: 16px;",
-          "This hub provides access to a variety of agricultural statistics and data visualisations developed by the RESAS (Rural & Environment Science & Analytical Services) division of the Scottish Government."
+          "This hub provides access to a variety of agricultural statistics and data visualisations developed by the RESAS (Rural & Environment Science & Analytical Services) division of the Scottish Government. This content is still in development. We would be grateful if you could fill in our ",
+          tags$a(href = "https://forms.office.com/e/Y9Eixgf4c1", target = "_blank", "feedback survey"),
+          ". You can also email us at ",
+          tags$a(href = "mailto:agric.stats@gov.scot", "agric.stats@gov.scot"),
+          "."
+        ),
+        tags$div(
+          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
+          "How to use the site"
+        ),
+        tags$p(
+          style = "font-size: 16px;",
+          "The site is divided into several sections, each accessible via the navigation bar at the top of the page. Each section contains interactive elements such as charts, tables, and maps, which can be selected through the sub-menu on each page. Here are some tips on how to interact with the site's features:"
+        ),
+        tags$ul(
+          style = "font-size: 16px;",
+          tags$li("Charts: Hover over chart elements to see detailed data. Click and drag on an area of the graph to zoom in to see an area in more detail. Press the reset zoom button to return to the default view."),
+          tags$li("Checkboxes: Select or deselect checkboxes to include or exclude variables from the charts."),
+          tags$li("Sliders: Adjust the sliders to filter data based on specific years."),
+          tags$li("Multiple inputs: Use the dropdown menus on some pages by clicking within the white box to select specific data categories. You can also type in the dropdown to quickly find the options you need."),
+          tags$li("Data tables: Click on table headers to sort data. Use the search box to filter table contents. Click the download data button to save the data for your own use."),
+          tags$li("Maps: Hover over regions on the map to see detailed statistics. Use the zoom and pan controls to navigate the map.")
         ),
         tags$div(
           style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
@@ -102,23 +131,6 @@ homeUI <- function(id) {
           tags$li(
             tags$a(href = "https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target = "_blank", "Scottish agriculture: economic reports")
           )
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "How to use the site"
-        ),
-        tags$p(
-          style = "font-size: 16px;",
-          "The site is divided into several sections, each accessible via the navigation bar at the top of the page. Each section contains interactive elements such as charts, tables, and maps, which can be selected through the sub-menu on each page. Here are some tips on how to interact with the site's features:"
-        ),
-        tags$ul(
-          style = "font-size: 16px;",
-          tags$li("Charts: Hover over chart elements to see detailed data. Click and drag on an area of the graph to zoom in to see an area in more detail. Press the reset zoom button to return to the default view."),
-          tags$li("Checkboxes: Select or deselect checkboxes to include or exclude variables from the charts."),
-          tags$li("Sliders: Adjust the sliders to filter data based on specific years."),
-          tags$li("Multiple inputs: Use the dropdown menus on some pages by clicking within the white box to select specific data categories. You can also type in the dropdown to quickly find the options you need."),
-          tags$li("Data tables: Click on table headers to sort data. Use the search box to filter table contents. Click the download data button to save the data for your own use."),
-          tags$li("Maps: Hover over regions on the map to see detailed statistics. Use the zoom and pan controls to navigate the map.")
         ),
         tags$div(
           style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
@@ -164,7 +176,9 @@ homeServer <- function(id) {
       beans_module = "beans_module",
       stockfeeding_module = "stockfeeding_module",
       human_vegetables_module = "human_vegetables_module",
-      fruit_module = "fruit_module"
+      fruit_module = "fruit_module",
+      structure_information = "structure_information",
+      economy = "economy"
     )
     
     # Set up observeEvent for each page

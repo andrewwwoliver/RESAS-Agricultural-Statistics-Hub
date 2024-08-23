@@ -1,5 +1,4 @@
 # File: module_poultry.R
-
 poultryUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
@@ -60,12 +59,16 @@ poultryUI <- function(id) {
                  DTOutput(ns("table")),
                  downloadButton(ns("downloadData"), "Download Data"),
                  generateCensusTableFooter()
-
         )
+      ),
+      div(
+        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+        HTML("<strong>Note:</strong> Poultry estimates for 2023 are not comparable to previous years due to methodological improvements.")
       )
     )
   )
 }
+
 
 poultryServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -89,7 +92,7 @@ poultryServer <- function(id) {
         req(input$variable)
         poultry_data %>% filter(`Livestock by category` == input$variable)
       }),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Poultry distribution by region in Scotland in", census_year),
       legend_title = "Number of poultry"

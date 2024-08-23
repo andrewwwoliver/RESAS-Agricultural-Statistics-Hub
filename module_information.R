@@ -1,16 +1,26 @@
-# module_information.R
-
 informationUI <- function(id) {
   ns <- NS(id)
   tagList(
     div(
       class = "container",
-      tags$div(style = "font-size: 24px; font-weight: bold;", "Publications:"),  # Bigger and bold title
+      # Add new section at the top
+      tags$div(style = "font-size: 24px; font-weight: bold;", "Other Sources:"),  # Bigger and bold title
+      tags$div(
+        style = "margin-top: 20px;",
+        tags$div(style = "font-size: 18px; font-weight: bold;", "Scottish Agriculture Greenhouse Gas Emissions and Nitrogen Use"),
+        p(HTML('For comprehensive data and insights, visit the <a href="https://www.gov.scot/collections/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use/" target="_blank">Scottish Agriculture Greenhouse Gas Emissions and Nitrogen Use</a> collection.'))
+      ),
+      # Existing sections
       tags$div(
         style = "margin-top: 20px;",
         tags$div(style = "font-size: 18px; font-weight: bold;", "Scottish Greenhouse Gas Statistics"),
         p(HTML('Official estimates of greenhouse gas emissions are available in the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a> publication.')),
-        tags$div(style = "font-size: 18px; font-weight: bold;", "Greenhouse Gas Inventory Reports"),
+        tags$div(
+          style = "margin-top: 20px;",
+          tags$div(style = "font-size: 18px; font-weight: bold;", "British Survey of Fertiliser Practice Report"),
+          p(HTML('To learn more about fertiliser practices in the UK, you can access the <a href="https://www.gov.uk/government/statistics/latest-british-survey-of-fertiliser-practice-report" target="_blank">British Survey of Fertiliser Practice Report</a>.'))
+        ),
+         tags$div(style = "font-size: 18px; font-weight: bold;", "Greenhouse Gas Inventory Reports"),
         p(a(href = "https://www.gov.scot/publications/estimated-dairy-emissions-mitigation-smart-inventory/", "Greenhouse gas inventory: estimated dairy emissions and their mitigation", target = "_blank")),
         tags$div(style = "font-size: 18px; font-weight: bold;", "Climate change evidence reports"),
         p(a(href = "https://www.gov.scot/publications/resas-climate-change-evidence-dairy-farmer-led-group/", "Dairy Farmer-led Group: climate change evidence", target = "_blank")),
@@ -30,7 +40,7 @@ informationUI <- function(id) {
         tags$div(style = "font-size: 18px; font-weight: bold;", "Greenhouse gas:"),
         p("A greenhouse gas is a gas which absorbs infrared radiation emitted from the surface of the Earth, helping to retain a portion of that energy in the atmosphere as heat."),
         tags$div(style = "font-size: 18px; font-weight: bold;", "LULUCF:"),
-        p("Estimates of emissions and removals from land use, land use change and forestry (LULUCF) depend critically on assumptions made on the rate of loss or gain of carbon in Scotland’s carbon rich soils. In Scotland, LULUCF activities, taken as a whole, acts as a slight source in recent years although acted as a net sink between 2009-2017, absorbing more greenhouse gas emissions than it releases."),
+        p("Estimates of emissions and removals from land use, land use change and forestry (LULUCF) depend critically on assumptions made on the rate of loss or gain of carbon in Scotland’s carbon-rich soils. In Scotland, LULUCF activities, taken as a whole, acts as a slight source in recent years although acted as a net sink between 2009-2017, absorbing more greenhouse gas emissions than it releases."),
         tags$div(style = "font-size: 18px; font-weight: bold;", "Methane (CH4):"),
         p("Methane is a greenhouse gas that is around 28 times more potent in the atmosphere than CO2 over a 100-year time horizon. Main sources include agriculture and landfill."),
         tags$div(style = "font-size: 18px; font-weight: bold;", "Metric tonne of carbon dioxide equivalent (MtCO₂e):"),

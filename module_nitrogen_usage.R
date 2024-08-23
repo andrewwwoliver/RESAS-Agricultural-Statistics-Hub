@@ -37,7 +37,6 @@ national_data_250 <- as.data.frame(
 # List of variables for radio buttons
 variables_nitrogen <- colnames(nitrogen_400)[-1]
 
-source("module_regions_map.R")
 
 
 

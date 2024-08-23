@@ -1,55 +1,74 @@
 ## data.R
 
+#########################################
+###
+### Data manipulation within this section:
+### 
+### >>> Census data
+###     > Further crops processing
+###     > Animal summary processing
+### >>> Emissions data
+### >>> 
+### >>> 2023 census module data
+###
+### --------------------------------
+###
+### How to update data:
+###
+### Individual instructions are available for each section. 
+###
+### Inputted will need to be in the same format as previous iterations unless
+### code is edited to adapt this. 
+###
+### Current data within the section primarily comes from the publicly available publication tables.
+###
+### Download the most recent tables from the publication, add them to the project directory, and modify the file path.
+###
+### Data processing is designed to be robust, but small changes within publications will likely lead to bugs needing fixed
+###
+### Ensure when updating census information that the all subsections are updated below.
+###
+#########################################
+
+# Libraries:
+
+
 library(readxl)
 library(openxlsx)
 library(dplyr)
 library(tidyr)
 
 
-
-# Load  data from the Excel file
-file_path <- "ghg_data.xlsx"
-agri_gas <- read_excel(file_path, sheet = "agri_gas")
-national_total <- read_excel(file_path, sheet = "national_total")
-subsector_total <- read_excel(file_path, sheet = "subsector_total")
-subsector_source <- read_excel(file_path, sheet = "subsector_source")
-
-agri_gas <- agri_gas %>% 
-  rename(Gas = ...1)
-
-# Reshape the data to long format
-agri_gas <- agri_gas %>% pivot_longer(cols = -Gas, names_to = "Year", values_to = "Value")
-national_total <- national_total %>% pivot_longer(cols = -Industry, names_to = "Year", values_to = "Value")
-subsector_total <- subsector_total %>% pivot_longer(cols = -Subsector, names_to = "Year", values_to = "Value")
-
-# Convert Year to numeric
-agri_gas$Year <- as.numeric(agri_gas$Year)
-national_total$Year <- as.numeric(national_total$Year)
-subsector_total$Year <- as.numeric(subsector_total$Year)
-
-# Merge the specified sources into 'Other emission source'
-subsector_source <- subsector_source %>%
-  mutate(
-    Source = ifelse(Source %in% c("Urea application", "Non-energy products from fuels and solvent use", "Other emission source"), 
-                    "Other emission source", 
-                    Source)
-  ) %>%
-  group_by(Source) %>%
-  summarise(across(everything(), sum)) %>%
-  ungroup()
-
-save(subsector_total, agri_gas, national_total, subsector_source, file = "ghg_data.RData")
-
-# load data
-load("ghg_data.RData")
-
-
-
-# File: load_tables.R
-
-library(readxl)
-library(dplyr)
-library(stringr)
+#########################################
+###
+###
+### Census Data: 
+###
+### Xlsx file originates from the published data tables in supporting documents
+### 2023 version: https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/
+###
+### To update, download the excel document and insert file into compendium working directory / file
+### Insert file path in the file_path below.
+### Check table_names for changes vs. the previous year's names and order
+### If the order is incorrect, change the table number accordingly
+###
+### Try to avoid renaming tables below unless necessary as these are referenced throughout the app
+### If changing any names, ensure all sourcing of the data matches changing (print_code.R can help to QA this)
+###
+### The data processing was designed for the 2023 census tables, and changes to tables may cause bugs
+### Processing aims to standardise all tables to make them compatible with the different visualisation modules
+### This includes removing the metadata above the tables, renaming headers, removing problematic trailing spaces, etc.
+###
+### Additional processing can be included if necessary (e.g. 2022 poultry removed to emphasise change in methodology)
+### Some data processing could be moved from within the server pages in the app to speed up loading & improve efficiency
+###
+### To update, run the code below.
+### QA results before saving as RData
+### RData is then loaded within options.RData
+###
+### Ensure the rest of the census code is ran subsequently after updating the base tables.
+###
+#########################################
 
 # Define file path
 file_path <- "June+Agricultural+Census+2023+Tables.xlsx"
@@ -58,7 +77,7 @@ file_path <- "June+Agricultural+Census+2023+Tables.xlsx"
 table_names <- c(
   "agricultural_area_hectares" = "Table_1",
   "vegetables_bulbs_fruit_area" = "Table_2",
-  "number_of_cattle" = "Table_3 ",
+  "number_of_cattle" = "Table_3 ", # this has a trailing space in the publication, if this gets fixed, change appropriately
   "number_of_sheep" = "Table_4 ",
   "number_of_pigs" = "Table_5",
   "number_of_poultry" = "Table_6",
@@ -78,6 +97,19 @@ table_names <- c(
   "arable_rotation" = "Table_20",
   "manure_fertiliser" = "Table_21"
 )
+# Function to remove rows until the first occurrence of "Source:" in the first column
+remove_until_source <- function(data) {
+  # Remove the first row (which is now the original header row)
+  data <- data[-1, ]
+  
+  # Now remove rows until the first occurrence of "Source:"
+  source_row <- which(str_detect(data[[1]], "^Source:"))
+  if (length(source_row) > 0) {
+    data <- data[(source_row + 1):nrow(data), ]
+  }
+  
+  return(data)
+}
 
 # Function to remove columns and rows that are all NAs
 clean_data <- function(data) {
@@ -93,6 +125,10 @@ clean_headers <- function(headers) {
   headers <- str_replace_all(headers, "\\s+", " ")  # Replace multiple spaces with a single space
   headers <- str_replace_all(headers, "\\b(North West|North East|South East|South West)\\b", "")  # Remove specific region names
   headers <- str_trim(headers)  # Trim again to remove any resulting leading or trailing spaces
+  
+  # Make headers unique
+  headers <- make.unique(headers, sep = "_")
+  
   return(headers)
 }
 
@@ -105,11 +141,20 @@ clean_cells <- function(data) {
 # Read each table, clean it, and assign to a variable
 for (table in names(table_names)) {
   sheet_name <- table_names[table]
-  data <- read_excel(file_path, sheet = sheet_name)
+  data <- read_excel(file_path, sheet = sheet_name, col_names = FALSE)  # Read data without headers
   
-  # Clean headers
-  headers <- names(data)
+  # Remove rows until the first occurrence of "Source:" in the first column
+  data <- remove_until_source(data)
+  
+  # Clean headers manually since the first row was treated as data
+  headers <- as.character(data[1, ])  # Take the first row as headers
   cleaned_headers <- clean_headers(headers)
+  
+  # Remove the first row that is now the headers
+  data <- data[-1, ]
+  
+  # Assign cleaned headers to the data
+  names(data) <- cleaned_headers
   
   # Remove columns with '5 year' in the header (case insensitive)
   columns_to_remove <- grep("5 year", cleaned_headers, ignore.case = TRUE)
@@ -117,9 +162,6 @@ for (table in names(table_names)) {
     data <- data[, -columns_to_remove]
     cleaned_headers <- cleaned_headers[-columns_to_remove]
   }
-  
-  # Assign cleaned headers to the data
-  names(data) <- cleaned_headers
   
   # Convert all columns except the first to numeric, setting non-numeric values to NA
   data <- data %>% mutate(across(-1, ~ as.numeric(as.character(.))))
@@ -133,6 +175,7 @@ for (table in names(table_names)) {
   
   assign(table, cleaned_data)
 }
+
 # Set all values in the 2022 column to NA
 number_of_poultry$`2022` <- NA
 
@@ -142,87 +185,19 @@ crops_grass_area_subregion <- crops_grass_area_subregion %>%
 # Save all tables to an RData file
 save(list = names(table_names), file = "census_data.RData")
 
-load("census_data.RData")
 
+# load to test
+#load("census_data.RData")
 
-
-
-# map data
-
-library(sf)
-library(dplyr)
-library(highcharter)
-library(geojsonio)
-library(rmapshaper)
-
-# Load the shapefile
-local_authorities <- st_read("Local_Authority_Boundaries_-_Scotland/pub_las.shp")
-
-mapping_data <- data.frame(
-  region = c("North West", "North West", "North West", "North West", 
-             "North East", "North East", "North East", 
-             "South East", "South East", "South East", "South East", "South East", 
-             "South East", "South East", "South East", "South East",
-             "South West", "South West", "South West", "South West", "South West", 
-             "South West", "South West", "South West", "South West", "South West", 
-             "South West", "South West", "South West", "South West", "South West", "South West"
-  ),
-  sub_region = c("Shetland", "Orkney", "Na h-Eileanan Siar", "Highland", 
-                 "Grampian", "Grampian", "Grampian", 
-                 "Tayside", "Tayside", "Tayside", "Fife", "Lothian", "Lothian", "Lothian", "Lothian", 
-                 "Scottish Borders", "East Central", "East Central", "East Central", 
-                 "Argyll & Bute", "Clyde Valley", "Clyde Valley", "Clyde Valley", "Clyde Valley", 
-                 "Clyde Valley", "Clyde Valley", "Clyde Valley", "Clyde Valley", "Ayrshire", "Ayrshire", "Ayrshire", 
-                 "Dumfries & Galloway"),
-  local_authority = c("Shetland Islands", "Orkney Islands", "Na h-Eileanan an Iar", "Highland", 
-                      "Aberdeen City", "Aberdeenshire", "Moray", 
-                      "Angus", "Dundee City", "Perth and Kinross", "Fife", "East Lothian", "City of Edinburgh", 
-                      "Midlothian", "West Lothian", "Scottish Borders", 
-                      "Clackmannanshire", "Falkirk", "Stirling", 
-                      "Argyll and Bute", "East Dunbartonshire", "East Renfrewshire", "Glasgow City", 
-                      "Inverclyde", "North Lanarkshire", "Renfrewshire", "South Lanarkshire", 
-                      "West Dunbartonshire", "East Ayrshire", "North Ayrshire", "South Ayrshire", 
-                      "Dumfries and Galloway")
-)
-
-# Merge the shapefile with the mapping data
-local_authorities <- local_authorities %>%
-  left_join(mapping_data, by = c("local_auth" = "local_authority"))
-
-# Ensure geometries are valid
-local_authorities <- st_make_valid(local_authorities)
-
-sub_regions <- local_authorities %>%
-  group_by(sub_region) %>%
-  summarise(geometry = st_union(geometry))
-
-st_write(sub_regions, "sub_regions.geojson", driver = "GeoJSON")
-
-# Load the GeoJSON file
-geojson_data <- geojson_read("sub_regions.geojson", what = "sp")
-
-geojson_data <- ms_simplify(geojson_data, keep = 0.001)
-
-geojson_write(geojson_data, file = "subregions_simplified.geojson")
-
-
-regions <- local_authorities %>%
-  group_by(region) %>%
-  summarise(geometry = st_union(geometry))
-
-st_write(regions, "regions.geojson", driver = "GeoJSON")
-
-Sys.setenv(OGR_GEOJSON_MAX_OBJ_SIZE = "0")
-
-regions_geojson <- geojson_read("regions.geojson", what = "sp")
-
-regions_geojson <- ms_simplify(regions_geojson, keep = 0.001)
-
-geojson_write(regions_geojson, file = "regions_simplified.geojson")
-
-##############----------------------###################
-
-#crops / fruit/veg
+#################################
+###
+### Processing for Crops / Fruit / Veg
+###
+### Run the code below to update
+###
+### Run whenever census data is updated
+###
+#################################
 
 # Print unique values 
 
@@ -395,7 +370,9 @@ save(
   file = "crops_data.RData"
 )
 
+### Animals summary data - Requires census tables
 
+load("census.RData")
 
 
 # Convert the wide format data into long format using pivot_longer
@@ -433,8 +410,84 @@ save(total_animals, file = "total_animals.RData")
 
 
 
+#########################################################################
+### 
+###
+### Emissions Data Processing
+###
+###
+##########################################################################
 
-# module 2023 data
+#agri_gas = Gas Breakdown of Emissions from Scottish agriculture greenhouse gas emissions and nitrogen use
+#subsector_total = Agricultural emissions broken down by subsector from Scottish agriculture greenhouse gas emissions and nitrogen use
+#subsector_source = Breakdown of subsectors by source from Scottish agriculture greenhouse gas emissions and nitrogen use
+#national_total = Yearly breakdown of Scottish Emissions from Scottish Greenhouse Gas Emissions publication
+
+# As of 2022-23 emissions publication, these were made available in excel sheet before being inputted into R
+# This could be repeated, or data could be read in from the difference sources, and manipulated into the same format
+
+# To update data, replace file path and run the below script.
+
+# Load  data from the Excel file
+file_path <- "ghg_data.xlsx"
+
+agri_gas <- read_excel(file_path, sheet = "agri_gas")
+national_total <- read_excel(file_path, sheet = "national_total")
+subsector_total <- read_excel(file_path, sheet = "subsector_total")
+subsector_source <- read_excel(file_path, sheet = "subsector_source")
+
+agri_gas <- agri_gas %>% 
+  rename(Gas = ...1)
+
+# Reshape the data to long format
+agri_gas <- agri_gas %>% pivot_longer(cols = -Gas, names_to = "Year", values_to = "Value")
+national_total <- national_total %>% pivot_longer(cols = -Industry, names_to = "Year", values_to = "Value")
+subsector_total <- subsector_total %>% pivot_longer(cols = -Subsector, names_to = "Year", values_to = "Value")
+
+# Convert Year to numeric
+agri_gas$Year <- as.numeric(agri_gas$Year)
+national_total$Year <- as.numeric(national_total$Year)
+subsector_total$Year <- as.numeric(subsector_total$Year)
+
+# Merge the specified sources into 'Other emission source'
+subsector_source <- subsector_source %>%
+  mutate(
+    Source = ifelse(Source %in% c("Urea application", "Non-energy products from fuels and solvent use", "Other emission source"), 
+                    "Other emission source", 
+                    Source)
+  ) %>%
+  group_by(Source) %>%
+  summarise(across(everything(), sum)) %>%
+  ungroup()
+
+save(subsector_total, agri_gas, national_total, subsector_source, file = "ghg_data.RData")
+
+# load data to test
+#load("ghg_data.RData")
+
+
+
+
+
+################################################################################
+
+###############################
+####
+#### Module 2023 data
+####
+#### This data comes from the 2023 Agricultural Census Module Results
+####
+#### https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/
+####
+#### The script extracts tables looking at soil management, fertiliser usage, manure, nitrogen
+#### and formats the data into formatting to be used in the modules.
+#### This minimises the amount of data processing done within the R Shiny app, improving running efficiency. 
+####
+#### This script should not need re-run as the module data will not be updated, though can be used
+#### as a baseline to include future year's module data.
+####
+#################################
+
 # Load necessary libraries
 library(readxl)
 library(stringr)
@@ -514,3 +567,5 @@ data_frames$grass_crop_nutrient_mgmt <- NULL
 
 # Save the data frames as a .RData file
 save(list = names(data_frames), file = "module_2023.RData", envir = list2env(data_frames))
+
+################################

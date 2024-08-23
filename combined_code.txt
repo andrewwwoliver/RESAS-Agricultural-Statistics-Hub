@@ -1,21 +1,5 @@
 ## File: app.R 
- # Source other elements
-source("module_line_chart.R")
-source("module_area_chart.R")
-source("module_data_table.R")
-source("module_percentage_bar_chart.R")
-source("options.R")
-source("module_summary.R")
-source("module_employees.R")
-source("module_legal_responsibility.R")
-source("module_fertiliser_usage.R")
-source("module_farm_types.R")
-source("module_occupiers.R")
-source("module_land_use_summary.R")
-source("module_owned_land.R")
-source("module_cattle.R")  # Added new module
-
-# Source the UI and server components
+ # Source the UI and server components
 source("ui.R")
 source("server.R")
 
@@ -26,56 +10,75 @@ shinyApp(ui = ui, server = server)
 ## File: data.R 
  ## data.R
 
+#########################################
+###
+### Data manipulation within this section:
+### 
+### >>> Census data
+###     > Further crops processing
+###     > Animal summary processing
+### >>> Emissions data
+### >>> 
+### >>> 2023 census module data
+###
+### --------------------------------
+###
+### How to update data:
+###
+### Individual instructions are available for each section. 
+###
+### Inputted will need to be in the same format as previous iterations unless
+### code is edited to adapt this. 
+###
+### Current data within the section primarily comes from the publicly available publication tables.
+###
+### Download the most recent tables from the publication, add them to the project directory, and modify the file path.
+###
+### Data processing is designed to be robust, but small changes within publications will likely lead to bugs needing fixed
+###
+### Ensure when updating census information that the all subsections are updated below.
+###
+#########################################
+
+# Libraries:
+
+
 library(readxl)
 library(openxlsx)
 library(dplyr)
 library(tidyr)
 
 
-
-# Load  data from the Excel file
-file_path <- "ghg_data.xlsx"
-agri_gas <- read_excel(file_path, sheet = "agri_gas")
-national_total <- read_excel(file_path, sheet = "national_total")
-subsector_total <- read_excel(file_path, sheet = "subsector_total")
-subsector_source <- read_excel(file_path, sheet = "subsector_source")
-
-agri_gas <- agri_gas %>% 
-  rename(Gas = ...1)
-
-# Reshape the data to long format
-agri_gas <- agri_gas %>% pivot_longer(cols = -Gas, names_to = "Year", values_to = "Value")
-national_total <- national_total %>% pivot_longer(cols = -Industry, names_to = "Year", values_to = "Value")
-subsector_total <- subsector_total %>% pivot_longer(cols = -Subsector, names_to = "Year", values_to = "Value")
-
-# Convert Year to numeric
-agri_gas$Year <- as.numeric(agri_gas$Year)
-national_total$Year <- as.numeric(national_total$Year)
-subsector_total$Year <- as.numeric(subsector_total$Year)
-
-# Merge the specified sources into 'Other emission source'
-subsector_source <- subsector_source %>%
-  mutate(
-    Source = ifelse(Source %in% c("Urea application", "Non-energy products from fuels and solvent use", "Other emission source"), 
-                    "Other emission source", 
-                    Source)
-  ) %>%
-  group_by(Source) %>%
-  summarise(across(everything(), sum)) %>%
-  ungroup()
-
-save(subsector_total, agri_gas, national_total, subsector_source, file = "ghg_data.RData")
-
-# load data
-load("ghg_data.RData")
-
-
-
-# File: load_tables.R
-
-library(readxl)
-library(dplyr)
-library(stringr)
+#########################################
+###
+###
+### Census Data: 
+###
+### Xlsx file originates from the published data tables in supporting documents
+### 2023 version: https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/
+###
+### To update, download the excel document and insert file into compendium working directory / file
+### Insert file path in the file_path below.
+### Check table_names for changes vs. the previous year's names and order
+### If the order is incorrect, change the table number accordingly
+###
+### Try to avoid renaming tables below unless necessary as these are referenced throughout the app
+### If changing any names, ensure all sourcing of the data matches changing (print_code.R can help to QA this)
+###
+### The data processing was designed for the 2023 census tables, and changes to tables may cause bugs
+### Processing aims to standardise all tables to make them compatible with the different visualisation modules
+### This includes removing the metadata above the tables, renaming headers, removing problematic trailing spaces, etc.
+###
+### Additional processing can be included if necessary (e.g. 2022 poultry removed to emphasise change in methodology)
+### Some data processing could be moved from within the server pages in the app to speed up loading & improve efficiency
+###
+### To update, run the code below.
+### QA results before saving as RData
+### RData is then loaded within options.RData
+###
+### Ensure the rest of the census code is ran subsequently after updating the base tables.
+###
+#########################################
 
 # Define file path
 file_path <- "June+Agricultural+Census+2023+Tables.xlsx"
@@ -84,7 +87,7 @@ file_path <- "June+Agricultural+Census+2023+Tables.xlsx"
 table_names <- c(
   "agricultural_area_hectares" = "Table_1",
   "vegetables_bulbs_fruit_area" = "Table_2",
-  "number_of_cattle" = "Table_3 ",
+  "number_of_cattle" = "Table_3 ", # this has a trailing space in the publication, if this gets fixed, change appropriately
   "number_of_sheep" = "Table_4 ",
   "number_of_pigs" = "Table_5",
   "number_of_poultry" = "Table_6",
@@ -104,6 +107,19 @@ table_names <- c(
   "arable_rotation" = "Table_20",
   "manure_fertiliser" = "Table_21"
 )
+# Function to remove rows until the first occurrence of "Source:" in the first column
+remove_until_source <- function(data) {
+  # Remove the first row (which is now the original header row)
+  data <- data[-1, ]
+  
+  # Now remove rows until the first occurrence of "Source:"
+  source_row <- which(str_detect(data[[1]], "^Source:"))
+  if (length(source_row) > 0) {
+    data <- data[(source_row + 1):nrow(data), ]
+  }
+  
+  return(data)
+}
 
 # Function to remove columns and rows that are all NAs
 clean_data <- function(data) {
@@ -119,6 +135,10 @@ clean_headers <- function(headers) {
   headers <- str_replace_all(headers, "\\s+", " ")  # Replace multiple spaces with a single space
   headers <- str_replace_all(headers, "\\b(North West|North East|South East|South West)\\b", "")  # Remove specific region names
   headers <- str_trim(headers)  # Trim again to remove any resulting leading or trailing spaces
+  
+  # Make headers unique
+  headers <- make.unique(headers, sep = "_")
+  
   return(headers)
 }
 
@@ -131,11 +151,20 @@ clean_cells <- function(data) {
 # Read each table, clean it, and assign to a variable
 for (table in names(table_names)) {
   sheet_name <- table_names[table]
-  data <- read_excel(file_path, sheet = sheet_name)
+  data <- read_excel(file_path, sheet = sheet_name, col_names = FALSE)  # Read data without headers
   
-  # Clean headers
-  headers <- names(data)
+  # Remove rows until the first occurrence of "Source:" in the first column
+  data <- remove_until_source(data)
+  
+  # Clean headers manually since the first row was treated as data
+  headers <- as.character(data[1, ])  # Take the first row as headers
   cleaned_headers <- clean_headers(headers)
+  
+  # Remove the first row that is now the headers
+  data <- data[-1, ]
+  
+  # Assign cleaned headers to the data
+  names(data) <- cleaned_headers
   
   # Remove columns with '5 year' in the header (case insensitive)
   columns_to_remove <- grep("5 year", cleaned_headers, ignore.case = TRUE)
@@ -143,9 +172,6 @@ for (table in names(table_names)) {
     data <- data[, -columns_to_remove]
     cleaned_headers <- cleaned_headers[-columns_to_remove]
   }
-  
-  # Assign cleaned headers to the data
-  names(data) <- cleaned_headers
   
   # Convert all columns except the first to numeric, setting non-numeric values to NA
   data <- data %>% mutate(across(-1, ~ as.numeric(as.character(.))))
@@ -159,6 +185,7 @@ for (table in names(table_names)) {
   
   assign(table, cleaned_data)
 }
+
 # Set all values in the 2022 column to NA
 number_of_poultry$`2022` <- NA
 
@@ -168,87 +195,19 @@ crops_grass_area_subregion <- crops_grass_area_subregion %>%
 # Save all tables to an RData file
 save(list = names(table_names), file = "census_data.RData")
 
-load("census_data.RData")
 
+# load to test
+#load("census_data.RData")
 
-
-
-# map data
-
-library(sf)
-library(dplyr)
-library(highcharter)
-library(geojsonio)
-library(rmapshaper)
-
-# Load the shapefile
-local_authorities <- st_read("Local_Authority_Boundaries_-_Scotland/pub_las.shp")
-
-mapping_data <- data.frame(
-  region = c("North West", "North West", "North West", "North West", 
-             "North East", "North East", "North East", 
-             "South East", "South East", "South East", "South East", "South East", 
-             "South East", "South East", "South East", "South East",
-             "South West", "South West", "South West", "South West", "South West", 
-             "South West", "South West", "South West", "South West", "South West", 
-             "South West", "South West", "South West", "South West", "South West", "South West"
-  ),
-  sub_region = c("Shetland", "Orkney", "Na h-Eileanan Siar", "Highland", 
-                 "Grampian", "Grampian", "Grampian", 
-                 "Tayside", "Tayside", "Tayside", "Fife", "Lothian", "Lothian", "Lothian", "Lothian", 
-                 "Scottish Borders", "East Central", "East Central", "East Central", 
-                 "Argyll & Bute", "Clyde Valley", "Clyde Valley", "Clyde Valley", "Clyde Valley", 
-                 "Clyde Valley", "Clyde Valley", "Clyde Valley", "Clyde Valley", "Ayrshire", "Ayrshire", "Ayrshire", 
-                 "Dumfries & Galloway"),
-  local_authority = c("Shetland Islands", "Orkney Islands", "Na h-Eileanan an Iar", "Highland", 
-                      "Aberdeen City", "Aberdeenshire", "Moray", 
-                      "Angus", "Dundee City", "Perth and Kinross", "Fife", "East Lothian", "City of Edinburgh", 
-                      "Midlothian", "West Lothian", "Scottish Borders", 
-                      "Clackmannanshire", "Falkirk", "Stirling", 
-                      "Argyll and Bute", "East Dunbartonshire", "East Renfrewshire", "Glasgow City", 
-                      "Inverclyde", "North Lanarkshire", "Renfrewshire", "South Lanarkshire", 
-                      "West Dunbartonshire", "East Ayrshire", "North Ayrshire", "South Ayrshire", 
-                      "Dumfries and Galloway")
-)
-
-# Merge the shapefile with the mapping data
-local_authorities <- local_authorities %>%
-  left_join(mapping_data, by = c("local_auth" = "local_authority"))
-
-# Ensure geometries are valid
-local_authorities <- st_make_valid(local_authorities)
-
-sub_regions <- local_authorities %>%
-  group_by(sub_region) %>%
-  summarise(geometry = st_union(geometry))
-
-st_write(sub_regions, "sub_regions.geojson", driver = "GeoJSON")
-
-# Load the GeoJSON file
-geojson_data <- geojson_read("sub_regions.geojson", what = "sp")
-
-geojson_data <- ms_simplify(geojson_data, keep = 0.001)
-
-geojson_write(geojson_data, file = "subregions_simplified.geojson")
-
-
-regions <- local_authorities %>%
-  group_by(region) %>%
-  summarise(geometry = st_union(geometry))
-
-st_write(regions, "regions.geojson", driver = "GeoJSON")
-
-Sys.setenv(OGR_GEOJSON_MAX_OBJ_SIZE = "0")
-
-regions_geojson <- geojson_read("regions.geojson", what = "sp")
-
-regions_geojson <- ms_simplify(regions_geojson, keep = 0.001)
-
-geojson_write(regions_geojson, file = "regions_simplified.geojson")
-
-##############----------------------###################
-
-#crops / fruit/veg
+#################################
+###
+### Processing for Crops / Fruit / Veg
+###
+### Run the code below to update
+###
+### Run whenever census data is updated
+###
+#################################
 
 # Print unique values 
 
@@ -421,7 +380,9 @@ save(
   file = "crops_data.RData"
 )
 
+### Animals summary data - Requires census tables
 
+load("census.RData")
 
 
 # Convert the wide format data into long format using pivot_longer
@@ -459,8 +420,84 @@ save(total_animals, file = "total_animals.RData")
 
 
 
+#########################################################################
+### 
+###
+### Emissions Data Processing
+###
+###
+##########################################################################
 
-# module 2023 data
+#agri_gas = Gas Breakdown of Emissions from Scottish agriculture greenhouse gas emissions and nitrogen use
+#subsector_total = Agricultural emissions broken down by subsector from Scottish agriculture greenhouse gas emissions and nitrogen use
+#subsector_source = Breakdown of subsectors by source from Scottish agriculture greenhouse gas emissions and nitrogen use
+#national_total = Yearly breakdown of Scottish Emissions from Scottish Greenhouse Gas Emissions publication
+
+# As of 2022-23 emissions publication, these were made available in excel sheet before being inputted into R
+# This could be repeated, or data could be read in from the difference sources, and manipulated into the same format
+
+# To update data, replace file path and run the below script.
+
+# Load  data from the Excel file
+file_path <- "ghg_data.xlsx"
+
+agri_gas <- read_excel(file_path, sheet = "agri_gas")
+national_total <- read_excel(file_path, sheet = "national_total")
+subsector_total <- read_excel(file_path, sheet = "subsector_total")
+subsector_source <- read_excel(file_path, sheet = "subsector_source")
+
+agri_gas <- agri_gas %>% 
+  rename(Gas = ...1)
+
+# Reshape the data to long format
+agri_gas <- agri_gas %>% pivot_longer(cols = -Gas, names_to = "Year", values_to = "Value")
+national_total <- national_total %>% pivot_longer(cols = -Industry, names_to = "Year", values_to = "Value")
+subsector_total <- subsector_total %>% pivot_longer(cols = -Subsector, names_to = "Year", values_to = "Value")
+
+# Convert Year to numeric
+agri_gas$Year <- as.numeric(agri_gas$Year)
+national_total$Year <- as.numeric(national_total$Year)
+subsector_total$Year <- as.numeric(subsector_total$Year)
+
+# Merge the specified sources into 'Other emission source'
+subsector_source <- subsector_source %>%
+  mutate(
+    Source = ifelse(Source %in% c("Urea application", "Non-energy products from fuels and solvent use", "Other emission source"), 
+                    "Other emission source", 
+                    Source)
+  ) %>%
+  group_by(Source) %>%
+  summarise(across(everything(), sum)) %>%
+  ungroup()
+
+save(subsector_total, agri_gas, national_total, subsector_source, file = "ghg_data.RData")
+
+# load data to test
+#load("ghg_data.RData")
+
+
+
+
+
+################################################################################
+
+###############################
+####
+#### Module 2023 data
+####
+#### This data comes from the 2023 Agricultural Census Module Results
+####
+#### https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/
+####
+#### The script extracts tables looking at soil management, fertiliser usage, manure, nitrogen
+#### and formats the data into formatting to be used in the modules.
+#### This minimises the amount of data processing done within the R Shiny app, improving running efficiency. 
+####
+#### This script should not need re-run as the module data will not be updated, though can be used
+#### as a baseline to include future year's module data.
+####
+#################################
+
 # Load necessary libraries
 library(readxl)
 library(stringr)
@@ -540,6 +577,8 @@ data_frames$grass_crop_nutrient_mgmt <- NULL
 
 # Save the data frames as a .RData file
 save(list = names(data_frames), file = "module_2023.RData", envir = list2env(data_frames))
+
+################################
 
 ## File: hc_theme.R 
  # hc_theme.R
@@ -649,184 +688,7 @@ thm <- hc_theme(
 options(highcharter.theme = thm)
 
 ## File: home.R 
- # Define UI for the home module
-homeUI <- function(id) {
-  ns <- NS(id)
-  fluidPage(
-    sidebarLayout(
-      sidebarPanel(
-        width = 3,
-        tags$div(
-          style = "margin-top: 0px; font-size: 24px; font-weight: bold;",
-          "Navigation"
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "Structure"
-        ),
-        tags$ul(
-          tags$li(actionLink(ns("nav_land_use"), "Land Use")),
-          tags$li(actionLink(ns("nav_farm_types"), "Farm Types")),
-          tags$li(actionLink(ns("nav_employees"), "Employees")),
-          tags$li(actionLink(ns("nav_occupiers"), "Occupiers")),
-          tags$li(actionLink(ns("nav_owned_land"), "Ownership Status")),
-          tags$li(actionLink(ns("nav_legal_responsibility"), "Legal Responsibility"))
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "Agri-Environment"
-        ),
-        tags$ul(
-          tags$li(actionLink(ns("nav_subsector"), "Agriculture Emissions")),
-          tags$li(actionLink(ns("nav_nitrogen"), "Nitrogen Usage")),
-          tags$li(actionLink(ns("nav_manure"), "Manure Usage")),
-          tags$li(actionLink(ns("nav_soil"), "Soil Testing")),
-          tags$li(actionLink(ns("nav_fertiliser"), "Fertiliser Usage")),
-          tags$li(actionLink(ns("nav_info"), "Further Information"))
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "Livestock"
-        ),
-        tags$ul(
-          tags$li(actionLink(ns("nav_animals_summary_module"), "Summary")),
-          tags$li(actionLink(ns("nav_cattle_module"), "Cattle")),
-          tags$li(actionLink(ns("nav_sheep_module"), "Sheep")),
-          tags$li(actionLink(ns("nav_pigs_module"), "Pigs")),
-          tags$li(actionLink(ns("nav_poultry_module"), "Poultry")),
-          tags$li(actionLink(ns("nav_other_animals_module"), "Other Animals"))
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "Crops"
-        ),
-        tags$ul(
-          tags$li(actionLink(ns("nav_crops_summary_module"), "Summary")),
-          tags$li(actionLink(ns("nav_cereals_module"), "Cereals")),
-          tags$li(actionLink(ns("nav_oilseed_module"), "Oilseed")),
-          tags$li(actionLink(ns("nav_potatoes_module"), "Potatoes")),
-          tags$li(actionLink(ns("nav_beans_module"), "Beans")),
-          tags$li(actionLink(ns("nav_stockfeeding_module"), "Stockfeeding")),
-          tags$li(actionLink(ns("nav_human_vegetables_module"), "Vegetables")),
-          tags$li(actionLink(ns("nav_fruit_module"), "Fruit"))
-        )
-      ),
-      mainPanel(
-        width = 9,
-        tags$div(
-          style = "margin-top: 20px; font-size: 24px; font-weight: bold;",
-          "Welcome to the RESAS Agricultural Statistics Hub"
-        ),
-        tags$p(
-          style = "font-size: 16px;",
-          "This hub provides access to a variety of agricultural statistics and data visualisations developed by the RESAS (Rural & Environment Science & Analytical Services) division of the Scottish Government."
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "Data sources"
-        ),
-        tags$p(
-          style = "font-size: 16px;",
-          "The data presented on this site is sourced from various RESAS publications, which provide comprehensive statistics on Scottish agriculture. These publications cover topics such as land use, farm types, employee demographics, livestock numbers, crop production, and agricultural emissions. Full results are available within each publication, whilst complete data tables are available within the supporting documentation of each publication."
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 16px; font-weight: bold;",
-          "Publications include:"
-        ),
-        tags$ul(
-          style = "font-size: 16px;",
-          tags$li(
-            tags$a(href = "https://www.gov.scot/collections/june-scottish-agricultural-census/", target = "_blank", "Scottish Agricultural Census: results")
-          ),
-          tags$li(
-            tags$a(href = "https://www.gov.scot/collections/scottish-farm-business-income-fbi-annual-estimates/", target = "_blank", "Scottish farm business income (FBI)")
-          ),
-          tags$li(
-            tags$a(href = "https://www.gov.scot/collections/scottish-cereal-harvest-estimates/", target = "_blank", "Scottish cereal harvest: estimates")
-          ),
-          tags$li(
-            tags$a(href = "https://www.gov.scot/collections/total-income-from-farming/", target = "_blank", "Total income from farming")
-          ),
-          tags$li(
-            tags$a(href = "https://www.gov.scot/collections/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use/", target = "_blank", "Scottish agriculture greenhouse gas emissions and nitrogen use")
-          ),
-          tags$li(
-            tags$a(href = "https://www.gov.scot/collections/economic-report-on-scottish-agriculture/", target = "_blank", "Scottish agriculture: economic reports")
-          )
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "How to use the site"
-        ),
-        tags$p(
-          style = "font-size: 16px;",
-          "The site is divided into several sections, each accessible via the navigation bar at the top of the page. Each section contains interactive elements such as charts, tables, and maps, which can be selected through the sub-menu on each page. Here are some tips on how to interact with the site's features:"
-        ),
-        tags$ul(
-          style = "font-size: 16px;",
-          tags$li("Charts: Hover over chart elements to see detailed data. Click and drag on an area of the graph to zoom in to see an area in more detail. Press the reset zoom button to return to the default view."),
-          tags$li("Checkboxes: Select or deselect checkboxes to include or exclude variables from the charts."),
-          tags$li("Sliders: Adjust the sliders to filter data based on specific years."),
-          tags$li("Multiple inputs: Use the dropdown menus on some pages by clicking within the white box to select specific data categories. You can also type in the dropdown to quickly find the options you need."),
-          tags$li("Data tables: Click on table headers to sort data. Use the search box to filter table contents. Click the download data button to save the data for your own use."),
-          tags$li("Maps: Hover over regions on the map to see detailed statistics. Use the zoom and pan controls to navigate the map.")
-        ),
-        tags$div(
-          style = "margin-top: 20px; font-size: 20px; font-weight: bold;",
-          "Feedback survey"
-        ),
-        tags$p(
-          style = "font-size: 16px;",
-          HTML("This content is still in development. We would be grateful if you could fill in our <a href='https://forms.office.com/e/Y9Eixgf4c1' target='_blank'>feedback survey</a>. You can also email us at <a href='mailto:agric.stats@gov.scot'>agric.stats@gov.scot</a>.")
-        )
-      )
-    )
-  )
-}
-
-homeServer <- function(id) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    # List of pages and their corresponding tab values
-    pages <- list(
-      land_use = "land_use",
-      farm_types = "farm_types",
-      employees = "employees",
-      occupiers = "occupiers",
-      owned_land = "owned_land",
-      legal_responsibility = "legal_responsibility",
-      subsector = "subsector",
-      nitrogen = "nitrogen",
-      manure = "manure",
-      soil = "soil",
-      fertiliser = "fertiliser",
-      info = "info",
-      animals_summary_module = "animals_summary_module",  # Working summary animals module
-      cattle_module = "cattle_module",
-      sheep_module = "sheep_module",
-      pigs_module = "pigs_module",
-      poultry_module = "poultry_module",
-      other_animals_module = "other_animals_module",
-      crops_summary_module = "crops_summary_module",  # Adding the crops summary module
-      cereals_module = "cereals_module",
-      oilseed_module = "oilseed_module",
-      potatoes_module = "potatoes_module",
-      beans_module = "beans_module",
-      stockfeeding_module = "stockfeeding_module",
-      human_vegetables_module = "human_vegetables_module",
-      fruit_module = "fruit_module"
-    )
-    
-    # Set up observeEvent for each page
-    lapply(names(pages), function(page) {
-      observeEvent(input[[paste0("nav_", page)]], {
-        updateTabsetPanel(session, "navbar", selected = pages[[page]])
-        updateQueryString(paste0("?page=", pages[[page]]), mode = "push")
-      })
-    })
-  })
-}
+ 
 
 ## File: module_animals_summary.R 
  # module_summary_animals.R
@@ -946,188 +808,10 @@ content_demo <- function() {
 content_demo()
 
 ## File: module_area_chart.R 
- # File: module_area_chart.R
-areaChartUI <- function(id, note_type = 1) {
-  ns <- NS(id)
-  
-  note_content <- if (note_type == 2) {
-    "<strong>Note:</strong><ul>
-      <li>To add a series to the chart, click inside the white box on the sidebar and select a variable.</li>
-      <li>To remove a series, click the x beside the variable name within the sidebar.</li>
-      <li>Zoom into the graph by clicking and dragging over the area you wish to focus on.</li>
-      <li>You can see data values for a specific year by hovering your mouse over the area.</li>
-    </ul>"
-  } else {
-    "<strong>Note:</strong><ul>
-      <li>To add or remove a series from the chart, select/deselect the variable from the sidebar menu.</li>
-      <li>Zoom into the graph by clicking and dragging over the area you wish to focus on.</li>
-      <li>You can see data values for a specific year by hovering your mouse over the area.</li>
-    </ul>"
-  }
-  
-  tagList(
-    htmlOutput(ns("title")),
-    highchartOutput(ns("area_chart")),
-    htmlOutput(ns("footer")),
-    div(
-      class = "note",
-      style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-      HTML(note_content)
-    )
-  )
-}
-
-areaChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, unit = "", footer, x_col, y_col) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
-    
-    output$title <- renderUI({
-      year_min <- min(as.numeric(chart_data()[[x_col]]), na.rm = TRUE)
-      year_max <- max(as.numeric(chart_data()[[x_col]]), na.rm = TRUE)
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, ", ", year_min, " to ", year_max, "</div>"))
-    })
-    
-    output$footer <- renderUI({
-      HTML(footer)
-    })
-    
-    output$area_chart <- renderHighchart({
-      data <- chart_data()
-      colors <- reactive_colors()
-      group_column <- setdiff(names(data), c(x_col, y_col))[1] # Assuming only one group column
-      
-      hc <- highchart() %>%
-        hc_chart(type = "area", zoomType = "xy") %>%
-        hc_yAxis(title = list(text = yAxisTitle)) %>%
-        hc_xAxis(title = list(text = xAxisTitle), type = "category", tickInterval = 5) %>%
-        hc_plotOptions(area = list(stacking = "normal", stickyTracking = TRUE)) %>%
-        hc_legend(align = "left", alignColumns = FALSE, layout = "horizontal") %>%
-        hc_add_theme(thm)
-      
-      unique_groups <- unique(data[[group_column]])
-      lapply(unique_groups, function(g) {
-        series_data <- data[data[[group_column]] == g, ]
-        
-        # Create a complete sequence of years
-        complete_years <- seq(min(series_data[[x_col]], na.rm = TRUE), max(series_data[[x_col]], na.rm = TRUE))
-        complete_series <- merge(data.frame(x = complete_years), series_data, by.x = "x", by.y = x_col, all.x = TRUE)
-        complete_series <- complete_series %>% transmute(x = as.numeric(x), y = !!sym(y_col))
-        
-        hc <<- hc %>%
-          hc_add_series(name = g, data = list_parse2(complete_series), color = colors[[g]])
-      })
-      
-      hc %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          headerFormat = "<b>{point.key}</b><br/>",
-          pointFormatter = JS(sprintf("function() {
-            var value = this.y;
-            var formattedValue;
-            if (value >= 1000) {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            } else {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
-            }
-            return this.series.name + ': ' + formattedValue + ' %s';
-          }", unit))
-        )
-    })
-  })
-}
+ 
 
 ## File: module_bar_chart.R 
- # File: module_bar_chart_combined.R
-
-barChartUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    htmlOutput(ns("title")),
-    highchartOutput(ns("bar_chart")),
-    htmlOutput(ns("footer")),
-    div(
-      class = "note",
-      style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-      HTML(
-        "<strong>Note:</strong><ul>
-        <li>To add or remove a series from the chart, select/deselect the variable from the sidebar menu.</li>
-          <li>You can see data values for a specific variable by hovering your mouse over the bars.</li>
-
-        </ul>"
-      )
-    )
-  )
-}
-
-# File: module_bar_chart.R
-
-barChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, unit = "", tooltip_format = "", maintain_order = FALSE) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
-    
-    output$title <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
-    })
-    
-    output$footer <- renderUI({
-      HTML(footer)
-    })
-    
-    output$bar_chart <- renderHighchart({
-      data <- chart_data()
-      if (nrow(data) == 0) return(NULL)
-      colors <- reactive_colors()
-      group_column <- setdiff(names(data), c(x_col, if (is.reactive(y_col)) y_col() else y_col))[1]
-      
-      if (is.reactive(y_col)) {
-        y_col_value <- y_col()
-      } else {
-        y_col_value <- y_col
-      }
-      
-      if (!maintain_order) {
-        data <- data %>%
-          arrange(desc(!!sym(y_col_value)))  # Sort data by value in descending order
-      }
-      
-      highchart() %>%
-        hc_chart(type = "bar", inverted = TRUE, zoomType = "xy") %>%
-        hc_xAxis(categories = data[[x_col]], title = list(text = xAxisTitle)) %>%
-        hc_yAxis(title = list(text = if (is.reactive(yAxisTitle)) yAxisTitle() else yAxisTitle), allowDecimals = FALSE) %>%
-        hc_plotOptions(bar = list(
-          dataLabels = list(enabled = FALSE),
-          colorByPoint = TRUE,
-          groupPadding = 0,
-          pointPadding = 0.1,
-          borderWidth = 0
-        )) %>%
-        hc_add_series(
-          name = "",
-          data = data %>% mutate(y = !!sym(y_col_value), color = colors[!!sym(x_col)]) %>% 
-            select(name = !!sym(x_col), y, color),
-          colorByPoint = TRUE,
-          showInLegend = FALSE
-        ) %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          headerFormat = "<b>{point.key}</b><br/>",
-          pointFormatter = JS(sprintf("function() {
-            var value = this.y;
-            var formattedValue;
-            if (value >= 1000) {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            } else {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
-            }
-            return this.series.name + ': ' + formattedValue + ' %s';
-          }", unit))
-        ) %>%
-        hc_add_theme(thm)
-    })
-  })
-}
+ 
 
 ## File: module_beans.R 
  # File: module_beans.R
@@ -1205,7 +889,7 @@ beansServer <- function(id) {
         beans_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Beans distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -1227,7 +911,7 @@ beansServer <- function(id) {
       yAxisTitle = "Area of beans (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -1239,7 +923,7 @@ beansServer <- function(id) {
       yAxisTitle = "Area of beans (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -1299,98 +983,7 @@ beans_demo <- function() {
 beans_demo()
 
 ## File: module_breakdown_chart.R 
- breakdownChartUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    htmlOutput(ns("title")),
-    highchartOutput(ns("breakdown_chart")),
-    htmlOutput(ns("footer")),
-    div(
-      class = "note",
-      style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-      HTML(
-        "<strong>Note:</strong><ul>
-          <li>This chart shows the breakdown of emissions by subsector.</li>
-          <li>Use the filters on the sidebar to refine the data displayed.</li>
-          <li>Hover over the bars to see detailed information for each subsector.</li>
-        </ul>"
-      )
-    )
-  )
-}
-
-breakdownChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, unit = "", footer) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$title <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
-    })
-    
-    output$footer <- renderUI({
-      HTML(footer)
-    })
-    
-    output$breakdown_chart <- renderHighchart({
-      data_long <- chart_data() %>%
-        pivot_longer(cols = -Source, names_to = "Subsector", values_to = "Value") %>%
-        arrange(match(Source, rev(unique(Source))))
-      breakdown_colors = c("#2b9c93", "#002d54", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c")
-      
-      unique_sources <- unique(data_long$Source)
-      color_map <- setNames(rev(breakdown_colors)[1:6], unique_sources)
-      
-      series_data <- lapply(unique_sources, function(source) {
-        list(
-          name = source,
-          data = data_long %>%
-            filter(Source == source) %>%
-            arrange(match(Subsector, unique(data_long$Subsector))) %>%
-            pull(Value),
-          color = color_map[[source]]
-        )
-      })
-      
-      highchart() %>%
-        hc_chart(type = "bar", zoomType = "xy") %>%
-        hc_xAxis(categories = unique(data_long$Subsector), 
-                 labels = list(style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial'))) %>%
-        hc_yAxis(title = list(text = yAxisTitle, style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial')),
-                 labels = list(style = list(color = "#000000", fontSize = '16px', fontFamily = 'Arial')),
-                 tickInterval = 0.5) %>%
-        hc_plotOptions(bar = list(
-          stacking = "normal",
-          groupPadding = 0,
-          pointPadding = 0.1,
-          borderWidth = 0
-        )) %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          headerFormat = "<span style='font-size: 16px; font-family: Arial'><b>{point.key}</b></span><br/>",
-          pointFormatter = JS("function() {
-            var value = this.y;
-            var formattedValue;
-            if (value >= 1000) {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            } else {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
-            }
-            return this.series.name + ': ' + formattedValue + ' MtCO₂e';
-          }"),
-          style = list(fontSize = "16px", fontFamily = "Arial")
-        ) %>%
-        hc_legend(
-          align = "right", 
-          verticalAlign = "middle", 
-          layout = "vertical",
-          itemStyle = list(fontSize = '16px', fontFamily = 'Arial', fontWeight = 'normal')
-        ) %>%
-        hc_add_series_list(series_data)
-    })
-  })
-}
-
-
+ 
 
 ## File: module_cattle.R 
  # File: module_cattle.R
@@ -1487,7 +1080,7 @@ cattleServer <- function(id) {
         req(input$variable)
         cattle_data %>% filter(`Livestock by category` == input$variable)
       }),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Cattle distribution by region in Scotland in", census_year),
       legend_title = "Number of cattle"
@@ -1510,7 +1103,7 @@ cattleServer <- function(id) {
       title = "Number of cattle by category across time",
       yAxisTitle = "Number of cattle (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -1522,7 +1115,7 @@ cattleServer <- function(id) {
       title = "Number of cattle by category across time",
       yAxisTitle = "Number of cattle (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -1688,7 +1281,7 @@ cerealsServer <- function(id) {
         cereals_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Cereals distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -1710,7 +1303,7 @@ cerealsServer <- function(id) {
       yAxisTitle = "Area of cereals (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -1722,7 +1315,7 @@ cerealsServer <- function(id) {
       yAxisTitle = "Area of cereals (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -1857,9 +1450,9 @@ cropsSummaryUI <- function(id) {
                               downloadButton(ns("download_data"), "Download Data")
                             )
                      )
-                   ),
-                   footer = generateCensusTableFooter() 
-          )
+                   )
+          ),
+          footer = generateCensusTableFooter() 
         )
       )
     )
@@ -1921,137 +1514,13 @@ content_demo <- function() {
 content_demo()
 
 ## File: module_data_functions.R 
- #module_data_functions.R
-
-
-
-# Function to handle variable select and button events
-handle_variable_select_and_buttons <- function(id_prefix, variables, input, output, session) {
-  selected_variables <- reactive({ vars <- variables(); vars[vars != "Total"] })
-  
-  output[[paste0("variable_select_", id_prefix)]] <- renderUI({
-    checkboxGroupInput(paste0("variables_", id_prefix), "Choose variables to add to chart", choices = variables(), selected = selected_variables())
-  })
-  
-  observeEvent(input[[paste0("select_all_button_", id_prefix)]], {
-    updateCheckboxGroupInput(session, paste0("variables_", id_prefix), selected = variables())
-  })
-  
-  observeEvent(input[[paste0("deselect_all_button_", id_prefix)]], {
-    updateCheckboxGroupInput(session, paste0("variables_", id_prefix), selected = character(0))
-  })
-}
+ 
 
 ## File: module_data_table.R 
- library(DT)
-library(dplyr)
-library(tidyr)
-
-# Function to render data tables using DT::renderDT
-render_data_table <- function(table_id, chart_data, output) {
-  output[[table_id]] <- DT::renderDT({
-    data <- chart_data()
-    if ("Year" %in% colnames(data)) {
-      data$Year <- as.character(data$Year)
-      first_column_name <- names(data)[1]
-      data <- pivot_wider(data, names_from = !!sym(first_column_name), values_from = Value)
-    }
-    data <- data %>% mutate(across(where(is.numeric), ~ formatC(.x, format = "f", digits = 2)))
-    datatable(as_tibble(data), options = list(paging = FALSE, scrollX = TRUE, dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print')), rownames = FALSE)
-  })
-}
-
-# Function to handle data download
-handle_data_download <- function(download_id, chart_type, chart_data, input, output, year_input = NULL) {
-  output[[download_id]] <- downloadHandler(
-    filename = function() {
-      if (!is.null(year_input)) {
-        paste("Agricultural Emissions Data -", chart_type, min(input[[year_input]]), "to", max(input[[year_input]]), ".csv")
-      } else {
-        paste("Agricultural Emissions Data -", chart_type, ".csv")
-      }
-    },
-    content = function(file) { 
-      data <- chart_data()
-      if ("Year" %in% colnames(data)) {
-        first_column_name <- names(data)[1]
-        data <- pivot_wider(data, names_from = !!sym(first_column_name), values_from = Value)
-      }
-      data <- data %>% mutate(across(where(is.numeric), ~ formatC(.x, format = "f", digits = 5)))
-      write.csv(data, file, row.names = FALSE)
-    }
-  )
-}
+ 
 
 ## File: module_double_bar_chart.R 
- library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-
-# Module UI
-doubleBarChartUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    highchartOutput(ns("doubleBarChart"))
-  )
-}
-
-# Module Server
-doubleBarChartServer <- function(id, data) {
-  moduleServer(id, function(input, output, session) {
-    output$doubleBarChart <- renderHighchart({
-      # Reshape data
-      reshaped_data <- data %>%
-        pivot_longer(cols = -`Occupier working time`, names_to = "Category", values_to = "Value")
-      
-      # Create a list of unique categories for series
-      categories <- unique(reshaped_data$Category)
-      
-      # Create a highchart object
-      hc <- highchart() %>%
-        hc_chart(type = "column") %>%
-        hc_title(text = "Occupiers by Employment Status and Age Group") %>%
-        hc_xAxis(categories = unique(reshaped_data$`Occupier working time`), title = list(text = "Category")) %>%
-        hc_yAxis(title = list(text = "Number of Occupiers")) %>%
-        hc_plotOptions(column = list(dataLabels = list(enabled = TRUE))) %>%
-        hc_legend(enabled = TRUE)
-      
-      # Add series to the chart
-      for (cat in categories) {
-        series_data <- reshaped_data %>%
-          filter(Category == cat) %>%
-          arrange(`Occupier working time`)
-        
-        hc <- hc %>%
-          hc_add_series(
-            name = cat,
-            data = series_data$Value
-          )
-      }
-      
-      hc
-    })
-  })
-}
-
-# Testing module
-doubleBarChart_demo <- function() {
-  # Assumes occupiers_age_gender is already loaded in the environment
-  
-  ui <- fluidPage(
-    doubleBarChartUI("x")
-  )
-  
-  server <- function(input, output, session) {
-    doubleBarChartServer("x", occupiers_age_gender)
-  }
-  
-  shinyApp(ui, server)
-}
-
-# Uncomment the line below to run the testing module
- doubleBarChart_demo()
+ 
 
 ## File: module_economy_summary.R 
  # module_economy_summary.R
@@ -2382,7 +1851,7 @@ farmTypesServer <- function(id) {
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Main farm type",
       unit = input$data_type,
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Main farm type",
       y_col = y_col,
       tooltip_format = tooltip_format,
@@ -2490,7 +1959,7 @@ fertiliserUsageServer <- function(id) {
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Fertiliser Type",
       unit = "",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Fertiliser by type",
       y_col = y_col,
       tooltip_format = tooltip_format
@@ -2604,7 +2073,7 @@ fruitServer <- function(id) {
         fruit_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Fruit distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -2626,7 +2095,7 @@ fruitServer <- function(id) {
       yAxisTitle = "Area of fruit (hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -2638,7 +2107,7 @@ fruitServer <- function(id) {
       yAxisTitle = "Area of fruit (hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -2705,205 +2174,7 @@ fruit_demo <- function() {
 fruit_demo()
 
 ## File: module_gas_emissions.R 
- full_data_gas <- reactive({ agri_gas })
-
-gasEmissionsUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    sidebarLayout(
-      sidebarPanel(
-        width = 3,
-        conditionalPanel(
-          condition = "input.tabs != 'Summary_Page'",
-          ns = ns,
-          uiOutput(ns("variable_select")),
-          sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
-        ),
-        conditionalPanel(
-          condition = "input.tabs == 'Summary_Page'",
-          ns = ns,
-          sliderInput(ns("summary_current_year_gas"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
-          sliderInput(ns("summary_comparison_year_gas"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1, sep = "")
-        )
-      ),
-      mainPanel(
-        id = ns("mainpanel"),
-        width = 9,
-        tabsetPanel(
-          id = ns("tabs"),
-          tabPanel("Summary Page",
-                   value = "Summary_Page",
-                   fluidRow(
-                     column(width = 12, div(class = "header-text", "Top 3 Gases Emitted:"))
-                   ),
-                   fluidRow(
-                     column(width = 4, valueBoxUI(ns("totalIndustry1_gas")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, valueBoxUI(ns("totalIndustry2_gas")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, valueBoxUI(ns("totalIndustry3_gas")), style = "padding-right: 0; padding-left: 0;")
-                   ),
-                   fluidRow(
-                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
-                   ),
-                   fluidRow(
-                     column(width = 4, valueBoxUI(ns("totalValue_gas")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryPieChart_gas"), "Gas Breakdown"), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryBarChart_gas"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
-                   )
-          ),
-          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = "Timelapse"),
-          tabPanel("Time Series", lineChartUI(ns("line")), value = "Line_Chart"),
-          tabPanel("Area Chart", areaChartUI(ns("area")), value = "Area_Chart"),
-          tabPanel("Data Table",
-                   DTOutput(ns("data_table")),
-                   downloadButton(ns("downloadData"), "Download Data"),
-                   value = "Data_Table")
-        )
-      )
-    )
-  )
-}
-
-gasEmissionsServer <- function(id) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    chart_data <- reactive({
-      data <- agri_gas
-      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
-      if (!is.null(input$variables)) {
-        data <- data %>%
-          filter(Gas %in% input$variables)
-      }
-      data
-    })
-    
-    output$variable_select <- renderUI({
-      choices <- unique(agri_gas$Gas)
-      selected <- setdiff(choices, "Total")
-      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
-    })
-    
-    
-    areaChartServer(
-      id = "area",
-      chart_data = chart_data,
-      title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
-    
-    timelapseBarChartServer(
-      id = "bar",
-      chart_data = chart_data,
-      title = "Agricultural Greenhouse Gas Emissions Breakdown Timelapse",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
-    
-    lineChartServer(
-      id = "line",
-      chart_data = chart_data,
-      title = "Agricultural Greenhouse Gas Emissions Breakdown in Scotland",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23.</div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
-    
-    render_data_table(
-      table_id = "data_table",
-      chart_data = chart_data,
-      output = output
-    )
-    
-    handle_data_download(
-      download_id = "downloadData",
-      chart_type = "Gas",
-      chart_data = chart_data,
-      input = input,
-      output = output,
-      year_input = "year"
-    )
-    
-    # Summary Module
-    current_year <- reactive({ input$summary_current_year_gas })
-    comparison_year <- reactive({ input$summary_comparison_year_gas })
-    
-    first_col_name <- "Gas"
-    
-    valueBoxServer(
-      id = "totalIndustry1_gas",
-      data = full_data_gas,
-      category = first_col_name,
-      industry = get_industry(1, full_data_gas, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalIndustry2_gas",
-      data = full_data_gas,
-      category = first_col_name,
-      industry = get_industry(2, full_data_gas, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalIndustry3_gas",
-      data = full_data_gas,
-      category = first_col_name,
-      industry = get_industry(3, full_data_gas, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalValue_gas",
-      data = full_data_gas,
-      category = first_col_name,
-      industry = reactive("Total"),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    summaryPieChartServer(
-      id = "industryPieChart_gas",
-      data = full_data_gas,
-      current_year = current_year,
-      category = first_col_name,
-      unit = "MtCO₂e"
-    )
-    summaryBarChartServer(
-      id = "industryBarChart_gas",
-      data = full_data_gas,
-      current_year = current_year,
-      comparison_year = comparison_year,
-      category = first_col_name,
-      unit = "MtCO₂e"
-    )
-  })
-}
-
-# Demo function to test the module
-gas_demo <- function() {
-  ui <- fluidPage(gasEmissionsUI("gas_test"))
-  server <- function(input, output, session) {
-    gasEmissionsServer("gas_test")
-  }
-  shinyApp(ui, server)
-}
-
-gas_demo()
+ 
 
 ## File: module_human_vegetables.R 
  # File: module_human_vegetables.R
@@ -2985,7 +2256,7 @@ humanVegetablesServer <- function(id) {
         human_vegetables_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Vegetables for human consumption distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -3007,7 +2278,7 @@ humanVegetablesServer <- function(id) {
       yAxisTitle = "Area of vegetables (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -3019,7 +2290,7 @@ humanVegetablesServer <- function(id) {
       yAxisTitle = "Area of vegetables (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -3086,19 +2357,29 @@ human_vegetables_demo <- function() {
 human_vegetables_demo()
 
 ## File: module_information.R 
- # module_information.R
-
-informationUI <- function(id) {
+ informationUI <- function(id) {
   ns <- NS(id)
   tagList(
     div(
       class = "container",
-      tags$div(style = "font-size: 24px; font-weight: bold;", "Publications:"),  # Bigger and bold title
+      # Add new section at the top
+      tags$div(style = "font-size: 24px; font-weight: bold;", "Other Sources:"),  # Bigger and bold title
+      tags$div(
+        style = "margin-top: 20px;",
+        tags$div(style = "font-size: 18px; font-weight: bold;", "Scottish Agriculture Greenhouse Gas Emissions and Nitrogen Use"),
+        p(HTML('For comprehensive data and insights, visit the <a href="https://www.gov.scot/collections/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use/" target="_blank">Scottish Agriculture Greenhouse Gas Emissions and Nitrogen Use</a> collection.'))
+      ),
+      # Existing sections
       tags$div(
         style = "margin-top: 20px;",
         tags$div(style = "font-size: 18px; font-weight: bold;", "Scottish Greenhouse Gas Statistics"),
         p(HTML('Official estimates of greenhouse gas emissions are available in the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a> publication.')),
-        tags$div(style = "font-size: 18px; font-weight: bold;", "Greenhouse Gas Inventory Reports"),
+        tags$div(
+          style = "margin-top: 20px;",
+          tags$div(style = "font-size: 18px; font-weight: bold;", "British Survey of Fertiliser Practice Report"),
+          p(HTML('To learn more about fertiliser practices in the UK, you can access the <a href="https://www.gov.uk/government/statistics/latest-british-survey-of-fertiliser-practice-report" target="_blank">British Survey of Fertiliser Practice Report</a>.'))
+        ),
+         tags$div(style = "font-size: 18px; font-weight: bold;", "Greenhouse Gas Inventory Reports"),
         p(a(href = "https://www.gov.scot/publications/estimated-dairy-emissions-mitigation-smart-inventory/", "Greenhouse gas inventory: estimated dairy emissions and their mitigation", target = "_blank")),
         tags$div(style = "font-size: 18px; font-weight: bold;", "Climate change evidence reports"),
         p(a(href = "https://www.gov.scot/publications/resas-climate-change-evidence-dairy-farmer-led-group/", "Dairy Farmer-led Group: climate change evidence", target = "_blank")),
@@ -3118,7 +2399,7 @@ informationUI <- function(id) {
         tags$div(style = "font-size: 18px; font-weight: bold;", "Greenhouse gas:"),
         p("A greenhouse gas is a gas which absorbs infrared radiation emitted from the surface of the Earth, helping to retain a portion of that energy in the atmosphere as heat."),
         tags$div(style = "font-size: 18px; font-weight: bold;", "LULUCF:"),
-        p("Estimates of emissions and removals from land use, land use change and forestry (LULUCF) depend critically on assumptions made on the rate of loss or gain of carbon in Scotland’s carbon rich soils. In Scotland, LULUCF activities, taken as a whole, acts as a slight source in recent years although acted as a net sink between 2009-2017, absorbing more greenhouse gas emissions than it releases."),
+        p("Estimates of emissions and removals from land use, land use change and forestry (LULUCF) depend critically on assumptions made on the rate of loss or gain of carbon in Scotland’s carbon-rich soils. In Scotland, LULUCF activities, taken as a whole, acts as a slight source in recent years although acted as a net sink between 2009-2017, absorbing more greenhouse gas emissions than it releases."),
         tags$div(style = "font-size: 18px; font-weight: bold;", "Methane (CH4):"),
         p("Methane is a greenhouse gas that is around 28 times more potent in the atmosphere than CO2 over a 100-year time horizon. Main sources include agriculture and landfill."),
         tags$div(style = "font-size: 18px; font-weight: bold;", "Metric tonne of carbon dioxide equivalent (MtCO₂e):"),
@@ -3246,7 +2527,7 @@ landUseSummaryServer <- function(id) {
         land_use_map() %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Land use by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -3274,7 +2555,7 @@ landUseSummaryServer <- function(id) {
       yAxisTitle = "Area (1,000 hectares)",
       xAxisTitle = "Land use type",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Variable",
       y_col = "Value",
       tooltip_format = "Area (hectares): {point.y:.2f}"
@@ -3287,7 +2568,7 @@ landUseSummaryServer <- function(id) {
       yAxisTitle = "Area of land use (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -3426,7 +2707,7 @@ legalResponsibilityServer <- function(id) {
       title = paste("Legal responsibility of holdings in Scotland", census_year),
       yAxisTitle = yAxisTitle,
       xAxisTitle = "Legal responsibility",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Legal responsibility",
       y_col = y_col,
       tooltip_format = tooltip_format,
@@ -3457,106 +2738,10 @@ legalResponsibilityServer <- function(id) {
 }
 
 ## File: module_line_chart.R 
- lineChartUI <- function(id, note_type = 1) {
-  ns <- NS(id)
-  
-  note_content <- if (note_type == 2) {
-    "<strong>Note:</strong><ul>
-      <li>To add a series to the chart, click inside the white box on the sidebar and select a variable.</li>
-      <li>To remove a series, click the x beside the variable name within the sidebar.</li>
-    <li>Zoom into the graph by clicking and dragging over the area you wish to focus on.</li>
-      <li>You can see data values for a specific year by hovering your mouse over the line.</li>
-    </ul>"
-  } else {
-    "<strong>Note:</strong><ul>
-      <li>To add or remove a series from the chart, select/deselect the variable from the sidebar menu.</li>
-      <li>Zoom into the graph by clicking and dragging over the area you wish to focus on.</li>
-      <li>You can see data values for a specific year by hovering your mouse over the line.</li>
-    </ul>"
-  }
-  
-  tagList(
-    htmlOutput(ns("title")),
-    highchartOutput(ns("line_chart")),
-    htmlOutput(ns("footer")),
-    div(
-      class = "note",
-      style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-      HTML(note_content)
-    )
-  )
-}
-
-
-lineChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, unit = "", footer, x_col, y_col) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    reactive_colors <- reactive({ assign_colors(chart_data(), preset_colors) })
-    
-    output$title <- renderUI({
-      year_min <- min(as.numeric(chart_data()[[x_col]]), na.rm = TRUE)
-      year_max <- max(as.numeric(chart_data()[[x_col]]), na.rm = TRUE)
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, ", ", year_min, " to ", year_max, "</div>"))
-    })
-    
-    output$footer <- renderUI({
-      HTML(footer)
-    })
-    
-    output$line_chart <- renderHighchart({
-      data <- chart_data()
-      colors <- reactive_colors()
-      group_column <- setdiff(names(data), c(x_col, y_col))[1] # Assuming only one group column
-      
-      hc <- highchart() %>%
-        hc_chart(type = "line", zoomType = "xy") %>%
-        hc_yAxis(title = list(text = yAxisTitle)) %>%
-        hc_xAxis(title = list(text = xAxisTitle), type = "category", tickInterval = 5) %>%
-        hc_plotOptions(line = list(colorByPoint = FALSE)) %>%
-        hc_legend(align = "left", alignColumns = FALSE, layout = "horizontal") %>%
-        hc_add_theme(thm)
-      
-      unique_groups <- unique(data[[group_column]])
-      lapply(unique_groups, function(g) {
-        series_data <- data[data[[group_column]] == g, ]
-        
-        # Create a complete sequence of years
-        complete_years <- seq(min(series_data[[x_col]], na.rm = TRUE), max(series_data[[x_col]], na.rm = TRUE))
-        complete_series <- merge(data.frame(x = complete_years), series_data, by.x = "x", by.y = x_col, all.x = TRUE)
-        complete_series <- complete_series %>% transmute(x = as.numeric(x), y = !!sym(y_col))
-        
-        hc <<- hc %>%
-          hc_add_series(name = g, data = list_parse2(complete_series), color = colors[[g]])
-      })
-      
-      hc %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          headerFormat = "<b>{point.key}</b><br/>",
-          pointFormatter = JS(sprintf("function() {
-            var value = this.y;
-            var formattedValue;
-            if (value >= 1000) {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            } else {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
-            }
-            return this.series.name + ': ' + formattedValue + ' %s';
-          }", unit))
-        )
-    })
-  })
-}
+ 
 
 ## File: module_manure.R 
- # File: module_manure.R
-
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(DT)
-library(shinydashboard)
+ 
 
 # Load the data
 load("module_2023.RData")
@@ -3582,7 +2767,6 @@ national_data <- manure_qty %>%
 # List of variables for radio buttons
 variables_manure <- colnames(manure_qty)[-1]
 
-source("module_regions_map.R")
 
 # Helper function to format numbers with commas and appropriate decimal places
 format_number <- function(number) {
@@ -3733,132 +2917,7 @@ content_demo <- function() {
 #content_demo()
 
 ## File: module_map.R 
- # File: module_map.R
-
-library(shiny)
-library(highcharter)
-library(geojsonio)
-library(dplyr)
-
-# Load the GeoJSON file
-geojson_data <- geojson_read("subregions_simplified.geojson", what = "sp")
-
-# Convert GeoJSON to a Highcharts-compatible format
-geojson_list <- geojson_list(geojson_data)
-
-mapUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    mainPanel(
-      width = 12,  # Ensures the main panel uses full width
-      htmlOutput(ns("title")),
-      highchartOutput(ns("map"), height = "75vh", width = "100%"),  # Set width to 100% for full utilization
-      htmlOutput(ns("footer")),
-      div(
-        class = "note",
-        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-        HTML(
-          "<strong>Note:</strong><ul>
-          <li>Where areas are shaded in grey, the data has been suppressed to prevent disclosure of individual holdings.</li>
-            <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
-            <li>You can see data values for each variable by hovering your mouse over the region.</li>
-            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
-          </ul>"
-        )
-      )
-    )
-  )
-}
-
-
-mapServer <- function(id, data, variable, unit = "", title, footer, legend_title = "Legend") {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$title <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
-    })
-    
-    output$footer <- renderUI({
-      HTML(footer)
-    })
-    
-    filtered_data <- reactive({
-      req(variable)  # Ensure that variable is not null or missing
-      req(variable())  # Ensure that variable() is not null or missing
-      req(data())      # Ensure that data() is not null or missing
-      
-      first_col_name <- names(data())[1]  # Get the name of the first column dynamically
-      data() %>%
-        filter(!!sym(first_col_name) == variable())  # Use the first column name for filtering
-    })
-    
-    output$map <- renderHighchart({
-      data <- filtered_data()
-      hc_data <- data %>% 
-        mutate(sub_region = as.character(sub_region)) %>%
-        select(sub_region, value) %>%
-        list_parse()
-      
-      variable_name <- variable()  # Get the selected variable name
-      
-      highchart(type = "map") %>%
-        hc_add_series(
-          mapData = geojson_list, 
-          joinBy = c("sub_region", "sub_region"),
-          data = hc_data,
-          borderColor = "#FFFFFF",
-          borderWidth = 0.5,
-          states = list(
-            hover = list(
-              color = "#BADA55"
-            )
-          ),
-          dataLabels = list(
-            enabled = FALSE  # Disable the overlays
-          ),
-          tooltip = list(
-            useHTML = TRUE,
-            headerFormat = "<b>{point.key}</b><br/>",
-            pointFormatter = JS(sprintf("function() {
-              var value = this.value;
-              var formattedValue;
-              if (value >= 1000) {
-                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-              } else {
-                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
-              }
-              return '<b>' + this.sub_region + '</b><br/>' +
-                     '%s: ' + formattedValue + ' %s';
-            }", variable_name, unit))
-          ),
-          nullColor = '#E0E0E0'  # Color for regions with no data
-        ) %>%
-        hc_mapNavigation(enabled = TRUE) %>%
-        hc_colorAxis(
-          min = 0,
-          stops = color_stops(5),
-          labels = list(
-            format = "{value:,.0f}"  # Ensure the labels show the correct values
-          )
-        ) %>%
-        hc_chart(reflow = TRUE) %>% # Make chart responsive
-        hc_legend(
-          layout = "vertical",            # Change layout to vertical
-          align = "right",                # Align the legend to the right
-          verticalAlign = "middle",       # Align the legend to the middle vertically
-          x = -10,                        # Move the legend left by 10px for right padding
-          title = list(text = legend_title, style = list(fontSize = '15px')),  # Use the provided or default title
-          itemStyle = list(
-            width = '300px',              # Adjust width as needed
-            padding = "0 10px 0 0"        # Add padding-right of 10px
-          ),
-          symbolHeight = 300,             # Adjust the height of the color bar
-          itemMarginTop = 10              # Adjust the margin at the top of each item
-        )
-    })
-  })
-}
+ 
 
 ## File: module_nitrogen_usage.R 
  # Load the data
@@ -3900,7 +2959,6 @@ national_data_250 <- as.data.frame(
 # List of variables for radio buttons
 variables_nitrogen <- colnames(nitrogen_400)[-1]
 
-source("module_regions_map.R")
 
 
 
@@ -4218,7 +3276,7 @@ occupiersServer <- function(id) {
     
     # Bar Chart Footer
     output$pyramid_footer <- renderUI({
-      HTML('<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>')
+      HTML(census_footer)
     })
     
     # Bar Chart - Output
@@ -4267,7 +3325,7 @@ occupiersServer <- function(id) {
       title = "Agricultural occupiers over time",
       yAxisTitle = "Occupiers (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Year",
       y_col = "Value"
     )
@@ -4277,7 +3335,7 @@ occupiersServer <- function(id) {
       id = "map",
       data = regions_data,
       variable = reactive(input$variable),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       title = paste("Occupiers by region in Scotland in", census_year),
       legend_title = "Number of occupiers"   
       )
@@ -4428,7 +3486,7 @@ oilseedServer <- function(id) {
         oilseed_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Oilseed distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -4450,7 +3508,7 @@ oilseedServer <- function(id) {
       yAxisTitle = "Area of oilseed (1,000)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -4462,7 +3520,7 @@ oilseedServer <- function(id) {
       yAxisTitle = "Area of oilseed (1,000)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -4631,7 +3689,7 @@ otherAnimalsServer <- function(id) {
         req(input$variable)
         other_animals_data %>% filter(`Livestock by category` == input$variable)
       }),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Other animals distribution by region in Scotland in", census_year),
       legend_title = "Number of animals"
@@ -4653,7 +3711,7 @@ otherAnimalsServer <- function(id) {
       title = "Number of other animals over time",
       yAxisTitle = "Number of animals (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -4722,14 +3780,7 @@ other_animals_demo <- function() {
 other_animals_demo()
 
 ## File: module_owned_land.R 
- library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(DT)
-
-# Load the required module
-source("module_line_chart.R")
+ 
 
 ownedLandUI <- function(id) {
   ns <- NS(id)
@@ -4793,7 +3844,7 @@ ownedLandServer <- function(id) {
       yAxisTitle = "Area (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Year",
       y_col = "Value"
     )
@@ -4834,76 +3885,7 @@ content_demo <- function() {
 content_demo()
 
 ## File: module_percentage_bar_chart.R 
- percentageBarChartUI <- function(id, chart_height = 300) {
-  ns <- NS(id)
-  tagList(
-    htmlOutput(ns("title")),
-    highchartOutput(ns("bar_chart"), height = paste0(chart_height, "px"))
-  )
-}
-percentageBarChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, x_col, y_col, unit = "") {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$bar_chart <- renderHighchart({
-      data <- chart_data()
-      if (nrow(data) == 0) return(NULL)
-      
-      # Ensure consistent handling of single-row data frames
-      data <- data %>%
-        mutate(Remaining = 100 - !!sym(y_col)) %>%
-        select(!!sym(x_col), Percentage = !!sym(y_col), Remaining)
-      
-      # Ensure the x-axis categories remain a vector and not a simplified structure
-      categories <- data[[x_col]]
-      if (is.factor(categories)) {
-        categories <- as.character(categories)
-      }
-      if (length(categories) == 1) {
-        categories <- list(categories)  # Force single element into a list to maintain structure
-      }
-      
-      highchart() %>%
-        hc_chart(type = "bar", inverted = TRUE, zoomType = "xy") %>%
-        hc_xAxis(categories = categories, title = list(text = xAxisTitle),
-                 labels = list(
-                   style = list(width = "250px"),  # Fixed width for labels
-                   useHTML = TRUE
-                 )) %>%
-        hc_yAxis(title = list(text = yAxisTitle), max = 100) %>%
-        hc_plotOptions(bar = list(
-          stacking = "normal",
-          dataLabels = list(enabled = FALSE),
-          groupPadding = 0,  # Minimum space between groups
-          pointPadding = 0.1,  # Controls space between bars in a group
-          borderWidth = 0,
-          pointWidth = 90  # Explicitly set the bar width
-        )) %>%
-        hc_add_series(
-          name = "Remaining",
-          data = data$Remaining,
-          color = "#d3d3d3",
-          showInLegend = FALSE  # Hide the series from the legend
-        ) %>%
-        hc_add_series(
-          name = "Percentage",
-          data = data$Percentage,
-          color = "#2b9c93",
-          showInLegend = FALSE  # Hide the series from the legend
-        ) %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          headerFormat = "<b>{point.key}</b><br/>",
-          pointFormatter = JS(sprintf("function() {
-            var value = this.y;
-            var formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
-            return this.series.name + ': ' + formattedValue + ' %s';
-          }", unit))
-        ) %>%
-        hc_add_theme(thm)
-    })
-  })
-}
+ 
 
 ## File: module_pigs.R 
  # File: module_pigs.R
@@ -4994,7 +3976,7 @@ pigsServer <- function(id) {
         req(input$variable)
         pigs_data %>% filter(`Livestock by category` == input$variable)
       }),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Pig distribution by region in Scotland in", census_year),
       legend_title = "Number of pigs"
@@ -5016,7 +3998,7 @@ pigsServer <- function(id) {
       title = "Number of pigs by category over time",
       yAxisTitle = "Number of pigs (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -5027,7 +4009,7 @@ pigsServer <- function(id) {
       title = "Number of pigs by category over time",
       yAxisTitle = "Number of pigs (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -5170,7 +4152,7 @@ potatoesServer <- function(id) {
         potatoes_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Potatoes distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -5192,7 +4174,7 @@ potatoesServer <- function(id) {
       yAxisTitle = "Area of potatoes (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -5204,7 +4186,7 @@ potatoesServer <- function(id) {
       yAxisTitle = "Area of potatoes (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -5273,7 +4255,6 @@ potatoes_demo()
 
 ## File: module_poultry.R 
  # File: module_poultry.R
-
 poultryUI <- function(id) {
   ns <- NS(id)
   sidebarLayout(
@@ -5334,12 +4315,16 @@ poultryUI <- function(id) {
                  DTOutput(ns("table")),
                  downloadButton(ns("downloadData"), "Download Data"),
                  generateCensusTableFooter()
-
         )
+      ),
+      div(
+        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+        HTML("<strong>Note:</strong> Poultry estimates for 2023 are not comparable to previous years due to methodological improvements.")
       )
     )
   )
 }
+
 
 poultryServer <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -5363,7 +4348,7 @@ poultryServer <- function(id) {
         req(input$variable)
         poultry_data %>% filter(`Livestock by category` == input$variable)
       }),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Poultry distribution by region in Scotland in", census_year),
       legend_title = "Number of poultry"
@@ -5463,146 +4448,11 @@ poultry_demo <- function() {
 poultry_demo()
 
 ## File: module_regions_map.R 
- # File: module_regions_map.R
-
-library(shiny)
-library(highcharter)
-library(geojsonio)
-library(dplyr)
-
-# Load the GeoJSON file
-region_geojson_data <- geojson_read("regions_simplified.geojson", what = "sp")
-
-# Convert GeoJSON to a Highcharts-compatible format
-region_geojson_list <- geojson_list(region_geojson_data)
-
-mapRegionsUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    mainPanel(
-      width = 12,  # Ensures the main panel uses full width
-      htmlOutput(ns("title")),
-      highchartOutput(ns("map"), height = "75vh", width = "100%"),  # Set width to 100% for full utilization
-      htmlOutput(ns("footer")),
-      div(
-        class = "note",
-        style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-        HTML(
-          "<strong>Note:</strong><ul>
-            <li>To change the data shown, select a variable from the radio buttons within the sidebar.</li>
-            <li>You can see data values for each variable by hovering your mouse over the region.</li>
-            <li>To change the zoom level, use the + and - to the left of the graph, or scroll using your mouse wheel.</li>
-          </ul>"
-        )
-      )
-    )
-  )
-}
-
-mapRegionsServer <- function(id, data, variable, unit = "", title, footer, legend_title = "Legend") {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$title <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
-    })
-    
-    output$footer <- renderUI({
-      HTML(footer)
-    })
-    
-    filtered_data <- reactive({
-      req(variable)
-      req(variable())
-      req(data())
-      
-      filtered <- data() %>%
-        select(region, value) %>%
-        mutate(region = as.character(region))
-      
-      filtered
-    })
-    
-    output$map <- renderHighchart({
-      data <- filtered_data()
-      
-      hc_data <- data %>% 
-        list_parse()
-      
-      variable_name <- variable()
-      
-      highchart(type = "map") %>%
-        hc_add_series(
-          mapData = region_geojson_list, 
-          joinBy = c("region", "region"),
-          data = hc_data,
-          borderColor = "#FFFFFF",
-          borderWidth = 0.5,
-          states = list(
-            hover = list(
-              color = "#BADA55"
-            )
-          ),
-          dataLabels = list(
-            enabled = FALSE
-          ),
-          tooltip = list(
-            useHTML = TRUE,
-            headerFormat = "<b>{point.key}</b><br/>",
-            pointFormatter = JS(sprintf("function() {
-              var value = this.value;
-              var formattedValue;
-              if (value >= 1000) {
-                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-              } else {
-                formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
-              }
-              return '<b>' + this.region + '</b><br/>' +
-                     '%s: ' + formattedValue + ' %s';
-            }", variable_name, unit))
-          ),
-          nullColor = '#E0E0E0'  # Color for regions with no data
-        ) %>%
-        hc_mapNavigation(enabled = TRUE) %>%
-        hc_colorAxis(
-          min = 0,
-          stops = color_stops(5),
-          labels = list(
-            format = "{value:,.0f}"  # Ensure the labels show the correct values
-          )
-        ) %>%
-        hc_chart(reflow = TRUE) %>% # Make chart responsive
-        hc_legend(
-          layout = "vertical",            # Change layout to vertical
-          align = "right",                # Align the legend to the right
-          verticalAlign = "middle",       # Align the legend to the middle vertically
-          x = -10,                        # Move the legend left by 10px for right padding
-          title = list(text = legend_title, style = list(fontSize = '15px')),  # Use the provided or default title
-          itemStyle = list(
-            width = '300px',              # Adjust width as needed
-            padding = "0 10px 0 0"        # Add padding-right of 10px
-          ),
-          symbolHeight = 300,             # Adjust the height of the color bar
-          itemMarginTop = 10              # Adjust the margin at the top of each item
-        )
-    })
-  })
-}
+ 
 
 ## File: module_sheep.R 
  # File: module_sheep.R
 
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-library(geojsonio)
-library(DT)
-
-# Load the required module
-source("module_map.R")
-source("module_area_chart.R")
-source("module_line_chart.R")
 
 sheepUI <- function(id) {
   ns <- NS(id)
@@ -5701,7 +4551,7 @@ sheepServer <- function(id) {
         req(input$variable)
         sheep_data %>% filter(`Livestock by category` == input$variable)
       }),
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Sheep distribution by region in Scotland in", census_year),
       legend_title = "Number of sheep"
@@ -5722,7 +4572,7 @@ sheepServer <- function(id) {
       title = "Number of sheep by category across time",
       yAxisTitle = "Number of sheep (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -5733,7 +4583,7 @@ sheepServer <- function(id) {
       title = "Number of sheep by category across time",
       yAxisTitle = "Number of sheep (1,000)",
       xAxisTitle = "Year",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -6102,7 +4952,7 @@ stockfeedingServer <- function(id) {
         stockfeeding_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Stockfeeding crops distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -6124,7 +4974,7 @@ stockfeedingServer <- function(id) {
       yAxisTitle = "Area of crops (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -6136,7 +4986,7 @@ stockfeedingServer <- function(id) {
       yAxisTitle = "Area of crops (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -6217,14 +5067,12 @@ stockfeeding_demo()
         conditionalPanel(
           condition = "input.tabs == 'Summary_Page'",
           ns = ns,
-          # Add text above the sliders
           div("Adjust the sliders to compare data from different years.", 
               style = "font-size: 14px; font-weight: bold; margin-bottom: 10px;"),
           sliderInput(ns("summary_current_year_subsector"), "Year of interest", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
           sliderInput(ns("summary_comparison_year_subsector"), "Comparison year", min = 1990, max = 2022, value = 2021, step = 1, sep = "")
         )
       ),
-      
       mainPanel(
         id = ns("mainpanel"),
         width = 9,
@@ -6241,7 +5089,7 @@ stockfeeding_demo()
                      column(width = 4, chartUI(ns("industryLineChart_total")), style = "padding-right: 0; padding-left: 0;")
                    ),
                    fluidRow(
-                     column(width = 12, div(class = "header-text", "Emissions by subsector:"))
+                     column(width = 12, div(class = "header-text", style = "padding-top: 20px;" ,"Emissions by subsector:"))
                    ),
                    fluidRow(
                      column(width = 4, valueBoxUI(ns("totalIndustry1_subsector")), style = "padding-right: 0; padding-left: 0;"),
@@ -6254,7 +5102,7 @@ stockfeeding_demo()
                      column(width = 4, valueBoxUI(ns("totalIndustry5_subsector")), style = "padding-right: 0; padding-left: 0;")
                    ),
                    fluidRow(
-                     column(width = 12, div(class = "header-text", "Scottish agricultural emissions by gas type:"))
+                     column(width = 12, div(class = "header-text", style = "margin-top: 20px;" , "Scottish agricultural emissions by gas type:"))
                    ),
                    fluidRow(
                      column(width = 4, chartUI(ns("industryPieChart_gas"))),
@@ -6267,6 +5115,19 @@ stockfeeding_demo()
                               style = "font-size: 16px; font-weight: bold; text-align: left; margin-top: 5px;",
                               HTML(
                                 '<a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.'
+                              )
+                            )
+                     )
+                   ),
+                   fluidRow(
+                     column(width = 12, 
+                            div(
+                              class = "note",
+                              style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
+                              HTML(
+                                "<strong>Note:</strong><ul>
+                                  <li>You can see data values by hovering your mouse over the content on charts.</li>
+                                </ul>"
                               )
                             )
                      )
@@ -6286,6 +5147,8 @@ stockfeeding_demo()
     )
   )
 }
+
+
 
 
 subsectorEmissionsServer <- function(id) {
@@ -6343,7 +5206,7 @@ subsectorEmissionsServer <- function(id) {
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
       unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>',
+      footer = emissions_footer,
       x_col = "Year",
       y_col = "Value"
     )
@@ -6355,7 +5218,7 @@ subsectorEmissionsServer <- function(id) {
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
       unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>',
+      footer = emissions_footer,
       x_col = "Year",
       y_col = "Value"
     )
@@ -6367,7 +5230,7 @@ subsectorEmissionsServer <- function(id) {
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Year",
       unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>',
+      footer = emissions_footer,  
       x_col = "Year",
       y_col = "Value"
     )
@@ -6379,8 +5242,8 @@ subsectorEmissionsServer <- function(id) {
       yAxisTitle = "Emissions (MtCO₂e)",
       xAxisTitle = "Subsector",
       unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>'
-    )
+      footer = emissions_footer
+      )
     
     
     
@@ -6517,768 +5380,20 @@ subsector_demo <- function() {
 subsector_demo()
 
 ## File: module_summary.R 
- #module_summary.R
-
-library(shiny)
-library(shinydashboard)
-library(ggplot2)
-library(dplyr)
-library(highcharter)
-
-# Function to create a small line plot for the value boxes
-small_line_plot <- function(data, color) {
-  ggplot(data, aes(x = Year, y = Value)) +
-    geom_line(color = "#002d54") +
-    theme_void() +
-    theme(plot.background = element_rect(fill = "transparent", color = NA))
-}
-
-# Function to create an arrow for Year on Year change
-create_yoy_arrow <- function(change) {
-  if (is.na(change) || is.nan(change)) {
-    icon("minus", style = "color: grey;")
-  } else if (change > 0) {
-    icon("arrow-up", style = "color: #2b9c93;")
-  } else {
-    icon("arrow-down", style = "color: #002d54;")
-  }
-}
-
-
-
-# UI Module for Value Box
-valueBoxUI <- function(id) {
-  ns <- NS(id)
-  uiOutput(ns("valueBox"))
-}
-
-# Server Module for Value Box
-valueBoxServer <- function(id, data, category, industry, current_year, comparison_year, unit) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    # Ensure the data is filtered and processed correctly
-    reactive_data <- reactive({ 
-      data() %>% filter(!!sym(category) == !!industry(), Year %in% c(current_year(), comparison_year())) 
-    })
-    
-    output$valueBox <- renderUI({
-      data_filtered <- reactive_data()
-      current_value <- data_filtered %>% filter(Year == current_year()) %>% summarise(Value = sum(Value, na.rm = TRUE)) %>% pull(Value)
-      comparison_value <- data_filtered %>% filter(Year == comparison_year()) %>% summarise(Value = sum(Value, na.rm = TRUE)) %>% pull(Value)
-      yoy_change <- if (comparison_value == 0 || is.na(comparison_value)) NA else ((current_value - comparison_value) / comparison_value) * 100
-      
-      formatted_value <- format_number(current_value)  # Use format_number to format the value
-      
-      # Use HTML to inject the formatted value directly
-      box(
-        class = "value-box",
-        title = NULL,
-        width = 12,
-        solidHeader = TRUE,
-        div(
-          style = "display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 5px;",
-          div(
-            style = "flex: 1; margin-bottom: 5px;",
-            h5(class = "value-box-title", industry()),
-            div(
-              style = "display: flex; align-items: baseline; margin-bottom: 5px;",
-              h3(HTML(formatted_value), style = "margin: 0;"),  # Injecting HTML directly to force correct rendering
-              span(class = "value-box-units", unit)
-            ),
-            div(
-              style = "display: flex; align-items: center; margin-bottom: 5px;",
-              create_yoy_arrow(yoy_change),
-              span(class = "value-box-yoy", 
-                   ifelse(is.na(yoy_change), "Comparison not available", sprintf("%+.2f%% %d vs. %d", yoy_change, current_year(), comparison_year())), 
-                   style = ifelse(yoy_change > 0, "color: #2b9c93; margin-left: 5px;", "color: #002d54; margin-left: 5px;"))
-            )
-          ),
-          div(
-            style = "margin-top: 10px;",  
-            plotOutput(ns("sparkline"), height = "30px", width = "100%")
-          )
-        )
-      )
-    })
-    
-    output$sparkline <- renderPlot({
-      small_line_plot(data() %>% filter(!!sym(category) == !!industry()), "#28a745")
-    })
-  })
-}
-
-
-
-chartUI <- function(id) {
-  ns <- NS(id)
-  box(
-    title = uiOutput(ns("chartTitle")),
-    width = 12,
-    solidHeader = TRUE,
-    div(class = "box-content", highchartOutput(ns("chartOutput"), height = "300px"))
-  )
-}
-
-
-
-# Server Module for Line Chart on Summary Page
-summaryLineChartServer <- function(id, data, title, unit = "") {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$chartTitle <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
-    })
-    
-    output$chartOutput <- renderHighchart({
-      summary_line_data <- data()
-      variable_col <- names(summary_line_data)[1]  # Get the first column name, which is the variable name
-      
-      series_list <- lapply(unique(summary_line_data[[variable_col]]), function(variable) {
-        df <- summary_line_data %>% filter(!!sym(variable_col) == variable)
-        list(
-          name = variable,
-          data = df %>% select(Year, Value) %>% list_parse2()
-        )
-      })
-      
-      highchart() %>%
-        hc_chart(type = "line", zoomType = "xy") %>%
-        hc_xAxis(categories = unique(summary_line_data$Year)) %>%
-        hc_yAxis(title = list(text = unit)) %>%
-        hc_legend(align = "left", alignColumns = FALSE, layout = "horizontal") %>%
-        hc_plotOptions(line = list(marker = list(enabled = FALSE))) %>%  # Disable markers
-        hc_tooltip(
-          useHTML = TRUE,
-          headerFormat = "<b>{point.key}</b><br/>",
-          pointFormatter = JS(sprintf("function() {
-            var value = this.y;
-            var formattedValue;
-            if (value >= 1000) {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            } else {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
-            }
-            return this.series.name + ': ' + formattedValue + ' %s';
-          }", unit))
-        ) %>%
-        hc_add_theme(thm) %>%
-        hc_add_series_list(series_list)
-    })
-  })
-}
-
-summaryPieChartServer <- function(id, data, title, current_year, category, unit) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$chartTitle <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, ", ", current_year(), "</div>"))
-    })
-    
-    output$chartOutput <- renderHighchart({
-      pie_data <- data() %>% filter(Year == current_year() & !!sym(category) != "Total") %>% 
-        group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
-      
-      highchart() %>%
-        hc_chart(type = "pie") %>%
-        hc_series(list(data = list_parse(pie_data %>% transmute(name = !!sym(category), y = Value)))) %>%
-        hc_plotOptions(pie = list(
-          dataLabels = list(enabled = FALSE),
-          showInLegend = TRUE
-        )) %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          pointFormat = sprintf(' {point.y:.2f} %s ({point.percentage:.2f}%%)', unit)
-        )
-    })
-  })
-}
-
-
-
-
-# Server Module for Bar Chart
-summaryBarChartServer <- function(id, data, current_year, comparison_year, title, category, unit = "") {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    output$chartTitle <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, ": ", current_year(), " vs. ", comparison_year(), "</div>"))
-    })
-    
-    
-    output$chartOutput <- renderHighchart({
-      bar_data <- data() %>% filter(Year == current_year() & !!sym(category) != "Total") %>% group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
-      line_data <- data() %>% filter(Year == comparison_year() & !!sym(category) != "Total") %>% group_by(!!sym(category)) %>% summarise(Value = sum(Value, na.rm = TRUE))
-      
-      colors <- c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
-      
-      highchart() %>%
-        hc_chart(type = "bar") %>%
-        hc_xAxis(categories = bar_data[[category]]) %>%
-        hc_yAxis(title = list(text = unit)) %>%
-        hc_add_series(
-          name = as.character(current_year()), 
-          data = bar_data$Value, 
-          type = "bar", 
-          colorByPoint = TRUE, 
-          colors = colors
-        ) %>%
-        hc_add_series(
-          name = as.character(comparison_year()), 
-          data = line_data$Value, 
-          type = "scatter", 
-          color = "#ff0000", 
-          marker = list(enabled = TRUE, symbol = "circle", lineWidth = 2, radius = 3)
-        ) %>%
-        hc_plotOptions(series = list(groupPadding = 0, pointPadding = 0.1, borderWidth = 0)) %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          shared = TRUE,
-          pointFormatter = JS(sprintf("function() {
-            var value = this.y;
-            var formattedValue;
-            if (value >= 1000) {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            } else {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
-            }
-            return this.series.name + ': ' + formattedValue + ' %s';
-          }", unit))
-        ) %>%
-        hc_add_theme(thm)
-    })
-  })
-}
-
-
-# Function to get top industries
-get_industry <- function(index, data, current_year, first_col_name) {
-  reactive({
-    industries <- data() %>%
-      filter(Year == current_year() & !!sym(first_col_name) != "Total") %>%
-      group_by(!!sym(first_col_name)) %>%
-      summarise(Value = sum(Value, na.rm = TRUE)) %>%
-      arrange(desc(Value)) %>%
-      slice_head(n = 5) %>%
-      pull(!!sym(first_col_name))
-    if (length(industries) >= index) {
-      industries[index]
-    } else {
-      NA
-    }
-  })
-}
+ 
 
 ## File: module_timelapse_bar_chart.R 
- # File: module_timelapse_bar_chart.R
-
-timelapseBarChartUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    tags$style(HTML("
-      .chart-container {
-        position: relative;
-      }
-      .chart-controls {
-        display: flex;
-        align-items: center;
-      }
-      .chart-controls .form-group {
-        margin-bottom: 0;
-        margin-left: 10px;
-      }
-      .chart-controls .btn {
-        margin-left: 10px;
-      }
-      .year-label {
-        margin-right: 10px;
-        font-weight: bold;
-      }
-    ")),
-    div(class = "chart-container",
-        fluidRow(
-          column(8, htmlOutput(ns("title"))),
-          column(4, div(class = "chart-controls",
-                        div(class = "year-label", "Year:"),
-                        sliderInput(ns("year"), NULL, min = 1998, max = 2022, value = 1998, step = 1, sep = "", ticks = TRUE, animate = animationOptions(interval = 1000, loop = FALSE), width = '200px'),
-                        actionButton(ns("playPause"), "", icon = icon("play"), class = "btn btn-primary")
-          ))
-        ),
-        highchartOutput(ns("chart"), height = "500px")
-    ),
-    htmlOutput(ns("footer")),
-    div(
-      class = "note",
-      style = "margin-top: 20px; padding: 10px; border-top: 1px solid #ddd;",
-      HTML(
-        "<strong>Note:</strong><ul>
-          <li>Press the play button at the top right of the screen to see the timelapse of the data. You can manually adjust the year by adjusting the slider.</li>
-          <li>To remove a series from the chart, deselect the variable from the sidebar menu.</li>
-          <li>You can see data values for a specific year by hovering your mouse over the line.</li>
-        </ul>"
-      )
-    )
-  )
-}
-
-timelapseBarChartServer <- function(id, chart_data, title, yAxisTitle, xAxisTitle, footer, x_col, y_col, unit = "") {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    max_value <- reactive({
-      all_data <- chart_data()
-      if (is.null(all_data) || nrow(all_data) == 0) return(0)
-      max_val <- max(all_data[[y_col]], na.rm = TRUE)
-      return(max_val)
-    })
-    
-    getData <- function(year, nbr) {
-      data <- chart_data()
-      if (is.null(data) || nrow(data) == 0) return(data.frame())
-      data %>%
-        filter(!!sym(x_col) == year) %>%
-        arrange(desc(!!sym(y_col))) %>%
-        slice(1:nbr) %>%
-        mutate(!!sym(y_col) := as.numeric(!!sym(y_col)))
-    }
-    
-    getSubtitle <- function(year, data) {
-      if (nrow(data) == 0) return("")
-      total_value <- sum(data[[y_col]], na.rm = TRUE)
-      paste0("<span style='font-size: 80px'>", year, "</span><br><span style='font-size: 22px'>Total: <b>", round(total_value, 2), "</b> ", unit, "</span>")
-    }
-    
-    getDataList <- function(data, colors) {
-      if (nrow(data) == 0) return(list())
-      first_col_name <- names(data)[1]
-      lapply(1:nrow(data), function(i) {
-        list(
-          name = data[[first_col_name]][i],
-          y = data[[y_col]][i],
-          color = colors[[data[[first_col_name]][i]]]
-        )
-      })
-    }
-    
-    current_year <- reactiveVal(1998)
-    nbr <- 20
-    
-    current_data <- reactive({
-      getData(current_year(), nbr)
-    })
-    
-    current_subtitle <- reactive({
-      getSubtitle(current_year(), current_data())
-    })
-    
-    current_colors <- reactive({
-      assign_colors(chart_data(), preset_colors)
-    })
-    
-    current_data_list <- reactive({
-      getDataList(current_data(), current_colors())
-    })
-    
-    updateYear <- function() {
-      year <- current_year()
-      if (year < 2022) {
-        current_year(year + 1)
-      } else {
-        current_year(1998)
-        session$sendCustomMessage(type = 'resetPlayButton', message = NULL)
-      }
-    }
-    
-    observe({
-      if (!is.null(input$playPause) && input$playPause %% 2 == 1) {
-        isolate({
-          updateYear()
-        })
-        invalidateLater(1000, session)
-      }
-    })
-    
-    observe({
-      updateSliderInput(session, "year", value = current_year())
-    })
-    
-    output$title <- renderUI({
-      HTML(paste0("<div style='font-size: 20px; font-weight: bold;'>", title, "</div>"))
-    })
-    
-    output$footer <- renderUI({
-      HTML(footer)
-    })
-    
-    output$chart <- renderHighchart({
-      data <- current_data()
-      if (nrow(data) == 0) return(NULL)
-      first_col_name <- names(data)[1]
-      highchart() %>%
-        hc_chart(type = "bar", zoomType = "xy", animation = list(duration = 1000)) %>%
-        hc_xAxis(type = "category", categories = data[[first_col_name]]) %>%
-        hc_yAxis(opposite = TRUE, tickPixelInterval = 150, title = list(text = yAxisTitle), max = max_value() + 1) %>%
-        hc_plotOptions(series = list(
-          animation = FALSE,
-          groupPadding = 0,
-          pointPadding = 0.1,
-          borderWidth = 0,
-          colorByPoint = FALSE,
-          dataSorting = list(enabled = TRUE, matchByName = TRUE),
-          dataLabels = list(enabled = TRUE, format = '{point.y:.2f}')
-        )) %>%
-        hc_series(list(
-          name = as.character(current_year()),
-          data = current_data_list()
-        )) %>%
-        hc_tooltip(
-          useHTML = TRUE,
-          headerFormat = "<b>{point.key}</b><br/>",
-          pointFormatter = JS(sprintf("function() {
-            var value = this.y;
-            var formattedValue;
-            if (value >= 1000) {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            } else {
-              formattedValue = value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2});
-            }
-            return this.series.name + ': ' + formattedValue + ' %s';
-          }", unit))
-        ) %>%
-        hc_legend(enabled = FALSE) %>%
-        hc_responsive(rules = list(
-          list(
-            condition = list(maxWidth = 550),
-            chartOptions = list(
-              xAxis = list(visible = FALSE),
-              plotOptions = list(
-                series = list(
-                  dataLabels = list(
-                    list(enabled = TRUE, y = 8),
-                    list(enabled = TRUE, format = '{point.name}', y = -8, style = list(fontWeight = 'normal', opacity = 0.7))
-                  )
-                )
-              )
-            )
-          )
-        ))
-    })
-    
-    observeEvent(input$year, {
-      current_year(input$year)
-    })
-  })
-}
+ 
 
 ## File: module_total_emissions.R 
- full_data_total <- reactive({ national_total })
-
-
-# UI for Total Emissions Module
-totalEmissionsUI <- function(id) {
-  ns <- NS(id)
-  tagList(
-    sidebarLayout(
-      sidebarPanel(
-        width = 3,
-        conditionalPanel(
-          condition = "input.tabs != 'Summary_Page'",
-          ns = ns,
-          uiOutput(ns("variable_select")),
-          actionButton(ns("select_all_button"), "Select All"),
-          actionButton(ns("deselect_all_button"), "Deselect All"),
-          sliderInput(ns("year"), "Select year range", value = c(1990, 2022), min = 1990, max = 2022, step = 1, sep = "", ticks = TRUE)
-        ),
-        conditionalPanel(
-          condition = "input.tabs == 'Summary_Page'",
-          ns = ns,
-          sliderInput(ns("summary_current_year_total"), "Current Year", min = 1990, max = 2022, value = 2022, step = 1, sep = ""),
-          sliderInput(ns("summary_comparison_year_total"), "Comparison Year", min = 1990, max = 2022, value = 2021, step = 1, sep = "")
-        )
-      ),
-      mainPanel(
-        id = ns("mainpanel"),
-        width = 9,
-        tabsetPanel(
-          id = ns("tabs"),
-          tabPanel("Summary Page",
-                   value = "Summary_Page",
-                   fluidRow(
-                     column(width = 12, div(class = "header-text", "Top 3 Emitting Industries:"))
-                   ),
-                   fluidRow(
-                     column(width = 4, valueBoxUI(ns("totalIndustry1_total")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, valueBoxUI(ns("totalIndustry2_total")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, valueBoxUI(ns("totalIndustry3_total")), style = "padding-right: 0; padding-left: 0;")
-                   ),
-                   fluidRow(
-                     column(width = 12, div(class = "header-text", "Summary Analysis:"))
-                   ),
-                   fluidRow(
-                     column(width = 4, valueBoxUI(ns("totalValue_total")), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryLineChart_total"), "Industry Emissions Over Time"), style = "padding-right: 0; padding-left: 0;"),
-                     column(width = 4, chartUI(ns("industryBarChart_total"), "Emissions by Category"), style = "padding-right: 0; padding-left: 0;")
-                   )
-          ),
-          tabPanel("Timelapse", timelapseBarChartUI(ns("bar")), value = "Timelapse"),
-          tabPanel("Time Series", lineChartUI(ns("line")), value = "Line_Chart"),
-          tabPanel("Area Chart", areaChartUI(ns("area")), value = "Area_Chart"),
-          tabPanel("Data Table",
-                   DTOutput(ns("data_table")),
-                   downloadButton(ns("downloadData"), "Download Data"),
-                   value = "Data_Table")
-        )
-      )
-    )
-  )
-}
-
-# Server for Total Emissions Module
-totalEmissionsServer <- function(id) {
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-    
-    # Reactive data for line chart
-    line_chart_data <- reactive({
-      data <- national_total
-      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
-      data <- data %>% filter(Industry %in% c("Agriculture", "Total"))
-      data
-    })
-    
-    # Reactive data for other charts
-    chart_data <- reactive({
-      data <- national_total
-      data <- data %>% filter(Year >= min(input$year) & Year <= max(input$year))
-      if (!is.null(input$variables)) {
-        data <- data %>%
-          filter(Industry %in% input$variables)
-      }
-      data
-    })
-    
-    output$variable_select <- renderUI({
-      choices <- unique(national_total$Industry)
-      selected <- setdiff(choices, "Total")
-      checkboxGroupInput(ns("variables"), "Choose variables to add to chart", choices = choices, selected = selected)
-    })
-    
-    observeEvent(input$select_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = setdiff(unique(national_total$Industry), "Total"))
-    })
-    
-    observeEvent(input$deselect_all_button, {
-      updateCheckboxGroupInput(session, ns("variables"), selected = character(0))
-    })
-    
-    areaChartServer(
-      id = "area",
-      chart_data = chart_data,
-      title = "National Greenhouse Gas Emissions by Source in Scotland",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
-    
-    timelapseBarChartServer(
-      id = "bar",
-      chart_data = chart_data,
-      title = "National Greenhouse Gas Emissions Timelapse",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
-    
-    lineChartServer(
-      id = "line",
-      chart_data = chart_data,
-      title = "National Greenhouse Gas Emissions by Source in Scotland",
-      yAxisTitle = "Emissions (MtCO₂e)",
-      xAxisTitle = "Year",
-      unit = "MtCO₂e",
-      footer = '<div style="font-size: 16px;"><a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/documents/">Source: Scottish Greenhouse Gas Statistics 2022</a></div>',
-      x_col = "Year",
-      y_col = "Value"
-    )
-    
-    render_data_table(
-      table_id = "data_table",
-      chart_data = chart_data,
-      output = output
-    )
-    
-    handle_data_download(
-      download_id = "downloadData",
-      chart_type = "National",
-      chart_data = chart_data,
-      input = input,
-      output = output,
-      year_input = "year"
-    )
-    
-    # Summary Module
-    current_year <- reactive({ input$summary_current_year_total })
-    comparison_year <- reactive({ input$summary_comparison_year_total })
-    
-    first_col_name <- "Industry"
-    
-    
-    valueBoxServer(
-      id = "totalIndustry1_total",
-      data = full_data_total,
-      category = first_col_name,
-      industry = get_industry(1, full_data_total, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalIndustry2_total",
-      data = full_data_total,
-      category = first_col_name,
-      industry = get_industry(2, full_data_total, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalIndustry3_total",
-      data = full_data_total,
-      category = first_col_name,
-      industry = get_industry(3, full_data_total, current_year, first_col_name),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    valueBoxServer(
-      id = "totalValue_total",
-      data = full_data_total,
-      category = first_col_name,
-      industry = reactive("Total"),
-      current_year = current_year,
-      comparison_year = comparison_year,
-      unit = "MtCO₂e"
-    )
-    summaryLineChartServer(
-      id = "industryLineChart_total",
-      data = line_chart_data,
-      unit = "MtCO₂e")
-
-    summaryBarChartServer(
-      id = "industryBarChart_total",
-      data = full_data_total,
-      current_year = current_year,
-      comparison_year = comparison_year,
-      category = first_col_name,
-      unit = "MtCO₂e"
-    )
-    
-    })
-}
-
-# Demo function to test the module
-total_demo <- function() {
-  ui <- fluidPage(totalEmissionsUI("total_test"))
-  server <- function(input, output, session) {
-    totalEmissionsServer("total_test")
-  }
-  shinyApp(ui, server)
-}
-
-total_demo()
+ 
 
 ## File: options.R 
- ##options.R
-
-library(shiny)
-library(highcharter)
-library(tidyverse)
-library(shinyWidgets)
-library(shinythemes)
-library(rsconnect)
-library(png)
-library(htmltools)
-library(DT)
-library(shinyjs)
-library(RColorBrewer)
-library(shinyjs)
-
-
-# Highchart options
-hcoptslang <- getOption("highcharter.lang")
-hcoptslang$thousandsSep <- ","
-hcoptslang$numericSymbols <- " "
-options(highcharter.lang = hcoptslang)
-
-# Load the theme
-thm <- source("hc_theme.R")$value
-
-# Load the .RData file containing the datasets
-load("ghg_data.RData")
-load("census_data.RData")
-load("crops_data.RData")
-load("total_animals.RData")
-load("module_2023.RData")
-
-
-# Preset list of colors
-preset_colors <- c("#002d54", "#2b9c93", "#6a2063", "#e5682a", "#0b4c0b", "#5d9f3c", "#592c20", "#ca72a2")
-
-# Function to assign colors to variables
-assign_colors <- function(data, colors) {
-  first_col_name <- names(data)[1]
-  variables <- unique(data[[first_col_name]])
-  setNames(colors[1:length(variables)], variables)
-}
-
-safe_as_numeric <- function(x) {
-  suppressWarnings({
-    result <- as.numeric(x)
-    if (is.na(result) && !is.na(x)) {
-      return(NA_real_)
-    }
-    return(result)
-  })
-}
+ 
 
 ## File: server.R 
  # server.R
-# Source the necessary modules for server logic
-source("module_subsector_emissions.R")
-source("module_fertiliser_usage.R")
-source("module_map.R")
-source("module_employees.R")
-source("module_legal_responsibility.R")
-source("module_land_use_summary.R")
-source("module_farm_types.R")
-source("module_occupiers.R")
-source("module_owned_land.R")
-source("module_cattle.R")
-source("module_sheep.R")
-source("module_pigs.R")
-source("module_poultry.R")
-source("module_other_animals.R")
-source("module_cereals.R")
-source("module_oilseed.R")
-source("module_potatoes.R")
-source("module_beans.R")
-source("module_stockfeeding.R")
-source("module_human_vegetables.R")
-source("module_fruit.R")
-source("home.R")
-source("module_soil_testing.R")
-source("module_manure.R")
-source("module_nitrogen_usage.R")
-source("module_crops_summary.R")
+
 
 
 server <- function(input, output, session) {
@@ -7605,21 +5720,27 @@ other_animals_demo <- function() {
 other_animals_demo()
 
 ## File: ui.R 
- source("options.R")
-source("utils.R")
-source("module_summary.R")
-source("module_line_chart.R")
-source("module_area_chart.R")
-source("module_bar_chart.R")
-source("module_percentage_bar_chart.R")
-source("module_timelapse_bar_chart.R")
-source("module_breakdown_chart.R")
-source("module_data_table.R")
-source("module_regions_map.R")
+ source("util_updates.R")
+source("util_functions.R")
+source("util_options.R")
+source("hc_theme.R")
+
+
+source("function_summary.R")
+source("function_line_chart.R")
+source("function_area_chart.R")
+source("function_bar_chart.R")
+source("function_percentage_bar_chart.R")
+source("function_timelapse_bar_chart.R")
+source("function_breakdown_chart.R")
+source("function_data_table.R")
+source("function_regions_map.R")
+source("function_map.R")
+
+
 source("module_subsector_emissions.R")
 source("module_information.R")
 source("module_fertiliser_usage.R")
-source("module_map.R")
 source("module_employees.R")
 source("module_legal_responsibility.R")
 source("module_farm_types.R")
@@ -7638,25 +5759,24 @@ source("module_beans.R")
 source("module_stockfeeding.R")
 source("module_human_vegetables.R")
 source("module_fruit.R")
-source("home.R")
+source("module_home.R")
 source("module_economy_summary.R")
 source("module_animals_summary.R")
-source("hc_theme.R")
 source("module_soil_testing.R")
 source("module_manure.R")
 source("module_nitrogen_usage.R")
 source("module_crops_summary.R")
+source("module_structure_information.R")
 
-library(shinyjs)
-library(shinythemes)
 
 create_footer <- function() {
   div(
     class = "footer",
-    span("Last Updated: ", format(Sys.Date(), "%d/%m/%Y")),
+    span("Last Updated: 22/08/2024"),
     img(src = "sg.png", alt = "SG Logo", style = "height: 30px; margin-left: 10px;")
   )
 }
+
 
 # Integrate the home module into the main UI
 ui <- fluidPage(
@@ -7667,7 +5787,7 @@ ui <- fluidPage(
     includeHTML("google-analytics.html"),
     tags$script(HTML("
       $(document).on('click', 'a[data-value=\"home\"]', function() {
-        history.pushState(null, '', '/');
+        history.pushState(null, '', '/AgStatsHub');
       });
     "))
   ),
@@ -7686,7 +5806,8 @@ ui <- fluidPage(
                        tabPanel("Employees", value = "employees", employeesMapUI("employees")),
                        tabPanel("Occupiers", value = "occupiers", occupiersUI("occupiers")),
                        tabPanel("Ownership Status", value = "owned_land", ownedLandUI("owned_land")),
-                       tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility"))
+                       tabPanel("Legal Responsibility", value = "legal_responsibility", legalResponsibilityUI("legal_responsibility")),
+                       tabPanel("Further Information", value = "structure_information", structureInformationUI("structure_information"))
             ),
             navbarMenu("Agri-Environment",
                        tabPanel("Agriculture Emissions", value = "subsector", subsectorEmissionsUI("subsector")),
@@ -7724,113 +5845,4 @@ ui <- fluidPage(
 )
 
 ## File: utils.R 
- #####################################
-####
-census_year <- 2023
-
-
-# File: utils.R
-
-createDownloadHandler <- function(input, file_map_name, file_timeseries_name, map_data, timeseries_data) {
-  downloadHandler(
-    filename = function() {
-      if (input$table_data == "map") {
-        file_map_name
-      } else {
-        file_timeseries_name
-      }
-    },
-    content = function(file) {
-      library(openxlsx)
-      
-      data_to_write <- if (input$table_data == "map") {
-        map_data
-      } else {
-        timeseries_data
-      }
-      
-      write.xlsx(data_to_write, file)
-    }
-  )
-}
-
-# File: utils.R
-
-createNavObserver <- function(input, session, pages) {
-  lapply(names(pages), function(page) {
-    observeEvent(input[[paste0("nav_", page)]], {
-      updateQueryString(paste0("?page=", pages[[page]]), mode = "push")
-    })
-  })
-}
-
-# Helper function to format numbers with commas and appropriate decimal places
-format_number <- function(number) {
-  # Check if the number is an integer
-  if (number %% 1 == 0) {
-    return(format(number, big.mark = ",", scientific = FALSE))
-  }
-  
-  # Calculate the number of significant figures
-  sig_digits <- nchar(gsub("0+$", "", gsub("\\.", "", as.character(number))))
-  
-  if (sig_digits > 3) {
-    # Round to nearest integer if more than 3 significant figures
-    rounded_number <- round(number)
-    return(format(rounded_number, big.mark = ",", scientific = FALSE))
-  } else {
-    # Otherwise, round to 2 decimal places
-    rounded_number <- round(number, 2)
-    return(format(rounded_number, big.mark = ",", scientific = FALSE, nsmall = 2))
-  }
-}
-
-
-# Function to generate the census data table footer with a light grey background
-generateCensusTableFooter <- function() {
-  div(
-    style = "background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-top: 20px;",
-    "This data is sourced from the ",
-    tags$a(href = "https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/",
-           "Scottish Agricultural Census: June 2023"),
-    " which was published on 31 October 2023.",
-    tags$br(),
-    "Where data is unavailable, findings have been suppressed to prevent disclosure of individual holdings.",
-    tags$br(),
-    "Full data tables and detailed analysis are available within the full report."
-  )
-}
-
-generateEmissionsTableFooter <- function() {
-  div(
-    style = "background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-top: 20px;",
-    "This data is sourced from the ",
-    tags$a(href = "https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/",
-           "Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23"),
-    " which was published on 27 June 2024, with its analysis based on the ",
-    tags$a(href = "https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/", 
-           "Scottish Greenhouse Gas Statistics 2022."),
-    tags$br(),
-    "Full data tables and detailed analysis are available within the full reports."
-  )
-}
-
-generate2023ModuleTableFooter <- function() {
-  div(
-    style = "background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-top: 20px;",
-    "This data is sourced from the ",
-    tags$a(href = "https://www.gov.scot/publications/results-from-the-scottish-agricultural-census-module-june-2023/",
-           "Scottish Agricultural Census: Module June 2023"),
-    " which was published on 23 May 2024.",
-    tags$br(),
-    "This module provides insights into soil cover, tillage, irrigation, nutrient management, and fertiliser application and storage. The report highlights the significant role these practices play in reducing emissions and improving soil and nutrient management across Scottish agricultural holdings.",
-    tags$br(),
-    "Where data is unavailable, findings have been suppressed to prevent disclosure of individual holdings.",
-    tags$br(),
-    "Full data tables and detailed analysis are available within the full report."
-  )
-}
-
-
-
-
+ 

@@ -1,4 +1,4 @@
-# File: module_bar_chart_combined.R
+# File: function_bar_chart.R
 
 barChartUI <- function(id) {
   ns <- NS(id)

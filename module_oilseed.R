@@ -74,7 +74,7 @@ oilseedServer <- function(id) {
         oilseed_map %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Oilseed distribution by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -96,7 +96,7 @@ oilseedServer <- function(id) {
       yAxisTitle = "Area of oilseed (1,000)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )
@@ -108,7 +108,7 @@ oilseedServer <- function(id) {
       yAxisTitle = "Area of oilseed (1,000)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )

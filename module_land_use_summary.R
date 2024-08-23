@@ -113,7 +113,7 @@ landUseSummaryServer <- function(id) {
         land_use_map() %>% filter(`Land use by category` == input$variable)
       }),
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       variable = reactive(input$variable),
       title = paste("Land use by region in Scotland in", census_year),
       legend_title = "Area (hectares)"
@@ -141,7 +141,7 @@ landUseSummaryServer <- function(id) {
       yAxisTitle = "Area (1,000 hectares)",
       xAxisTitle = "Land use type",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "Variable",
       y_col = "Value",
       tooltip_format = "Area (hectares): {point.y:.2f}"
@@ -154,7 +154,7 @@ landUseSummaryServer <- function(id) {
       yAxisTitle = "Area of land use (1,000 hectares)",
       xAxisTitle = "Year",
       unit = "hectares",
-      footer = '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>',
+      footer = census_footer,
       x_col = "year",
       y_col = "value"
     )

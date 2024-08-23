@@ -1,8 +1,3 @@
-library(shiny)
-library(highcharter)
-library(dplyr)
-library(tidyr)
-
 # Module UI
 doubleBarChartUI <- function(id) {
   ns <- NS(id)

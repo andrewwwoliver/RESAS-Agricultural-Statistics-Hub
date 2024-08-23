@@ -1,63 +1,26 @@
 #####################################
 ####
+#### When updating census data, ensure to update the census_year, and relevant footers below. 
+#### Include title, publication dates, link to publication
+####
+#####################################
+
+#  WHENEVER YOU ARE UPDATING THE APP, ENSURE TO UPDATE THE FOOTER, IN UI.R WITH THE CURRENT DATE
+
+
+# Year of census data - some years need manually updated, breakdown server in emissions
+
 census_year <- 2023
 
+emissions_year <- 2022
 
-# File: utils.R
+#emissions_year 
 
-createDownloadHandler <- function(input, file_map_name, file_timeseries_name, map_data, timeseries_data) {
-  downloadHandler(
-    filename = function() {
-      if (input$table_data == "map") {
-        file_map_name
-      } else {
-        file_timeseries_name
-      }
-    },
-    content = function(file) {
-      library(openxlsx)
-      
-      data_to_write <- if (input$table_data == "map") {
-        map_data
-      } else {
-        timeseries_data
-      }
-      
-      write.xlsx(data_to_write, file)
-    }
-  )
-}
+#some footers need manually updated - e.g. poultry - run print_code and search for 2022 / 2023 to find issues
+census_footer <- '<div style="font-size: 16px; font-weight: bold;"><a href="https://www.gov.scot/publications/results-scottish-agricultural-census-june-2023/documents/">Source: Scottish Agricultural Census: June 2023</a></div>'
 
-# File: utils.R
+emissions_footer <- '<div style="font-size: 16px; font-weight: bold;"> <a href="https://www.gov.scot/publications/scottish-agriculture-greenhouse-gas-emissions-and-nitrogen-use-2022-23/" target="_blank">Source: Scottish agriculture greenhouse gas emissions and nitrogen use 2022-23</a>, analysis based on results of the <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-2022/" target="_blank">Scottish Greenhouse Gas Statistics 2022</a>.</div>'
 
-createNavObserver <- function(input, session, pages) {
-  lapply(names(pages), function(page) {
-    observeEvent(input[[paste0("nav_", page)]], {
-      updateQueryString(paste0("?page=", pages[[page]]), mode = "push")
-    })
-  })
-}
-
-# Helper function to format numbers with commas and appropriate decimal places
-format_number <- function(number) {
-  # Check if the number is an integer
-  if (number %% 1 == 0) {
-    return(format(number, big.mark = ",", scientific = FALSE))
-  }
-  
-  # Calculate the number of significant figures
-  sig_digits <- nchar(gsub("0+$", "", gsub("\\.", "", as.character(number))))
-  
-  if (sig_digits > 3) {
-    # Round to nearest integer if more than 3 significant figures
-    rounded_number <- round(number)
-    return(format(rounded_number, big.mark = ",", scientific = FALSE))
-  } else {
-    # Otherwise, round to 2 decimal places
-    rounded_number <- round(number, 2)
-    return(format(rounded_number, big.mark = ",", scientific = FALSE, nsmall = 2))
-  }
-}
 
 
 # Function to generate the census data table footer with a light grey background
@@ -104,7 +67,4 @@ generate2023ModuleTableFooter <- function() {
     "Full data tables and detailed analysis are available within the full report."
   )
 }
-
-
-
 
